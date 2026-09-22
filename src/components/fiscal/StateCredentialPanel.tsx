@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,8 @@ type CredentialStatus = {
   verification_label: string;
   last_verified_at: string | null;
   can_reconcile: boolean;
+  username_automatic: boolean;
+  username_source: string | null;
 };
 
 async function callCredential(body: Record<string, unknown>) {
@@ -22,7 +24,9 @@ async function callCredential(body: Record<string, unknown>) {
   try {
     const context = (error as { context?: Response })?.context;
     if (context) message = (await context.clone().json())?.error || message;
-  } catch {}
+  } catch {
+    // Mantém a mensagem segura quando a resposta não possui JSON legível.
+  }
   throw new Error(message);
 }
 
@@ -42,6 +46,7 @@ const tone = (status?: string) => {
 
 export function StateCredentialPanel({
   officeCompanyId,
+  fiscalCompanyId,
   state,
   allowDelete = false,
   onChanged,
@@ -50,7 +55,8 @@ export function StateCredentialPanel({
   officeCompanyId?: string;
   state?: string | null;
   allowDelete?: boolean;
-  onChanged?: () => void;
+  fiscalCompanyId?: string;
+  onChanged?: (status?: CredentialStatus | null) => void;
   portal?: boolean;
 }) {
   const [status, setStatus] = useState<CredentialStatus | null>(null);
@@ -61,9 +67,11 @@ export function StateCredentialPanel({
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const base = useMemo(() => officeCompanyId ? { office_company_id: officeCompanyId } : {}, [officeCompanyId]);
+  const base = useMemo(() => fiscalCompanyId
+    ? { fiscal_company_id: fiscalCompanyId }
+    : officeCompanyId ? { office_company_id: officeCompanyId } : {}, [fiscalCompanyId, officeCompanyId]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await callCredential({ action: 'status', ...base });
@@ -73,14 +81,14 @@ export function StateCredentialPanel({
     } finally {
       setLoading(false);
     }
-  };
+  }, [base]);
 
   useEffect(() => {
     void load();
-  }, [officeCompanyId]);
+  }, [load]);
 
   const saveAndTest = async () => {
-    if (!username.trim() || !password) return;
+    if ((!status?.username_automatic && !username.trim()) || !password) return;
     setBusy(true);
     setError('');
     setMessage('');
@@ -96,7 +104,7 @@ export function StateCredentialPanel({
       } else {
         setMessage('Credencial salva. A SEFAZ estava indisponível e o acesso continuará pendente de validação.');
       }
-      onChanged?.();
+      onChanged?.(result.status || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -114,7 +122,7 @@ export function StateCredentialPanel({
       setMessage(result.status?.verification_status === 'valid'
         ? 'Acesso confirmado novamente e reconciliação fiscal reencaminhada.'
         : result.status?.verification_label || 'Verificação concluída.');
-      onChanged?.();
+      onChanged?.(result.status || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -131,7 +139,7 @@ export function StateCredentialPanel({
       const result = await callCredential({ action: 'delete', ...base });
       setStatus(result.status || null);
       setMessage('Acesso estadual removido.');
-      onChanged?.();
+      onChanged?.(result.status || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -180,18 +188,17 @@ export function StateCredentialPanel({
         </div>
       )}
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label>
-          <span className={portal ? 'mb-1.5 block text-[10px] font-medium text-[#91a1b5]' : 'mb-1.5 block text-xs font-medium text-muted-foreground'}>
-            {status?.configured ? 'Novo usuário (somente para substituir)' : 'Usuário do portal'}
-          </span>
-          <Input autoComplete="off" value={username} onChange={event => setUsername(event.target.value)} placeholder={status?.configured ? 'Deixe vazio para manter' : 'Usuário SEFAZ/AL'} />
-        </label>
+      <div className={'mt-4 grid gap-3 ' + (status?.username_automatic ? '' : 'sm:grid-cols-2')}>
+        {!status?.username_automatic && <label>
+          <span className={portal ? 'mb-1.5 block text-[10px] font-medium text-[#91a1b5]' : 'mb-1.5 block text-xs font-medium text-muted-foreground'}>Usuário do portal</span>
+          <Input autoComplete="off" value={username} onChange={event => setUsername(event.target.value)} placeholder="CACEAL sem dígito verificador" />
+        </label>}
         <label>
           <span className={portal ? 'mb-1.5 block text-[10px] font-medium text-[#91a1b5]' : 'mb-1.5 block text-xs font-medium text-muted-foreground'}>
             {status?.configured ? 'Nova senha (somente para substituir)' : 'Senha do portal'}
           </span>
           <Input type="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} placeholder={status?.configured ? 'Deixe vazio para manter' : 'Senha SEFAZ/AL'} />
+          {status?.username_automatic && <small className={portal ? 'mt-1 block text-[10px] text-[#91a1b5]' : 'mt-1 block text-xs text-muted-foreground'}>O usuário foi identificado automaticamente pela inscrição estadual do A1.</small>}
         </label>
       </div>
 
@@ -206,7 +213,7 @@ export function StateCredentialPanel({
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button disabled={busy || !username.trim() || !password} onClick={() => void saveAndTest()}>
+        <Button disabled={busy || (!status?.username_automatic && !username.trim()) || !password} onClick={() => void saveAndTest()}>
           {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Salvar e testar acesso
         </Button>

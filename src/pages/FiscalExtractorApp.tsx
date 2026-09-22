@@ -27,6 +27,7 @@ import ExtractorAccountDrawer from '@/components/extractor/ExtractorAccountDrawe
 import ExtractorCompanySelector from '@/components/extractor/ExtractorCompanySelector';
 import ExtractorReports from '@/components/extractor/ExtractorReports';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
+import { StateCredentialPanel } from '@/components/fiscal/StateCredentialPanel';
 import '@/styles/fiscal-extractor.css';
 import '@/styles/fiscal-extractor-polish.css';
 import '@/styles/fiscal-extractor-final.css';
@@ -243,8 +244,8 @@ const formatDate = (v?: string | null, withTime = false) => {
 const syncLabel = (v?: string | null) => {
   const x = String(v || '').toLowerCase();
   if (x === 'queued') return 'Na fila';
-  if (x === 'waiting_state_credentials') return 'Ativa';
-  if (x === 'waiting_sales_reference') return 'Ativa';
+  if (x === 'waiting_state_credentials') return 'Aguardando acesso SEFAZ';
+  if (x === 'waiting_sales_reference') return 'Preparando vendas';
   if (x === 'waiting_certificate') return 'Certificado pendente';
   if (['running', 'reconciling', 'bootstrap_window', 'retrying'].includes(x))
     return 'Sincronizando';
@@ -3307,6 +3308,7 @@ export function AddCompanyModal({ preview, onClose, onDone }: any) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [savedCompany, setSavedCompany] = useState<any>(null);
   const submit = async () => {
     if (busy) return;
     if (preview) return setError('O cadastro fica disponível no ambiente autenticado.');
@@ -3329,7 +3331,8 @@ export function AddCompanyModal({ preview, onClose, onDone }: any) {
       });
       setPassword('');
       setFile(null);
-      onDone(data.company);
+      if (String(data.company?.state || '').toUpperCase() === 'AL') setSavedCompany(data.company);
+      else onDone(data.company);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Não foi possível salvar. Tente novamente.');
     } finally {
@@ -3352,11 +3355,27 @@ export function AddCompanyModal({ preview, onClose, onDone }: any) {
           if (busy) e.preventDefault();
         }}
       >
-        <DialogTitle>Adicionar ou renovar certificado A1</DialogTitle>
+        <DialogTitle>{savedCompany ? 'Concluir acesso às vendas' : 'Adicionar ou renovar certificado A1'}</DialogTitle>
         <DialogDescription>
-          O CNPJ é identificado pelo certificado. Na renovação, os dados já cadastrados da empresa
-          são preservados.
+          {savedCompany
+            ? 'O A1 já foi validado e a busca de compras começou. Informe somente a senha estadual para liberar a conferência completa das vendas de Alagoas.'
+            : 'O CNPJ é identificado pelo certificado. Na renovação, os dados já cadastrados da empresa são preservados.'}
         </DialogDescription>
+        {savedCompany ? <div className="space-y-4">
+          <StateCredentialPanel
+            fiscalCompanyId={savedCompany.id}
+            state={savedCompany.state}
+            portal
+            onChanged={status => {
+              if (status?.verification_status === 'valid') onDone(savedCompany);
+            }}
+          />
+          <div className="flex justify-end">
+            <button type="button" className="extractor-secondary" onClick={() => onDone(savedCompany)}>
+              Concluir depois
+            </button>
+          </div>
+        </div> :
         <form
           className="space-y-5"
           onSubmit={e => {
@@ -3415,7 +3434,7 @@ export function AddCompanyModal({ preview, onClose, onDone }: any) {
               {busy ? 'Validando e salvando…' : 'Validar e salvar'}
             </button>
           </div>
-        </form>
+        </form>}
       </DialogContent>
     </Dialog>
   );

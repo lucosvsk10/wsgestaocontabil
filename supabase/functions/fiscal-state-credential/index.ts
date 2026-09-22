@@ -40,25 +40,56 @@ async function authContext(req:Request){
 }
 async function resolveCompany(ctx:any,body:any){
   let officeCompanyId=clean(body.office_company_id);
+  const requestedFiscalId=clean(body.fiscal_company_id);
   if(!ctx.isAdmin){
     const {data:links,error}=await ctx.admin.from("company_user_links").select("company_id,is_primary").eq("user_id",ctx.user.id).order("is_primary",{ascending:false});
     if(error)throw error;
     const allowed=(links||[]).map((r:any)=>String(r.company_id));
-    if(!officeCompanyId)officeCompanyId=allowed[0]||"";
-    if(!officeCompanyId||!allowed.includes(officeCompanyId))throw Object.assign(new Error("Empresa não vinculada a este acesso."),{status:403});
+    if(officeCompanyId&&allowed.includes(officeCompanyId)){
+      // Acesso do cliente contábil já confirmado pelo vínculo da empresa.
+    }else if(requestedFiscalId){
+      const {data:members,error:memberError}=await ctx.admin.from("organization_members")
+        .select("organization_id,role,status").eq("user_id",ctx.user.id).eq("status","active");
+      if(memberError)throw memberError;
+      const organizationIds=(members||[])
+        .filter((member:any)=>["owner","admin"].includes(String(member.role||"")))
+        .map((member:any)=>String(member.organization_id));
+      if(!organizationIds.length)throw Object.assign(new Error("Empresa não vinculada a este acesso."),{status:403});
+      const {data:accounts,error:accountError}=await ctx.admin.from("extractor_accounts")
+        .select("id,lifetime_access,access_expires_at").in("organization_id",organizationIds).eq("status","active");
+      if(accountError)throw accountError;
+      const now=Date.now();
+      const accountIds=(accounts||[])
+        .filter((account:any)=>account.lifetime_access===true||(account.access_expires_at&&new Date(account.access_expires_at).getTime()>now))
+        .map((account:any)=>String(account.id));
+      const {data:link,error:linkError}=accountIds.length
+        ? await ctx.admin.from("extractor_companies").select("id").in("account_id",accountIds)
+          .eq("fiscal_company_id",requestedFiscalId).eq("status","active").limit(1).maybeSingle()
+        : {data:null,error:null};
+      if(linkError)throw linkError;
+      if(!link)throw Object.assign(new Error("Empresa não vinculada a este acesso do Extrator."),{status:403});
+    }else{
+      if(!officeCompanyId)officeCompanyId=allowed[0]||"";
+      if(!officeCompanyId||!allowed.includes(officeCompanyId))throw Object.assign(new Error("Empresa não vinculada a este acesso."),{status:403});
+    }
   }
   let fiscal:any=null;
-  const fiscalId=clean(body.fiscal_company_id);
-  if(ctx.isAdmin&&fiscalId){
-    const {data,error}=await ctx.admin.from("fiscal_companies").select("id,company_id,cnpj,razao_social,uf,status").eq("id",fiscalId).maybeSingle();
+  if((ctx.isAdmin||requestedFiscalId)&&requestedFiscalId){
+    const {data,error}=await ctx.admin.from("fiscal_companies").select("id,company_id,cnpj,razao_social,inscricao_estadual,uf,status").eq("id",requestedFiscalId).maybeSingle();
     if(error)throw error;fiscal=data;
   }else if(officeCompanyId){
-    const {data,error}=await ctx.admin.from("fiscal_companies").select("id,company_id,cnpj,razao_social,uf,status").eq("company_id",officeCompanyId).maybeSingle();
+    const {data,error}=await ctx.admin.from("fiscal_companies").select("id,company_id,cnpj,razao_social,inscricao_estadual,uf,status").eq("company_id",officeCompanyId).maybeSingle();
     if(error)throw error;fiscal=data;
   }
   if(!fiscal)throw Object.assign(new Error("Este cliente ainda não possui perfil fiscal vinculado."),{status:404});
   if(fiscal.status!=="ativa")throw Object.assign(new Error("A empresa fiscal está inativa."),{status:422});
   return{fiscal,officeCompanyId:String(fiscal.company_id||officeCompanyId||"")};
+}
+function alPortalUsername(fiscal:any){
+  const registration=digits(fiscal?.inscricao_estadual);
+  if(registration.length===9)return registration.slice(0,-1);
+  if(registration.length===8)return registration;
+  return "";
 }
 function publicStatus(cred:any,fiscal:any){
   const code=clean(cred?.last_verification_status)||"not_configured";
@@ -79,6 +110,8 @@ function publicStatus(cred:any,fiscal:any){
     verification_label:labels[code]||code,
     last_verified_at:cred?.last_verified_at||null,
     can_reconcile:code==="valid",
+    username_automatic:Boolean(alPortalUsername(fiscal)),
+    username_source:alPortalUsername(fiscal)?"inscricao_estadual":null,
   };
 }
 async function gatewayToken(admin:any){
@@ -202,8 +235,9 @@ Deno.serve(async req=>{
     if(uf!=="AL")return J({error:`Automação estadual ainda não disponível para ${uf||"esta UF"}.`,status:publicStatus(cred,fiscal)},422);
 
     if(action==="save_verify"){
-      const username=clean(body.username),password=String(body.password||"");
-      if(username.length<2||username.length>180||password.length<1||password.length>240)return J({error:"Informe usuário e senha válidos da SEFAZ/AL."},422);
+      const username=clean(body.username)||alPortalUsername(fiscal),password=String(body.password||"");
+      if(username.length<2||username.length>180)return J({error:"Não foi possível identificar automaticamente o usuário da SEFAZ/AL. Atualize a inscrição estadual da empresa."},422);
+      if(password.length<1||password.length>240)return J({error:"Informe a senha do portal da SEFAZ/AL."},422);
       const verification=await verifyAl(ctx.admin,username,password,digits(fiscal.cnpj));
       if(verification.code==="invalid_credentials"){
         await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_rejected",verification.code);
