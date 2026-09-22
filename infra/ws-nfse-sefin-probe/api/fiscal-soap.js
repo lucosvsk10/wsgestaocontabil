@@ -319,12 +319,12 @@ module.exports = async function handler(req, res) {
         contentType: `application/soap+xml; charset=utf-8; action="${ns}/nfeAutorizacaoLote"`,
         accept: 'application/soap+xml, text/xml, */*',
       });
-      const cStats = [...String(result.text || '').matchAll(/<(?:\\w+:)?cStat>(\\d+)<\\/(?:\\w+:)?cStat>/g)].map(m => m[1]);
-      const motives = [...String(result.text || '').matchAll(/<(?:\\w+:)?xMotivo>([\\s\\S]*?)<\\/(?:\\w+:)?xMotivo>/g)].map(m => m[1].trim());
+      const cStats = [...String(result.text || '').matchAll(/<(?:\w+:)?cStat>(\d+)<\/(?:\w+:)?cStat>/g)].map(m => m[1]);
+      const motives = [...String(result.text || '').matchAll(/<(?:\w+:)?xMotivo>([\s\S]*?)<\/(?:\w+:)?xMotivo>/g)].map(m => m[1].trim());
       const cStat = cStats[cStats.length - 1] || '';
       const xMotivo = motives[motives.length - 1] || '';
-      const recoveredKey = [...xMotivo.matchAll(/(\\d{44})/g)].map(m => m[1]).find(k => k !== probeKey) || '';
-      if (cStat === '539' && /^\\d{44}$/.test(recoveredKey)) {
+      const recoveredKey = [...xMotivo.matchAll(/(\d{44})/g)].map(m => m[1]).find(k => k !== probeKey) || '';
+      if (cStat === '539' && /^\d{44}$/.test(recoveredKey)) {
         return json(res, 200, { ok: true, exists: true, cStat, xMotivo, access_key: recoveredKey });
       }
       if (cStat === '100') {
