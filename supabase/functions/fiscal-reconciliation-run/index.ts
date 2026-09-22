@@ -164,6 +164,20 @@ Deno.serve(async req=>{
             xmlPending:nfe55Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfe55Out.length-keySet(nfe55Out).size,
             details:{portal_credential:true},
           });
+        }else if(uf==="SP"){
+          const official55=await paged<any>((from,to)=>admin.from("fiscal_sales_documents")
+            .select("access_key,issue_date,xml,source,source_reference,status")
+            .eq("company_id",companyId).eq("model","55")
+            .eq("source","sefaz_sp_nfe55_issuer_event")
+            .gte("issue_date",startTs(start)).lte("issue_date",endTs(end)).range(from,to));
+          await upsert(admin,companyId,start,end,"sale_nfe55",{
+            sourceName:"NFeDistribuicaoDFe eventos do emitente + SEFAZ/SP Consulta Protocolo",
+            sourceConfirmed:false,siteKeys:keySet(nfe55Out),blocked:false,
+            xmlPending:nfe55Out.filter(r=>!r.full_xml||!r.xml).length,
+            duplicateCount:nfe55Out.length-keySet(nfe55Out).size,
+            reason:"As chaves oficiais encontradas são capturadas e validadas, porém o serviço não enumera exaustivamente todas as NF-e 55 emitidas por período.",
+            details:{uf,official_keys_captured:keySet(official55).size,official_event_rows:official55.length,exhaustive_enumeration:false},
+          });
         }else{
           await upsert(admin,companyId,start,end,"sale_nfe55",{
             sourceName:uf==="AL"?"SEFAZ/AL relatório NF-e emitidas":"SEFAZ emitente NF-e",
