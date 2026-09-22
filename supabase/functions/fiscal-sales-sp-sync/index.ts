@@ -51,14 +51,36 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
     for(let n=floor;n<=end;n++){const row=map.get(n),st=String(row?.status||"");if(!row||["pending","error","not_found"].includes(st)||(st==="not_authorized"&&String(row?.cstat||"")!=="481"))candidates.push({series,n,priority:n<=maxInside?0:1})}
   }
   candidates.sort((a,b)=>a.priority-b.priority||a.series-b.series||a.n-b.n);
-  let found=0,cancelled=0,unused=0,failed=0;const failures:any[]=[];
-  for(const item of candidates.slice(0,Math.max(1,Math.min(20,batch)))){
+  let found=0,cancelled=0,unused=0,failed=0,cooldown=false;const failures:any[]=[];
+  const probeBody=(series:number,note_number:number)=>({action:"sp-nfe-recover-key",environment:"production",...gatewayCertificate,
+    issuer_cnpj:c.cnpj,issuer_ie:c.inscricao_estadual,issuer_name:c.razao_social,issuer_trade_name:c.nome_fantasia,
+    issuer_city_code:c.codigo_municipio,issuer_city:c.municipio,issuer_street:c.endereco?.logradouro,issuer_number:c.endereco?.numero,
+    issuer_district:c.endereco?.bairro,issuer_zip:c.endereco?.cep,crt:crtFor(c.regime_tributario),series,note_number});
+  const control=infos.slice().sort((a,b)=>b.number-a.number)[0];
+  let probeValidated=false;
+  try{
+    if(!control)throw Error("sp_recovery_control_missing");
+    const check=await gatewayObject(gatewayToken,probeBody(control.series,control.number));
+    probeValidated=Boolean(check?.exists&&String(check?.cStat||"")==="539"&&dg(check?.access_key)===control.key);
+    if(!probeValidated)throw Error("sp_recovery_control_failed:"+String(check?.cStat||"")+":"+String(check?.xMotivo||""));
+  }catch(e){
+    const msg=e instanceof Error?e.message:String(e);
+    if(msg.includes("656")||/Consumo Indevido/i.test(msg))cooldown=true;
+    failures.push({control:true,series:control?.series||null,note_number:control?.number||null,error:msg});
+  }
+  if(!probeValidated){
+    const now=new Date().toISOString(),waitMinutes=cooldown?65:30;
+    await admin.from("fiscal_sales_sync_state").update({
+      status:cooldown?"cooldown":"error",reconciliation_complete:false,
+      last_error:failures[0]?.error||"Falha ao validar controle 539 da recuperação NF-e 55/SP",
+      next_scheduled_at:new Date(Date.now()+waitMinutes*60000).toISOString(),updated_at:now
+    }).eq("company_id",c.id);
+    return{processed:0,found:0,cancelled:0,unused:0,failed:1,pending:candidates.length,complete:false,cooldown,probe_validated:false,scopes,failures:failures.slice(0,6)};
+  }
+  for(const item of candidates.slice(0,Math.max(1,Math.min(14,batch)))){
     const now=new Date().toISOString();
     try{
-      const recovery=await gatewayObject(gatewayToken,{action:"sp-nfe-recover-key",environment:"production",...gatewayCertificate,
-        issuer_cnpj:c.cnpj,issuer_ie:c.inscricao_estadual,issuer_name:c.razao_social,issuer_trade_name:c.nome_fantasia,
-        issuer_city_code:c.codigo_municipio,issuer_city:c.municipio,issuer_street:c.endereco?.logradouro,issuer_number:c.endereco?.numero,
-        issuer_district:c.endereco?.bairro,issuer_zip:c.endereco?.cep,crt:crtFor(c.regime_tributario),series:item.series,note_number:item.n});
+      const recovery=await gatewayObject(gatewayToken,probeBody(item.series,item.n));
       if(recovery.exists&&/^\d{44}$/.test(String(recovery.access_key||""))){
         const key=String(recovery.access_key),info=keyInfo(key);if(!info||info.issuer!==cnpj||info.model!=="55"||info.series!==item.series||info.number!==item.n)throw Error("recovery_key_identity_mismatch");
         const text=await gateway(gatewayToken,{action:"sp-nfe-consult",environment:"production",...gatewayCertificate,access_key:key});
@@ -71,10 +93,14 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
         if(isCancelled)cancelled++;else found++;
       }else{
         const probeStat=String(recovery.cStat||"");
-        if(probeStat!=="481")throw Error("sp_recovery_probe_invalid:"+probeStat+":"+String(recovery.xMotivo||""));
-        const {error:ue}=await admin.from("fiscal_sales_reconciliation").upsert({company_id:c.id,model:"55",series:String(item.series),note_number:item.n,status:"not_authorized",access_key:null,issue_date:null,cstat:probeStat||"SP_NO_AUTHORIZATION",xmotivo:String(recovery.xMotivo||"Numeração sem NF-e autorizada na SEFAZ/SP"),attempts:1,tried_months:[],last_checked_at:now,resolved_at:now,updated_at:now,xml_status:"not_applicable",xml_attempts:0,detail_status:"not_applicable",detail_attempts:0,event_status:"not_applicable",event_attempts:0},{onConflict:"company_id,model,series,note_number"});if(ue)throw ue;unused++;
+        if(["","108","109","656"].includes(probeStat))throw Error("sp_recovery_probe_transient:"+probeStat+":"+String(recovery.xMotivo||""));
+        const reason="Controle 539 validado; numeração sem NF-e autorizada. "+String(recovery.xMotivo||"");
+        const {error:ue}=await admin.from("fiscal_sales_reconciliation").upsert({company_id:c.id,model:"55",series:String(item.series),note_number:item.n,status:"not_authorized",access_key:null,issue_date:null,cstat:probeStat||"SP_NO_AUTHORIZATION",xmotivo:reason,attempts:1,tried_months:[],last_checked_at:now,resolved_at:now,updated_at:now,xml_status:"not_applicable",xml_attempts:0,detail_status:"not_applicable",detail_attempts:0,event_status:"not_applicable",event_attempts:0},{onConflict:"company_id,model,series,note_number"});if(ue)throw ue;unused++;
       }
-    }catch(e){failed++;failures.push({series:item.series,note_number:item.n,error:e instanceof Error?e.message:String(e)})}
+    }catch(e){
+      const msg=e instanceof Error?e.message:String(e);failed++;failures.push({series:item.series,note_number:item.n,error:msg});
+      if(msg.includes("656")||/Consumo Indevido/i.test(msg)){cooldown=true;break}
+    }
     await new Promise(r=>setTimeout(r,180));
   }
   const {data:after,error:ae}=await admin.from("fiscal_sales_reconciliation").select("series,note_number,status,access_key").eq("company_id",c.id).eq("model","55").limit(10000);if(ae)throw ae;
@@ -85,8 +111,9 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
     finalScopes.push({...scope,max_known:recoveredMax,end,pending:localPending});
   }
   const complete=total>0&&pending===0&&failed===0,now=new Date().toISOString();
-  await admin.from("fiscal_sales_sync_state").update({status:complete?"idle":"queued",reconciliation_total:total,reconciliation_resolved:resolved,reconciliation_found:foundTotal,reconciliation_cancelled:cancelTotal,reconciliation_not_authorized:notAuthTotal,reconciliation_pending:pending,reconciliation_complete:complete,reconciliation_completed_at:complete?now:null,last_error:failed?String(failed)+" falha(s) NF-e 55/SP":null,next_scheduled_at:new Date(Date.now()+(complete?30:5)*60000).toISOString(),updated_at:now}).eq("company_id",c.id);
-  return{processed:Math.min(batch,candidates.length),found,cancelled,unused,failed,pending,complete,scopes:finalScopes,failures:failures.slice(0,6)};
+  const waitMinutes=cooldown?65:(complete?30:65);
+  await admin.from("fiscal_sales_sync_state").update({status:cooldown?"cooldown":(complete?"idle":"queued"),latest_number:Math.max(0,...(after||[]).filter((r:any)=>["found","cancelled"].includes(String(r.status))).map((r:any)=>Number(r.note_number)||0))||null,cursor_number:Math.max(0,...(after||[]).filter((r:any)=>["found","cancelled"].includes(String(r.status))).map((r:any)=>Number(r.note_number)||0))||null,reconciliation_total:total,reconciliation_resolved:resolved,reconciliation_found:foundTotal,reconciliation_cancelled:cancelTotal,reconciliation_not_authorized:notAuthTotal,reconciliation_pending:pending,reconciliation_complete:complete,reconciliation_completed_at:complete?now:null,last_error:cooldown?"SEFAZ 656: cooldown automático":(failed?String(failed)+" falha(s) NF-e 55/SP":null),next_scheduled_at:new Date(Date.now()+waitMinutes*60000).toISOString(),updated_at:now}).eq("company_id",c.id);
+  return{processed:Math.min(14,Math.min(batch,candidates.length)),found,cancelled,unused,failed,pending,complete,cooldown,probe_validated:true,scopes:finalScopes,failures:failures.slice(0,6)};
 }
 
 
