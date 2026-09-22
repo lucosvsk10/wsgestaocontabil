@@ -78,7 +78,7 @@ function authorized(req) {
   return token && safeEqual(sha256(token), GATEWAY_TOKEN_SHA256);
 }
 function stripDecl(xml) { return String(xml || '').replace(/^<\?xml[^>]*\?>\s*/i, ''); }
-function decodeXmlEntities(v) { return String(v || '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&'); }
+function decodeXmlEntities(v) { let s=String(v || ''); for(let i=0;i<3;i++){const n=s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&'); if(n===s)break; s=n;} return s; }
 function tls(body) {
   const pfxB64 = String(body.certificate_base64 || '').replace(/\s+/g, '');
   const password = String(body.certificate_password || '');
