@@ -191,13 +191,27 @@ async function transmitEvent(pfxB64, password, signedXml) {
 
 async function distributeNfse(material, cnpj, nsu) {
   const qs = new URLSearchParams({ tipoNSU: 'DISTRIBUICAO', lote: 'true', cnpjConsulta: cnpj });
-  return requestHttps({
-    hostname: ADN_HOST,
-    method: 'GET',
-    path: `/contribuintes/DFe/${Math.max(0, Number(nsu) || 0)}?${qs}`,
-    ...material,
-    headers: { Accept: 'application/json' },
-  });
+  let lastError = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const result = await requestHttps({
+        hostname: ADN_HOST,
+        method: 'GET',
+        path: `/contribuintes/DFe/${Math.max(0, Number(nsu) || 0)}?${qs}`,
+        ...material,
+        headers: { Accept: 'application/json' },
+      });
+      if (![500, 502, 503, 504].includes(Number(result.status || 0))) return result;
+      lastError = new Error(`adn_http_${result.status}`);
+    } catch (error) {
+      lastError = error;
+      const code = String(error?.code || '');
+      const message = String(error?.message || error || '');
+      if (!['ECONNRESET','EPIPE','ETIMEDOUT','ECONNABORTED'].includes(code) && !/socket hang up|timeout|reset/i.test(message)) throw error;
+    }
+    if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+  }
+  throw lastError || new Error('adn_transport_failed');
 }
 
 module.exports = async function handler(req, res) {
