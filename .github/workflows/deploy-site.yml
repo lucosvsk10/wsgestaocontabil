@@ -35,6 +35,7 @@ jobs:
       - name: Link the project that owns the production domain
         run: |
           node <<'NODE'
+          (async () => {
           const fs = require('node:fs');
           const token = process.env.VERCEL_TOKEN;
           const teamId = process.env.VERCEL_TEAM_ID;
@@ -72,6 +73,10 @@ jobs:
           fs.mkdirSync('.vercel', { recursive: true });
           fs.writeFileSync('.vercel/project.json', JSON.stringify({ orgId: match.scope, projectId: match.project.id }));
           console.log(`Projeto localizado: ${match.project.name}`);
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
           NODE
 
       - name: Pull production configuration
