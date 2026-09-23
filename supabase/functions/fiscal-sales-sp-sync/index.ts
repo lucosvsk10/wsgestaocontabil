@@ -258,8 +258,19 @@ Deno.serve(async req=>{try{
     const {error:de}=await admin.from("fiscal_dfe_documents").upsert({user_id:c.created_by,company_id:companyId,cnpj:c.cnpj,environment:c.ambiente_padrao==="homologacao"?"homologacao":"producao",uf_code:"35",nsu:"SP-SAE-"+key,schema_name:"procNFe_v4.00",document_kind:"nfe",direction:"saida",access_key:key,issue_date:issue||null,value:total,issuer_cnpj:c.cnpj,issuer_name:c.razao_social,note_number:number,series,status_code:"100",full_xml:true,xml,source:"sefaz_sp_sae_nfce",source_id:key,model:"65",status_text:status,updated_at:nowIso},{onConflict:"user_id,cnpj,environment,uf_code,nsu"});if(de)throw de;saved++;
   }catch(e){failed++;console.error("sp nfce download",key,e)}}
   const pending=Math.max(0,missing.length-saved),completedAt=new Date().toISOString();
+  const nfceSourceOk=segments.length>0&&segments.every((s:any)=>["100","107"].includes(String(s.cStat||"")))&&failed===0&&pending===0;
+  const nfceSourceError=nfceSourceOk?null:(failed?String(failed)+" XML(s) NFC-e falharam":pending?String(pending)+" NFC-e pendente(s)":("Retorno SAE não confirmado: "+segments.map((s:any)=>String(s.cStat||"?")).join(",")));
   const {data:maxRow}=await admin.from("fiscal_sales_documents").select("document_number").eq("company_id",companyId).eq("model","65").order("document_number",{ascending:false}).limit(1).maybeSingle();
-  await admin.from("fiscal_sales_sync_state").upsert({company_id:companyId,paused:false,status:pending?"queued":"idle",latest_number:Number(maxRow?.document_number||0)||null,cursor_number:Number(maxRow?.document_number||0)||null,initial_backfill_done:pending===0,last_started_at:state?.last_started_at||completedAt,last_completed_at:completedAt,next_scheduled_at:new Date(Date.now()+30*60000).toISOString(),last_error:failed?String(failed)+" XML(s) falharam; retry automático":null,updated_at:completedAt},{onConflict:"company_id"});
+  await admin.from("fiscal_sales_sync_state").upsert({
+    company_id:companyId,paused:false,status:pending?"queued":"idle",
+    latest_number:Number(maxRow?.document_number||0)||null,cursor_number:Number(maxRow?.document_number||0)||null,
+    initial_backfill_done:pending===0,last_started_at:state?.last_started_at||completedAt,last_completed_at:completedAt,
+    nfce_source_status:nfceSourceOk?"ok":"error",nfce_source_confirmed_at:nfceSourceOk?completedAt:null,
+    nfce_source_period_start:start.toISOString(),nfce_source_period_end:end.toISOString(),
+    nfce_source_count:all.length,nfce_source_error:nfceSourceError,
+    next_scheduled_at:new Date(Date.now()+30*60000).toISOString(),
+    last_error:failed?String(failed)+" XML(s) falharam; retry automático":null,updated_at:completedAt
+  },{onConflict:"company_id"});
   await admin.from("fiscal_companies").update({last_sync_at:completedAt}).eq("id",companyId);
   const nfe55Recovery=b.skip_nfe55_recovery?{skipped:true}:await recoverSpNfe55Numbers(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_batch||12),Number(b.nfe55_lookahead||15));
   const nfe55Xml=(b.skip_nfe55_xml||nfe55Recovery?.cooldown)?{skipped:true,reason:nfe55Recovery?.cooldown?"recovery_cooldown":"requested"}:await backfillSpNfe55Xml(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_xml_batch||1));
