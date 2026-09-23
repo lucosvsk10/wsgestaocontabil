@@ -121,23 +121,35 @@ async function gatewayToken(admin:any){
   if(!token)throw new Error("gateway_token_missing");
   return token;
 }
-async function verifyAl(admin:any,username:string,password:string,cnpj:string){
+async function verifyAl(admin:any,username:string,password:string,cnpj:string,ie:string){
   const token=await gatewayToken(admin);
   const today=new Date();
   const day=new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Maceio",year:"numeric",month:"2-digit",day:"2-digit"}).format(today);
   try{
-    const response=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-entry-report",{
+    const entryResponse=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-entry-report",{
       method:"POST",
       headers:{"content-type":"application/json","authorization":`Bearer ${token}`},
       body:JSON.stringify({username,password,cnpj,start:day,end:day,verify_only:true}),
       signal:AbortSignal.timeout(65000),
     });
-    const payload=await response.json().catch(()=>({})) as any;
-    if(response.status===422&&payload?.error==="invalid_credentials")return{code:"invalid_credentials",http:response.status,details:{login_valid:false}};
-    if(response.ok&&payload?.login_valid===true&&payload?.report_access===true)return{code:"valid",http:response.status,details:{login_valid:true,report_access:true}};
-    if(response.ok&&payload?.login_valid===true&&payload?.report_access===false)return{code:"valid_without_report_permission",http:response.status,details:{login_valid:true,report_access:false,reason:payload?.error||null}};
-    if(payload?.login_valid===true)return{code:"valid_without_report_permission",http:response.status,details:{login_valid:true,report_access:false,reason:payload?.error||null}};
-    return{code:"portal_unavailable",http:response.status,details:{reason:payload?.error||"verification_failed"}};
+    const entry=await entryResponse.json().catch(()=>({})) as any;
+    if(entryResponse.status===422&&entry?.error==="invalid_credentials")return{code:"invalid_credentials",http:entryResponse.status,details:{login_valid:false}};
+    if(!(entryResponse.ok&&entry?.login_valid===true))return{code:"portal_unavailable",http:entryResponse.status,details:{reason:entry?.error||"entry_report_verification_failed"}};
+
+    const salesResponse=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-sales-report",{
+      method:"POST",
+      headers:{"content-type":"application/json","authorization":`Bearer ${token}`},
+      body:JSON.stringify({username,password,cnpj,ie,start:day,end:day,verify_only:true}),
+      signal:AbortSignal.timeout(65000),
+    });
+    const sales=await salesResponse.json().catch(()=>({})) as any;
+    if(salesResponse.ok&&sales?.login_valid===true&&sales?.report_access===true){
+      return{code:"valid",http:salesResponse.status,details:{login_valid:true,entry_report_access:true,sales_report_access:true}};
+    }
+    if(sales?.login_valid===true&&(sales?.permission_denied===true||salesResponse.status===403||sales?.report_access===false)){
+      return{code:"valid_without_report_permission",http:salesResponse.status,details:{login_valid:true,entry_report_access:true,sales_report_access:false,reason:sales?.error||"sales_report_permission_denied"}};
+    }
+    return{code:"portal_unavailable",http:salesResponse.status,details:{reason:sales?.error||"sales_report_verification_failed"}};
   }catch(error){
     return{code:"portal_unavailable",http:null,details:{reason:error instanceof Error?error.message:String(error)}};
   }
@@ -266,11 +278,11 @@ Deno.serve(async req=>{
       if(error)throw error;
       const results=await Promise.all((rows||[]).map(async(cred:any)=>{
         try{
-          const {data:fiscal,error:fiscalError}=await admin.from("fiscal_companies").select("id,cnpj,status").eq("id",cred.company_id).maybeSingle();
+          const {data:fiscal,error:fiscalError}=await admin.from("fiscal_companies").select("id,cnpj,inscricao_estadual,status").eq("id",cred.company_id).maybeSingle();
           if(fiscalError||!fiscal||fiscal.status!=="ativa")return{company_id:cred.company_id,skipped:true};
           const username=await decrypt(cred.username_ciphertext,cred.username_iv);
           const password=await decrypt(cred.password_ciphertext,cred.password_iv);
-          const verification=await verifyAl(admin,username,password,digits(fiscal.cnpj));
+          const verification=await verifyAl(admin,username,password,digits(fiscal.cnpj),digits(fiscal.inscricao_estadual));
           const now=new Date().toISOString();
           await admin.from("fiscal_state_credentials").update({
             last_verified_at:now,last_verification_status:verification.code,updated_at:now
@@ -362,7 +374,7 @@ Deno.serve(async req=>{
       await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_saved_pending","pending_verification");
       const verifyTask=(async()=>{
         try{
-          const verification=await verifyAl(ctx.admin,username,password,digits(fiscal.cnpj));
+          const verification=await verifyAl(ctx.admin,username,password,digits(fiscal.cnpj),digits(fiscal.inscricao_estadual));
           const verifiedAt=new Date().toISOString();
           await ctx.admin.from("fiscal_state_credentials").update({
             last_verified_at:verifiedAt,last_verification_status:verification.code,updated_at:verifiedAt
@@ -383,7 +395,7 @@ Deno.serve(async req=>{
       const username=clean(body.username)||alPortalUsername(fiscal),password=String(body.password||"");
       if(username.length<2||username.length>180)return J({error:"Não foi possível identificar automaticamente o usuário da SEFAZ/AL. Atualize a inscrição estadual da empresa."},422);
       if(password.length<1||password.length>240)return J({error:"Informe a senha do portal da SEFAZ/AL."},422);
-      const verification=await verifyAl(ctx.admin,username,password,digits(fiscal.cnpj));
+      const verification=await verifyAl(ctx.admin,username,password,digits(fiscal.cnpj),digits(fiscal.inscricao_estadual));
       if(verification.code==="invalid_credentials"){
         await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_rejected",verification.code);
         return J({error:"Usuário ou senha inválidos no portal da SEFAZ/AL.",verification_status:verification.code},422);
@@ -426,7 +438,7 @@ Deno.serve(async req=>{
       if(!cred?.id)return J({error:"Credencial estadual não configurada."},404);
       const username=await decrypt(cred.username_ciphertext,cred.username_iv);
       const password=await decrypt(cred.password_ciphertext,cred.password_iv);
-      const verification=await verifyAl(ctx.admin,username,password,digits(fiscal.cnpj));
+      const verification=await verifyAl(ctx.admin,username,password,digits(fiscal.cnpj),digits(fiscal.inscricao_estadual));
       const now=new Date().toISOString();
       const {data:updated,error}=await ctx.admin.from("fiscal_state_credentials").update({
         last_verified_at:now,last_verification_status:verification.code,updated_at:now
