@@ -66,7 +66,8 @@ async function fetchSalesReport(gatewayToken: string, username: string, password
   });
   const payload = await response.json().catch(() => ({})) as any;
   if (!response.ok || !payload?.ok || !payload?.data_base64) {
-    throw new Error(`sefaz_sales_report_gateway_${response.status}:${String(payload?.error || "invalid_response").slice(0, 180)}`);
+    const detail = payload?.error || payload?.response_excerpt || payload?.content_type || "invalid_response";
+    throw new Error(`sefaz_sales_report_gateway_${response.status}:${String(detail).replace(/\\s+/g," ").slice(0, 260)}`);
   }
   return B(String(payload.data_base64));
 }
