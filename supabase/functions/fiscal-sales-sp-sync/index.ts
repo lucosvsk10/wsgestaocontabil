@@ -93,10 +93,30 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
         const {error:rr}=await admin.from("fiscal_sales_reconciliation").upsert({company_id:c.id,model:"55",series,note_number:info.number,status:isCancelled?"cancelled":"found",access_key:key,issue_date:issue,cstat:isCancelled?"101":"100",xmotivo:status,attempts:1,last_checked_at:now,resolved_at:now,updated_at:now,xml_status:"pending",xml_attempts:0,detail_status:"pending",detail_attempts:0,event_status:isCancelled?"pending":"not_applicable",event_attempts:0},{onConflict:"company_id,model,series,note_number"});if(rr)throw rr;
         if(isCancelled)cancelled++;else found++;
       }else{
-        const probeStat=String(recovery.cStat||"");
-        if(["","108","109","656"].includes(probeStat))throw Error("sp_recovery_probe_transient:"+probeStat+":"+String(recovery.xMotivo||""));
-        const reason="Controle 539 validado; numeração sem NF-e autorizada. "+String(recovery.xMotivo||"");
-        const {error:ue}=await admin.from("fiscal_sales_reconciliation").upsert({company_id:c.id,model:"55",series:String(item.series),note_number:item.n,status:"not_authorized",access_key:null,issue_date:null,cstat:probeStat||"SP_NO_AUTHORIZATION",xmotivo:reason,attempts:1,tried_months:[],last_checked_at:now,resolved_at:now,updated_at:now,xml_status:"not_applicable",xml_attempts:0,detail_status:"not_applicable",detail_attempts:0,event_status:"not_applicable",event_attempts:0},{onConflict:"company_id,model,series,note_number"});if(ue)throw ue;unused++;
+        const probeStat=String(recovery.cStat||""),probeReason=String(recovery.xMotivo||"");
+        if(["","108","109","656"].includes(probeStat))throw Error("sp_recovery_probe_transient:"+probeStat+":"+probeReason);
+        if(probeStat==="204"||recovery?.ambiguous_duplicate){
+          throw Error("sp_recovery_duplicate_without_key:"+probeStat+":"+probeReason);
+        }
+        if(probeStat==="206"){
+          const reason="Controle 539 validado; numeração oficialmente inutilizada. "+probeReason;
+          const {error:ie}=await admin.from("fiscal_sales_reconciliation").upsert({
+            company_id:c.id,model:"55",series:String(item.series),note_number:item.n,status:"inutilized",
+            access_key:null,issue_date:null,cstat:"206",xmotivo:reason,attempts:1,tried_months:[],
+            last_checked_at:now,resolved_at:now,updated_at:now,xml_status:"not_applicable",xml_attempts:0,
+            detail_status:"not_applicable",detail_attempts:0,event_status:"not_applicable",event_attempts:0
+          },{onConflict:"company_id,model,series,note_number"});if(ie)throw ie;unused++;
+        }else if(probeStat==="220"&&/(destinat[aá]rio|destinatario).*(emitente)|identifica[cç][aã]o.*igual.*emitente/i.test(probeReason)){
+          const reason="Controle 539 validado; numeração sem NF-e autorizada. "+probeReason;
+          const {error:ue}=await admin.from("fiscal_sales_reconciliation").upsert({
+            company_id:c.id,model:"55",series:String(item.series),note_number:item.n,status:"not_authorized",
+            access_key:null,issue_date:null,cstat:"220",xmotivo:reason,attempts:1,tried_months:[],
+            last_checked_at:now,resolved_at:now,updated_at:now,xml_status:"not_applicable",xml_attempts:0,
+            detail_status:"not_applicable",detail_attempts:0,event_status:"not_applicable",event_attempts:0
+          },{onConflict:"company_id,model,series,note_number"});if(ue)throw ue;unused++;
+        }else{
+          throw Error("sp_recovery_unclassified:"+probeStat+":"+probeReason);
+        }
       }
     }catch(e){
       const msg=e instanceof Error?e.message:String(e);failed++;failures.push({series:item.series,note_number:item.n,error:msg});
