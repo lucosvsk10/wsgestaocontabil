@@ -128,6 +128,35 @@ async function login(username, password) {
   return cookie;
 }
 
+async function getContributorReportMenu(username, password, targetCnpj) {
+  const base = `https://${HOST}`;
+  let cookie = await login(username, password);
+  const landing = await requestUrl(`${base}/paginaRelatorioContribuinte.htm`, {
+    headers: { 'Cookie': cookie, 'Referer': `${base}/` },
+  });
+  cookie = mergeCookies(cookie, landing.headers['set-cookie']);
+  const text = landing.body.toString('utf8');
+  const loginPage = /sca_default_login_page|name=["']sca_login/i.test(text);
+  if (loginPage) return { ok:false, login_valid:false, error:'nfce_portal_login_required', http:landing.status };
+  const available = [...text.matchAll(/<option\s+value=["'](\d{14})["']/gi)].map(m => m[1]);
+  const selected = available.includes(targetCnpj) ? targetCnpj : available.length === 1 ? available[0] : '';
+  const links = [...text.matchAll(/href=["']([^"'#]+)["']/gi)]
+    .map(m=>String(m[1]||''))
+    .filter(v=>/(relat|consulta|nota|nfce|xml|download|inutil|emit|saida|entrada)/i.test(v))
+    .map(v=>{try{const u=new URL(v,base);return u.pathname+u.search}catch{return v.slice(0,240)}})
+    .filter((v,i,a)=>v&&a.indexOf(v)===i)
+    .slice(0,120);
+  const forms = [...text.matchAll(/<form\b[^>]*>/gi)].map(raw=>{
+    const tag=raw[0];
+    const action=(tag.match(/action=["']([^"']+)["']/i)||[])[1]||'';
+    const method=(tag.match(/method=["']([^"']+)["']/i)||[])[1]||'';
+    return {action:action?(()=>{try{return new URL(action,base).pathname}catch{return action.slice(0,180)}})():'',method};
+  }).filter((v,i,a)=>v.action&&a.findIndex(x=>x.action===v.action&&x.method===v.method)===i).slice(0,60);
+  const actions=[...new Set([...text.matchAll(/(?:action|url|href)\s*[:=]\s*["']([^"']+)["']/gi)].map(m=>String(m[1]||'')).filter(v=>/(relat|consulta|nota|nfce|xml|download|inutil|emit|saida|entrada)/i.test(v)))].slice(0,120);
+  const labels=[...text.matchAll(/>([^<>]{2,120})</g)].map(m=>m[1].replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim()).filter(v=>/(relat|consulta|nota|nfce|xml|inutil|emit|saida|entrada)/i.test(v)).filter((v,i,a)=>v&&a.indexOf(v)===i).slice(0,120);
+  return {ok:true,login_valid:true,http:landing.status,company_available:Boolean(selected),available_count:available.length,links,forms,actions,labels};
+}
+
 async function getInutilizationReport(username, password, targetCnpj) {
   const base = `https://${HOST}`;
   let cookie = await login(username, password);
@@ -179,10 +208,13 @@ module.exports = async function handler(req, res) {
     const username = String(body.username || '');
     const password = String(body.password || '');
     const cnpj = digits(body.cnpj);
+    const action = String(body.action || 'inutilization');
     if (!username || !password || !/^\d{14}$/.test(cnpj)) {
       return json(res, 400, { error: 'invalid_payload' });
     }
-    const result = await getInutilizationReport(username, password, cnpj);
+    const result = action === 'menu'
+      ? await getContributorReportMenu(username, password, cnpj)
+      : await getInutilizationReport(username, password, cnpj);
     return json(res, result.ok ? 200 : 422, result);
   } catch (error) {
     console.error('SEFAZ AL report gateway error', error);
