@@ -25,6 +25,10 @@ type CredentialStatus = {
   reconciliation_resolved?: number;
   reconciliation_pending?: number;
   reconciliation_complete?: boolean;
+  sales_source_confirmed?: boolean;
+  sales_source_count?: number;
+  sales_site_count?: number;
+  sales_source_missing?: number;
 };
 
 async function callCredential(body: Record<string, unknown>) {
@@ -157,8 +161,10 @@ export function StateCredentialPanel({
       return { text: 'SEFAZ indisponível no momento. A validação será tentada novamente automaticamente.', busy: true, kind: 'warning' };
     if (status.verification_status === 'valid') {
       const found = Number(status.sales_documents || status.sales_found || 0);
-      if (status.reconciliation_complete)
-        return { text: `Sincronização concluída · ${found} nota${found === 1 ? '' : 's'} encontrada${found === 1 ? '' : 's'}.`, busy: false, kind: 'success' };
+      if (status.sales_source_confirmed && status.reconciliation_complete && Number(status.sales_source_missing || 0) === 0)
+        return { text: `Sincronização concluída · ${found} venda${found === 1 ? '' : 's'} importada${found === 1 ? '' : 's'}.`, busy: false, kind: 'success' };
+      if (!status.sales_source_confirmed)
+        return { text: 'Acesso confirmado. Conferindo as vendas na fonte oficial da SEFAZ/AL…', busy: true, kind: 'success' };
       if (['reconciling', 'running'].includes(String(status.sales_status || '')))
         return { text: `Acesso confirmado. Buscando notas emitidas…${found ? ` ${found} encontrada${found === 1 ? '' : 's'} até agora.` : ''}`, busy: true, kind: 'success' };
       if (status.sales_status === 'error')
@@ -189,7 +195,7 @@ export function StateCredentialPanel({
         </div>
         <span className={'rounded-full px-2.5 py-1 text-[10px] font-semibold ' + tone(status?.verification_status)}>
           {status?.verification_status === 'valid'
-            ? (status.reconciliation_complete ? 'Sincronizado' : 'Buscando notas')
+            ? (status.sales_source_confirmed && status.reconciliation_complete && Number(status.sales_source_missing || 0) === 0 ? 'Sincronizado' : 'Buscando vendas')
             : status?.configured ? status.verification_label : 'Não configurado'}
         </span>
       </div>
