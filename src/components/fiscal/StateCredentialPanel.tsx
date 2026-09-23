@@ -117,11 +117,11 @@ export function StateCredentialPanel({
     setError('');
     setMessage('');
     try {
-      const result = await callCredential({ action: 'verify', ...base });
+      const result = await callCredential({ action: 'request_verify', ...base });
       setStatus(result.status || null);
-      setMessage(result.status?.verification_status === 'valid'
-        ? 'Acesso confirmado novamente e reconciliação fiscal reencaminhada.'
-        : result.status?.verification_label || 'Verificação concluída.');
+      setMessage(result.status?.verification_status === 'pending_verification'
+        ? 'Validação recolocada na fila interna. Nenhuma consulta foi feita diretamente por esta tela.'
+        : result.status?.verification_label || 'Validação enfileirada.');
       onChanged?.(result.status || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -219,7 +219,7 @@ export function StateCredentialPanel({
         </Button>
         {status?.configured && (
           <Button variant="outline" disabled={busy} onClick={() => void verifyAgain()}>
-            <RefreshCw className="mr-2 h-4 w-4" />Testar novamente
+            <RefreshCw className="mr-2 h-4 w-4" />Validar novamente
           </Button>
         )}
         {status?.configured && allowDelete && (
