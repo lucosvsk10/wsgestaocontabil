@@ -29,7 +29,7 @@ Deno.serve(async req=>{
     const {data:links,error:linkError}=await admin.from("extractor_companies").select("fiscal_company_id").eq("status","active");
     if(linkError)throw linkError;
     const ids=[...new Set((links||[]).map((r:any)=>String(r.fiscal_company_id||"")).filter(Boolean))];
-    let q=admin.from("fiscal_companies").select("id,cnpj,razao_social,uf,status,fiscal_settings").in("id",ids).eq("status","ativa").order("razao_social");
+    let q=admin.from("fiscal_companies").select("id,cnpj,razao_social,uf,ambiente_padrao,status,fiscal_settings").in("id",ids).eq("status","ativa").order("razao_social");
     if(only)q=q.eq("id",only);
     const {data:companies,error}=await q;
     if(error)throw error;
@@ -37,17 +37,19 @@ Deno.serve(async req=>{
 
     for(const company of companies||[]){
       const companyId=String(company.id),uf=String(company.uf||"").toUpperCase(),cnpj=dg(company.cnpj);
-      const [purchaseState,salesState,nfseState,stateCred,dfeState,observed,sale55Rec,sp55Rows]=await Promise.all([
+      const [purchaseState,salesState,nfseState,stateCred,dfeState,cteState,mdfeState,observed,sale55Rec,sp55Rows]=await Promise.all([
         admin.from("fiscal_purchase_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
         admin.from("fiscal_sales_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
         admin.from("fiscal_nfse_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
         admin.from("fiscal_state_credentials").select("last_verification_status,last_verified_at").eq("company_id",companyId).eq("is_active",true).maybeSingle(),
         admin.from("fiscal_dfe_sync_state").select("ult_nsu,max_nsu,last_status_code,last_status_message,last_synced_at").eq("cnpj",cnpj).order("last_synced_at",{ascending:false}).limit(1).maybeSingle(),
+        admin.from("fiscal_transport_sync_state").select("*").eq("company_id",companyId).eq("document_family","cte57").eq("environment",company.ambiente_padrao==="homologacao"?"homologacao":"producao").maybeSingle(),
+        admin.from("fiscal_transport_sync_state").select("*").eq("company_id",companyId).eq("document_family","mdfe58").eq("environment",company.ambiente_padrao==="homologacao"?"homologacao":"producao").maybeSingle(),
         admin.from("fiscal_dfe_documents").select("model,direction,document_kind").eq("company_id",companyId).limit(1000),
         admin.from("fiscal_source_reconciliation").select("status,source_confirmed,source_count,site_count,xml_pending_count,checked_at,reason,details").eq("company_id",companyId).eq("document_type","sale_nfe55").order("checked_at",{ascending:false}).limit(1).maybeSingle(),
         uf==="SP"?admin.from("fiscal_sales_documents").select("access_key,xml,source,updated_at").eq("company_id",companyId).eq("model","55").limit(5000):Promise.resolve({data:[],error:null}),
       ]);
-      const ps=purchaseState.data||null,ss=salesState.data||null,ns=nfseState.data||null,cred=stateCred.data||null,ds=dfeState.data||null,s55=sale55Rec.data||null,sp55=sp55Rows.data||[];
+      const ps=purchaseState.data||null,ss=salesState.data||null,ns=nfseState.data||null,cred=stateCred.data||null,ds=dfeState.data||null,cts=cteState.data||null,mds=mdfeState.data||null,s55=sale55Rec.data||null,sp55=sp55Rows.data||[];
       const obs=observed.data||[];
       const seen=(model:string,direction:string)=>obs.some((r:any)=>String(r.model||"")===model&&String(r.direction||"")===direction);
       const now=new Date().toISOString();
@@ -132,20 +134,29 @@ Deno.serve(async req=>{
         });
       }
 
+      const cteCaughtUp=Boolean(cts?.last_completed_at&&!cts?.last_error&&String(cts?.ult_nsu||"")===String(cts?.max_nsu||"")&&["137","138"].includes(String(cts?.last_status_code||"")));
+      const mdfeCaughtUp=Boolean(mds?.last_completed_at&&!mds?.last_error&&String(mds?.ult_nsu||"")===String(mds?.max_nsu||"")&&["137","138"].includes(String(mds?.last_status_code||"")));
       rows.push({
         document_type:"cte57",direction:"entrada",applicability:seen("57","entrada")?"observed":"unknown",
-        source_name:"CT-e Distribuição DF-e",source_mode:"national_cte",coverage_status:"blocked",source_confirmed:false,
-        last_verified_at:null,last_success_at:null,last_error:"Conector CT-e nacional ainda não implementado no Extrator.",details:{},
+        source_name:"CTeDistribuicaoDFe",source_mode:"national_cte",
+        coverage_status:cteCaughtUp?"covered":cts?.last_error?"error":"partial",source_confirmed:cteCaughtUp,
+        last_verified_at:cts?.last_synced_at||null,last_success_at:cteCaughtUp?(cts?.last_completed_at||cts?.last_synced_at||null):null,
+        last_error:cteCaughtUp?null:(cts?.last_error||"Distribuição nacional de CT-e ainda não comprovadamente em dia."),
+        details:{ult_nsu:cts?.ult_nsu||null,max_nsu:cts?.max_nsu||null,cstat:cts?.last_status_code||null,scope:"documentos de interesse do ator; CT-e próprios do emitente não são enumerados por este serviço"},
       });
       rows.push({
         document_type:"cte57",direction:"saida",applicability:seen("57","saida")?"observed":"unknown",
         source_name:"CT-e emitidos",source_mode:"issuer_cte",coverage_status:"blocked",source_confirmed:false,
-        last_verified_at:null,last_success_at:null,last_error:"Conector de CT-e emitidos ainda não implementado no Extrator.",details:{},
+        last_verified_at:cts?.last_synced_at||null,last_success_at:null,
+        last_error:"CTeDistribuicaoDFe não enumera os CT-e gerados pelo próprio emitente; falta fonte oficial exaustiva de emitidos.",
+        details:{national_distribution_caught_up:cteCaughtUp,reason:"issuer_cte_exhaustive_enumeration_not_available"},
       });
       rows.push({
         document_type:"mdfe58",direction:"saida",applicability:seen("58","saida")?"observed":"unknown",
         source_name:"MDF-e emitidos",source_mode:"issuer_mdfe",coverage_status:"blocked",source_confirmed:false,
-        last_verified_at:null,last_success_at:null,last_error:"Conector de MDF-e emitidos ainda não implementado no Extrator.",details:{},
+        last_verified_at:mds?.last_synced_at||null,last_success_at:null,
+        last_error:"MDFeDistribuicaoDFe não enumera os MDF-e gerados pelo próprio emitente; falta fonte oficial exaustiva de emitidos.",
+        details:{national_distribution_caught_up:mdfeCaughtUp,reason:"issuer_mdfe_exhaustive_enumeration_not_available"},
       });
       rows.push({
         document_type:"nfe_event",direction:"eventos",applicability:"required",
@@ -156,14 +167,20 @@ Deno.serve(async req=>{
         details:{},
       });
       rows.push({
-        document_type:"cte_event",direction:"eventos",applicability:"unknown",
-        source_name:"Eventos CT-e",source_mode:"national_cte",coverage_status:"blocked",source_confirmed:false,
-        last_verified_at:null,last_success_at:null,last_error:"Eventos CT-e ainda sem conector.",details:{},
+        document_type:"cte_event",direction:"eventos",applicability:obs.some((r:any)=>String(r.model||"")==="57")?"observed":"unknown",
+        source_name:"CTeDistribuicaoDFe eventos",source_mode:"national_cte",
+        coverage_status:cteCaughtUp?"covered":cts?.last_error?"error":"partial",source_confirmed:cteCaughtUp,
+        last_verified_at:cts?.last_synced_at||null,last_success_at:cteCaughtUp?(cts?.last_completed_at||cts?.last_synced_at||null):null,
+        last_error:cteCaughtUp?null:(cts?.last_error||"Eventos de interesse do CT-e ainda não estão em dia."),
+        details:{scope:"eventos distribuídos ao ator pelo Ambiente Nacional"},
       });
       rows.push({
         document_type:"mdfe_event",direction:"eventos",applicability:"unknown",
-        source_name:"Eventos MDF-e",source_mode:"national_mdfe",coverage_status:"blocked",source_confirmed:false,
-        last_verified_at:null,last_success_at:null,last_error:"Eventos MDF-e ainda sem conector.",details:{},
+        source_name:"MDFeDistribuicaoDFe eventos",source_mode:"national_mdfe",
+        coverage_status:mdfeCaughtUp?"covered":mds?.last_error?"error":"partial",source_confirmed:mdfeCaughtUp,
+        last_verified_at:mds?.last_synced_at||null,last_success_at:mdfeCaughtUp?(mds?.last_completed_at||mds?.last_synced_at||null):null,
+        last_error:mdfeCaughtUp?null:(mds?.last_error||"Eventos MDF-e distribuídos ao ator ainda não estão em dia."),
+        details:{scope:"eventos/documentos de interesse; emissão própria continua em fonte separada"},
       });
 
       for(const row of rows){
