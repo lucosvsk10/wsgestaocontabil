@@ -216,13 +216,18 @@ Deno.serve(async req=>{
             .select("access_key,issue_date,xml,source")
             .eq("company_id",companyId).eq("model","65").eq("source","sefaz_sp_sae_nfce")
             .gte("issue_date",startTs(start)).lte("issue_date",endTs(end)).range(from,to));
-          const confirmed=Boolean(sState?.last_completed_at&&!sState?.last_error);
+          const sourceStart=Date.parse(String(sState?.nfce_source_period_start||""));
+          const sourceEnd=Date.parse(String(sState?.nfce_source_period_end||""));
+          const requestedStart=Date.parse(startTs(start)),requestedEnd=Date.parse(endTs(end));
+          const periodCovered=Number.isFinite(sourceStart)&&Number.isFinite(sourceEnd)&&sourceStart<=requestedStart&&sourceEnd>=requestedEnd;
+          const confirmed=Boolean(sState?.nfce_source_status==="ok"&&sState?.nfce_source_confirmed_at&&periodCovered);
           await upsert(admin,companyId,start,end,"sale_nfce65",{
             sourceName:"SEFAZ/SP SAE-NFC-e",sourceConfirmed:confirmed,
             sourceKeys:keySet(src),siteKeys:keySet(nfce65Out),
             xmlPending:nfce65Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfce65Out.length-keySet(nfce65Out).size,
-            blocked:!confirmed,reason:confirmed?null:(sState?.last_error||"Consulta SAE-NFC-e não concluída."),
-            details:{sync_status:sState?.status||null,last_completed_at:sState?.last_completed_at||null},
+            blocked:!confirmed,
+            reason:confirmed?null:(sState?.nfce_source_error||(!periodCovered?"Consulta SAE-NFC-e ainda não cobre integralmente o período auditado.":"Consulta SAE-NFC-e não concluída.")),
+            details:{source_status:sState?.nfce_source_status||null,source_confirmed_at:sState?.nfce_source_confirmed_at||null,source_count:sState?.nfce_source_count??null,source_period_start:sState?.nfce_source_period_start||null,source_period_end:sState?.nfce_source_period_end||null,period_covered:periodCovered},
           });
         }else if(uf==="AL"){
           const rec=await paged<any>((from,to)=>admin.from("fiscal_sales_reconciliation")
