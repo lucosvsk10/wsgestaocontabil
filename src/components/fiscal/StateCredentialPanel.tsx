@@ -163,7 +163,7 @@ export function StateCredentialPanel({
       const found = Number(status.sales_documents || status.sales_found || 0);
       if (status.sales_source_confirmed && status.reconciliation_complete && Number(status.sales_source_missing || 0) === 0)
         return { text: `Sincronização concluída · ${found} venda${found === 1 ? '' : 's'} importada${found === 1 ? '' : 's'}.`, busy: false, kind: 'success' };
-      if (!status.sales_source_confirmed && status.sales_error)
+      if (!status.sales_source_confirmed && (status.sales_error || ['idle', 'waiting_sales_reference', 'error'].includes(String(status.sales_status || ''))))
         return { text: `Acesso confirmado. O relatório oficial de vendas está indisponível; ${found} venda${found === 1 ? '' : 's'} confirmada${found === 1 ? '' : 's'} até agora.`, busy: false, kind: 'warning' };
       if (!status.sales_source_confirmed)
         return { text: 'Acesso confirmado. Conferindo as vendas na fonte oficial da SEFAZ/AL…', busy: true, kind: 'success' };
@@ -197,7 +197,7 @@ export function StateCredentialPanel({
         </div>
         <span className={'rounded-full px-2.5 py-1 text-[10px] font-semibold ' + tone(status?.verification_status)}>
           {status?.verification_status === 'valid'
-            ? (status.sales_source_confirmed && status.reconciliation_complete && Number(status.sales_source_missing || 0) === 0 ? 'Sincronizado' : status.sales_error ? 'Conferência pendente' : 'Buscando vendas')
+            ? (status.sales_source_confirmed && status.reconciliation_complete && Number(status.sales_source_missing || 0) === 0 ? 'Sincronizado' : status.sales_error || ['idle', 'waiting_sales_reference', 'error'].includes(String(status.sales_status || '')) ? 'Conferência pendente' : 'Buscando vendas')
             : status?.configured ? status.verification_label : 'Não configurado'}
         </span>
       </div>
