@@ -52,7 +52,9 @@ async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}
   const loginPage=/sca_default_login_page|sca_security_check|name=["']sca_login/i.test(text);
   const ok=report.status>=200&&report.status<300&&!loginPage&&report.body.length>0;
   return {
-    ok,http:report.status,content_type:contentType,bytes:report.body.length,
+    ok,
+    error: ok ? null : (loginPage ? 'sales_report_auth_required' : ('sales_report_http_'+report.status)),
+    http:report.status,content_type:contentType,bytes:report.body.length,
     landing_http:landing.status,
     ...(ok?{data_base64:report.body.toString('base64')}:{response_excerpt:text.replace(/\s+/g,' ').slice(0,700)}),
   };
