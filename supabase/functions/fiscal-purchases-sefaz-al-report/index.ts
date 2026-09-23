@@ -168,6 +168,7 @@ Deno.serve(async (req) => {
 
     const dryRun = Boolean(body.dry_run);
     const includeKeys = Boolean(body.include_keys);
+    const debugShape = Boolean(body.debug_shape);
     const { data: credential, error: credentialError } = await admin
       .from("fiscal_state_credentials")
       .select("username_ciphertext,username_iv,password_ciphertext,password_iv")
@@ -389,6 +390,10 @@ Deno.serve(async (req) => {
       by_status: byStatus,
       by_model: byModel,
       ...(includeKeys ? { purchase_keys: purchaseKeys, purchase_all_keys: purchaseAllKeys, self_issued_keys: selfIssuedKeys } : {}),
+      ...(debugShape ? {
+        report_headers: (textRows[headerIndex] || []).map((value:any,index:number)=>({index,label:String(value||"").trim()})),
+        report_samples: textRows.slice(headerIndex+1,headerIndex+4).map((row:any[])=>row.map((value:any,index:number)=>({index,value:String(value??"").slice(0,160)})))
+      } : {}),
       transport: "vercel-node",
     });
   } catch (error) {
