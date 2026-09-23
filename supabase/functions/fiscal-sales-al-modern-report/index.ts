@@ -16,12 +16,26 @@ Deno.serve(async req=>{try{
  const a=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
  const tok=req.headers.get("x-debug-token")||"";const{data:t}=await a.from("_fiscal_sales_debug_token").select("token").eq("id",true).maybeSingle();if(tok!==String(t?.token||""))return J({error:"unauthorized"},403);
  const b=await req.json().catch(()=>({})) as any,cid=String(b.company_id||"");if(!cid)return J({error:"company_id_required"},400);
- const{data:c}=await a.from("fiscal_companies").select("id,cnpj,uf,status").eq("id",cid).maybeSingle();if(!c||c.status!=="ativa"||String(c.uf||"").toUpperCase()!=="AL")return J({error:"company_not_active_al"},422);
+ const{data:c}=await a.from("fiscal_companies").select("id,cnpj,inscricao_estadual,uf,status").eq("id",cid).maybeSingle();if(!c||c.status!=="ativa"||String(c.uf||"").toUpperCase()!=="AL")return J({error:"company_not_active_al"},422);
  const{data:cred}=await a.from("fiscal_state_credentials").select("username_ciphertext,username_iv,password_ciphertext,password_iv,last_verification_status,is_active").eq("company_id",cid).eq("uf","AL").eq("is_active",true).maybeSingle();if(!cred||cred.last_verification_status!=="valid")return J({error:"state_credential_not_valid"},409);
  const username=await dec(cred.username_ciphertext,cred.username_iv),password=await dec(cred.password_ciphertext,cred.password_iv),token=await auth(username,password);
  const today=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Maceio",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
  const{data:minStart}=await a.rpc("extractor_minimum_history_start");const start=/^\d{4}-\d{2}-\d{2}$/.test(String(b.start||""))?String(b.start):String(minStart||today.slice(0,8)+"01"),end=/^\d{4}-\d{2}-\d{2}$/.test(String(b.end||""))?String(b.end):today;
  const root=dg(c.cnpj).slice(0,8),comps=competenceList(start,end),results:any[]=[];
+ const caceal=dg((c as any).inscricao_estadual||"");
+ const noteApiResults:any[]=[];
+ for(const comp of comps){
+   const year=comp.slice(0,4),month=String(Number(comp.slice(4,6)));
+   for(const tipoDocumento of ["NFE","NFCE"]){
+     const u=new URL("https://contribuinte.sefaz.al.gov.br/malhafiscal/sfz-malhafiscal-api/api/notaFiscal");
+     const params={caceal,anoCompetencia:year,mesCompetencia:month,tipoDocumento,tipoOperacao:"S",pagina:"1",tamanhoPagina:"200",ehExpurgo:"false",apenasNfe:"false",chaveAcesso:""};
+     for(const [k,v] of Object.entries(params))u.searchParams.set(k,v);
+     const rr=await get(u.toString(),token,"application/json");
+     const txt=new TextDecoder().decode(rr.buf);
+     let parsed:any=null;try{parsed=JSON.parse(txt)}catch{}
+     noteApiResults.push({competencia:comp,tipoDocumento,http:rr.status,type:rr.type,bytes:rr.buf.length,payload:parsed??txt.slice(0,1200)});
+   }
+ }
  const year=Number(end.slice(0,4));
  const summaryUrl=new URL("https://contribuinte.sefaz.al.gov.br/malhafiscal/sfz-malhafiscal-api/api/escrituracao-nao-extemporaneo");
  summaryUrl.searchParams.set("raizCnpj",root);summaryUrl.searchParams.set("anoCompetencia",String(year));
@@ -37,5 +51,5 @@ Deno.serve(async req=>{try{
    const rows=sheets.flatMap(s=>s.rows||[]),keys=[...new Set(rows.map(keyFromRow).filter((k:string)=>/^\d{44}$/.test(k)&&k.slice(6,20)===dg(c.cnpj)))];
    results.push({competencia:comp,http:r.status,type:r.type,bytes:r.buf.length,sheets:sheets.map(s=>({sheet:s.sheet,rows:s.rows.length,columns:s.rows[0]?Object.keys(s.rows[0]).slice(0,30):[]})),keys:keys.length,access_keys:keys.slice(0,500)});
  }
- return J({ok:true,company_id:cid,period:{start,end},root_cnpj:root,summary_http:summaryResp.status,summary_type:summaryResp.type,summary:Array.isArray(summary)?summary.slice(0,500):summary,results,total_keys:results.reduce((n,x)=>n+Number(x.keys||0),0)});
+ return J({ok:true,company_id:cid,period:{start,end},root_cnpj:root,note_api:noteApiResults,summary_http:summaryResp.status,summary_type:summaryResp.type,summary:Array.isArray(summary)?summary.slice(0,500):summary,results,total_keys:results.reduce((n,x)=>n+Number(x.keys||0),0)});
 }catch(e){return J({error:e instanceof Error?e.message:String(e)},500)}});
