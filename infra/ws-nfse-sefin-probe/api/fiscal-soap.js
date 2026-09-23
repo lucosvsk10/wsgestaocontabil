@@ -318,6 +318,59 @@ module.exports = async function handler(req, res) {
     }
 
 
+    if (action === 'cte-distribution') {
+      const cnpj = digits(b.cnpj);
+      const ufCode = digits(b.uf_code || b.ufCode).padStart(2, '0');
+      const ultNSU = digits(b.ult_nsu || b.ultNSU || '0').padStart(15, '0').slice(-15);
+      if (!/^\d{14}$/.test(cnpj) || !/^\d{2}$/.test(ufCode)) {
+        return json(res, 400, { error: 'invalid_cte_distribution_target' });
+      }
+      const endpoint = env === 'production'
+        ? 'https://www1.cte.fazenda.gov.br/CTeDistribuicaoDFe/CTeDistribuicaoDFe.asmx'
+        : 'https://hom.cte.fazenda.gov.br/CTeDistribuicaoDFe/CTeDistribuicaoDFe.asmx';
+      const ns = 'http://www.portalfiscal.inf.br/cte/wsdl/CTeDistribuicaoDFe';
+      const inner = `<distDFeInt xmlns="http://www.portalfiscal.inf.br/cte" versao="1.00"><tpAmb>${env === 'production' ? '1' : '2'}</tpAmb><cUFAutor>${ufCode}</cUFAutor><CNPJ>${cnpj}</CNPJ><distNSU><ultNSU>${ultNSU}</ultNSU></distNSU></distDFeInt>`;
+      const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Header><cteCabecMsg xmlns="${ns}"><cUF>${ufCode}</cUF><versaoDados>1.00</versaoDados></cteCabecMsg></soap12:Header><soap12:Body><cteDistDFeInteresse xmlns="${ns}"><cteDadosMsg>${inner}</cteDadosMsg></cteDistDFeInteresse></soap12:Body></soap12:Envelope>`;
+      const result = await requestHttps(endpoint, material, {
+        body: soap,
+        contentType: `application/soap+xml; charset=utf-8; action="${ns}/cteDistDFeInteresse"`,
+        accept: 'application/soap+xml, text/xml, */*',
+      });
+      return json(res, result.status >= 200 && result.status < 300 ? 200 : 502, {
+        ok: result.status >= 200 && result.status < 300,
+        http: result.status,
+        endpoint,
+        text: decodeXmlEntities(result.text),
+      });
+    }
+
+    if (action === 'mdfe-distribution') {
+      const cnpj = digits(b.cnpj);
+      const ufCode = digits(b.uf_code || b.ufCode).padStart(2, '0');
+      const ultNSU = digits(b.ult_nsu || b.ultNSU || '0').padStart(15, '0').slice(-15);
+      if (!/^\d{14}$/.test(cnpj) || !/^\d{2}$/.test(ufCode)) {
+        return json(res, 400, { error: 'invalid_mdfe_distribution_target' });
+      }
+      const endpoint = env === 'production'
+        ? 'https://mdfe.svrs.rs.gov.br/ws/MDFeDistribuicaoDFe/MDFeDistribuicaoDFe.asmx'
+        : 'https://mdfe-homologacao.svrs.rs.gov.br/ws/MDFeDistribuicaoDFe/MDFeDistribuicaoDFe.asmx';
+      const ns = 'http://www.portalfiscal.inf.br/mdfe/wsdl/MDFeDistribuicaoDFe';
+      const inner = `<distDFeInt xmlns="http://www.portalfiscal.inf.br/mdfe" versao="1.00"><tpAmb>${env === 'production' ? '1' : '2'}</tpAmb><CNPJ>${cnpj}</CNPJ><distNSU><ultNSU>${ultNSU}</ultNSU></distNSU></distDFeInt>`;
+      const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Header><mdfeCabecMsg xmlns="${ns}"><cUF>${ufCode}</cUF><versaoDados>1.00</versaoDados></mdfeCabecMsg></soap12:Header><soap12:Body><mdfeDistDFeInteresse xmlns="${ns}"><mdfeDadosMsg>${inner}</mdfeDadosMsg></mdfeDistDFeInteresse></soap12:Body></soap12:Envelope>`;
+      const result = await requestHttps(endpoint, material, {
+        body: soap,
+        contentType: `application/soap+xml; charset=utf-8; action="${ns}/mdfeDistDFeInteresse"`,
+        accept: 'application/soap+xml, text/xml, */*',
+      });
+      return json(res, result.status >= 200 && result.status < 300 ? 200 : 502, {
+        ok: result.status >= 200 && result.status < 300,
+        http: result.status,
+        endpoint,
+        text: decodeXmlEntities(result.text),
+      });
+    }
+
+
     if (action === 'sp-nfe-portal-probe') {
       const result = await requestHttps('https://www.nfe.fazenda.sp.gov.br/ConsultaNFe/consulta/publica/ConsultarNFe.aspx', material, {
         method: 'GET',
