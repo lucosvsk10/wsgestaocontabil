@@ -46,9 +46,10 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
     const si=infos.filter(i=>i.series===series),before=si.filter(i=>i.month<historyMonth),inside=si.filter(i=>i.month>=historyMonth);
     const prior=before.length?Math.max(...before.map(i=>i.number)):0,minInside=inside.length?Math.min(...inside.map(i=>i.number)):0,maxInside=inside.length?Math.max(...inside.map(i=>i.number)):prior;
     if(!maxInside)continue;
+    const latestMonth=Math.max(...si.map(i=>i.month)),latestRows=si.filter(i=>i.month===latestMonth),latestMin=Math.min(...latestRows.map(i=>i.number)),latestMax=Math.max(...latestRows.map(i=>i.number));
     const floor=prior?prior+1:Math.max(1,minInside-30),end=maxInside+lookahead,map=maps.get(series)||new Map();
-    scopes.push({series,floor,max_known:maxInside,end});
-    for(let n=floor;n<=end;n++){const row=map.get(n),st=String(row?.status||"");if(!row||["pending","error","not_found"].includes(st)||(st==="not_authorized"&&String(row?.cstat||"")!=="481"))candidates.push({series,n,priority:n<=maxInside?0:1})}
+    scopes.push({series,floor,max_known:maxInside,end,latest_month:latestMonth,latest_min:latestMin,latest_max:latestMax});
+    for(let n=floor;n<=end;n++){const row=map.get(n),st=String(row?.status||"");if(!row||["pending","error","not_found"].includes(st)||(st==="not_authorized"&&String(row?.cstat||"")!=="481")){const priority=n>=latestMin&&n<=latestMax?0:(n<=maxInside?1:2);candidates.push({series,n,priority})}}
   }
   candidates.sort((a,b)=>a.priority-b.priority||a.series-b.series||a.n-b.n);
   let found=0,cancelled=0,unused=0,failed=0,cooldown=false;const failures:any[]=[];
