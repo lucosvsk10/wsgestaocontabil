@@ -86,7 +86,7 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
         const key=String(recovery.access_key),info=keyInfo(key);if(!info||info.issuer!==cnpj||info.model!=="55"||info.series!==item.series||info.number!==item.n)throw Error("recovery_key_identity_mismatch");
         const text=await gateway(gatewayToken,{action:"sp-nfe-consult",environment:"production",...gatewayCertificate,access_key:key});
         const stats=[...text.matchAll(/<(?:\w+:)?cStat>(\d+)<\/(?:\w+:)?cStat>/g)].map(m=>m[1]),motives=[...text.matchAll(/<(?:\w+:)?xMotivo>([\s\S]*?)<\/(?:\w+:)?xMotivo>/g)].map(m=>m[1].trim());
-        const isCancelled=/<(?:\w+:)?tpEvento>110111<\/(?:\w+:)?tpEvento>/i.test(text)||stats.includes("101"),status=isCancelled?"Cancelada":(motives.find(m=>/autorizado o uso/i.test(m))||motives[0]||"Autorizada"),issue=tag(text,"dhRecbto")||null,series=String(info.series),number=String(info.number);
+        const isCancelled=/<(?:\w+:)?tpEvento>110111<\/(?:\w+:)?tpEvento>/i.test(text)||stats.includes("101"),status=isCancelled?"Cancelada":(motives.find(m=>/autorizado o uso/i.test(m))||motives[0]||"Autorizada"),issue=tag(text,"dhEmi")||null,series=String(info.series),number=String(info.number);
         const source="sefaz_sp_nfe55_539_recovery",sourceReference={service:"NFeAutorizacao4_recovery_539",recovery_cstat:recovery.cStat,protocol:tag(text,"nProt")||null,official:true,xml_pending:true};
         const {error:se}=await admin.from("fiscal_sales_documents").upsert({company_id:c.id,uf:"SP",model:"55",access_key:key,document_number:number,series,issue_date:issue,status,total_value:null,recipient_document:null,recipient_name:null,xml:null,source,source_reference:sourceReference,updated_at:now},{onConflict:"company_id,access_key"});if(se)throw se;
         const {error:de}=await admin.from("fiscal_dfe_documents").upsert({user_id:c.created_by,company_id:c.id,cnpj:c.cnpj,environment:"producao",uf_code:"35",nsu:"SP-NFE55-"+key,schema_name:"retConsSitNFe_v4.00",document_kind:"nfe",direction:"saida",access_key:key,issue_date:issue,value:null,issuer_cnpj:c.cnpj,issuer_name:c.razao_social,note_number:number,series,status_code:isCancelled?"101":"100",full_xml:false,xml:null,source,source_id:key,model:"55",status_text:status,updated_at:now},{onConflict:"user_id,cnpj,environment,uf_code,nsu"});if(de)throw de;
@@ -141,13 +141,14 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
 async function backfillSpNfe55Xml(admin:any,c:any,gatewayToken:string,gatewayCertificate:any,historyStart:string,batch=20){
   const cnpj=dg(c.cnpj),monthFloor=String(historyStart||"").slice(0,7).replace("-","");
   const {data:rows,error}=await admin.from("fiscal_sales_documents")
-    .select("access_key,document_number,series,issue_date,status,xml,source")
+    .select("access_key,document_number,series,issue_date,status,xml,source,source_reference")
     .eq("company_id",c.id).eq("model","55").is("xml",null)
-    .order("issue_date",{ascending:false}).limit(Math.max(20,Math.min(100,batch*4)));
+    .order("updated_at",{ascending:true}).limit(Math.max(20,Math.min(100,batch*4)));
   if(error)throw error;
   let saved=0,summaryOnly=0,failed=0,cooldown=false;const failures:any[]=[];
   for(const row of rows||[]){
     if(saved+summaryOnly+failed>=batch)break;
+    if(row.source_reference?.xml_unavailable===true)continue;
     const key=dg(row.access_key);if(key.length!==44||key.slice(6,20)!==cnpj||key.slice(20,22)!=="55")continue;
     const keyMonth="20"+key.slice(2,6);if(monthFloor&&keyMonth<monthFloor)continue;
     const now=new Date().toISOString();
@@ -173,7 +174,15 @@ async function backfillSpNfe55Xml(admin:any,c:any,gatewayToken:string,gatewayCer
       saved++;
     }catch(e){
       failed++;const msg=e instanceof Error?e.message:String(e);failures.push({key,error:msg});
-      await admin.from("fiscal_sales_reconciliation").update({xml_status:"retrying",xml_attempts:1,xml_last_error:msg,xml_last_checked_at:now,updated_at:now}).eq("company_id",c.id).eq("access_key",key);
+      const unavailable=/^distribution_no_document:(641|653):/.test(msg);
+      if(unavailable){
+        const {error:markError}=await admin.from("fiscal_sales_documents").update({source_reference:{...(row.source_reference||{}),xml_pending:false,xml_unavailable:true,xml_unavailable_reason:msg},updated_at:now}).eq("company_id",c.id).eq("access_key",key);
+        if(markError)throw markError;
+      }else{
+        await admin.from("fiscal_sales_documents").update({updated_at:now}).eq("company_id",c.id).eq("access_key",key);
+      }
+      const {error:reconciliationError}=await admin.from("fiscal_sales_reconciliation").update({xml_status:"retrying",xml_last_error:msg,xml_last_checked_at:now,updated_at:now}).eq("company_id",c.id).eq("access_key",key);
+      if(reconciliationError)throw reconciliationError;
       if(msg.includes("656")||/Consumo Indevido/i.test(msg)){cooldown=true;break}
     }
     await new Promise(r=>setTimeout(r,220));
@@ -215,11 +224,11 @@ async function syncSpNfe55FromIssuerEvents(admin:any,c:any,gatewayToken:string,g
       const stats=[...text.matchAll(/<(?:\w+:)?cStat>(\d+)<\/(?:\w+:)?cStat>/g)].map(m=>m[1]);
       const reasons=[...text.matchAll(/<(?:\w+:)?xMotivo>([\s\S]*?)<\/(?:\w+:)?xMotivo>/g)].map(m=>m[1].trim());
       const cancelled=/<(?:\w+:)?tpEvento>110111<\/(?:\w+:)?tpEvento>/i.test(text)||stats.includes("101");
-      const rootStat=stats[0]||"",protocol=tag(text,"nProt"),received=tag(text,"dhRecbto");
+      const rootStat=stats[0]||"",protocol=tag(text,"nProt");
       if(!["100","101"].includes(rootStat)&&!stats.includes("100"))throw new Error("sp_consult_"+(rootStat||"unknown")+":"+(reasons[0]||"sem_motivo"));
       const status=cancelled?"Cancelada":(reasons[0]||"Autorizada");
-      const series=String(Number(key.slice(22,25))),number=String(Number(key.slice(25,34))),nowIso=new Date().toISOString(),issue=received||meta?.last_event_at||null;
-      const {error:se}=await admin.from("fiscal_sales_documents").upsert({company_id:c.id,uf:"SP",model:"55",access_key:key,document_number:number,series,issue_date:issue,status,total_value:null,recipient_document:meta?.recipient||null,recipient_name:null,xml:null,source:"sefaz_sp_nfe55_issuer_event",source_reference:{service:"NFeDistribuicaoDFe+NFeConsultaProtocolo4",event_nsus:meta?.nsus||[],event_types:meta?.events||[],protocol:protocol||null,xml_pending:true},updated_at:nowIso},{onConflict:"company_id,access_key"});
+      const series=String(Number(key.slice(22,25))),number=String(Number(key.slice(25,34))),nowIso=new Date().toISOString(),issue=tag(text,"dhEmi")||null;
+      const {error:se}=await admin.from("fiscal_sales_documents").upsert({company_id:c.id,uf:"SP",model:"55",access_key:key,document_number:number,series,issue_date:issue,status,total_value:null,recipient_document:meta?.recipient||null,recipient_name:null,xml:null,source:"sefaz_sp_nfe55_issuer_event",source_reference:{service:"NFeDistribuicaoDFe+NFeConsultaProtocolo4",event_nsus:meta?.nsus||[],event_types:meta?.events||[],event_last_at:meta?.last_event_at||null,protocol:protocol||null,xml_pending:true},updated_at:nowIso},{onConflict:"company_id,access_key"});
       if(se)throw se;
       const {error:de}=await admin.from("fiscal_dfe_documents").upsert({user_id:c.created_by,company_id:c.id,cnpj:c.cnpj,environment:c.ambiente_padrao==="homologacao"?"homologacao":"producao",uf_code:"35",nsu:"SP-NFE55-"+key,schema_name:"retConsSitNFe_v4.00",document_kind:"nfe",direction:"saida",access_key:key,issue_date:issue,value:null,issuer_cnpj:c.cnpj,issuer_name:c.razao_social,recipient_cnpj:meta?.recipient||null,note_number:number,series,status_code:cancelled?"101":"100",full_xml:false,xml:null,source:"sefaz_sp_nfe55_issuer_event",source_id:key,model:"55",status_text:status,updated_at:nowIso},{onConflict:"user_id,cnpj,environment,uf_code,nsu"});
       if(de)throw de;
@@ -246,6 +255,11 @@ Deno.serve(async req=>{try{
   const pfx=await dec(cert.certificate_ciphertext,cert.certificate_iv),pass=await dec(cert.password_ciphertext,cert.password_iv);
   const parsedCertificate=lerCertificado(Buffer.from(pfx,"base64"),pass);
   const gatewayCertificate={certificate_pem:parsedCertificate.certificadoPem,private_key_pem:parsedCertificate.chavePrivadaPem,chain_pem:parsedCertificate.cadeiaPem||[]};
+  if(b.action==="nfe55_xml_only"){
+    const start=String(minHistory||"2026-08-01");
+    const xml=await backfillSpNfe55Xml(admin,c,gatewayToken,gatewayCertificate,start,Math.max(1,Math.min(5,Number(b.batch||1))));
+    return J({ok:true,company_id:companyId,nfe55_xml:xml});
+  }
   if(b.portal_probe){
     const portal=await gatewayObject(gatewayToken,{action:"sp-nfe-portal-probe",environment:"production",...gatewayCertificate});
     return J({ok:true,company_id:companyId,portal});
