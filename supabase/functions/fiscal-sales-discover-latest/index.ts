@@ -132,9 +132,17 @@ Deno.serve(async req => {
           break;
         }
         if (result.realKey) {
-          latest = Math.max(latest, noteNumber);
-          hits.push({ note_number: noteNumber, access_key: result.realKey, month });
-          break;
+          const keyMonth = result.realKey.slice(2, 6);
+          const keyModel = result.realKey.slice(20, 22);
+          const keyNumber = Number(result.realKey.slice(25, 34));
+          if (keyMonth === month && keyModel === "65" && keyNumber === noteNumber) {
+            const confirmed = await consult(pfx, password, result.realKey);
+            if (["100","101","110","301","302"].includes(String(confirmed.cStat || ""))) {
+              latest = Math.max(latest, noteNumber);
+              hits.push({ note_number: noteNumber, access_key: result.realKey, month });
+              break;
+            }
+          }
         }
         await sleep(220);
       }
