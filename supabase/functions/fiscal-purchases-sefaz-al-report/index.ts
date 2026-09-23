@@ -212,12 +212,13 @@ Deno.serve(async (req) => {
       if (configuredStart && issueDate && issueDate.slice(0, 10) < configuredStart) continue;
       const seriesNumber = String(row?.[15] || "").split("/").map((part: string) => part.trim());
       const issuerCnpj = digits(row?.[5] || raw?.[5]);
-      const typeText = String(row?.[18] || raw?.[18] || "").trim();
       const statusText = String(row?.[21] || "").trim();
       const active = /ativa/i.test(statusText);
       const cancelled = /cancel/i.test(statusText);
       const value = money(raw?.[23] !== "" ? raw?.[23] : row?.[23]);
-      const direction = /sa[íi]da/i.test(typeText) ? "saida" : "entrada";
+      // This endpoint is "notas-fiscais-entrada". Its "Tipo" column is the NF-e tpNF
+      // from the issuer perspective, not the direction relative to the queried company.
+      const direction = "entrada";
       parsed.push({
         user_id: company.created_by,
         company_id: companyId,
@@ -236,7 +237,7 @@ Deno.serve(async (req) => {
         value: Number.isFinite(value) ? value : 0,
         issuer_cnpj: issuerCnpj || null,
         issuer_name: String(row?.[13] || "").trim() || null,
-        recipient_cnpj: direction === "entrada" ? companyCnpj : null,
+        recipient_cnpj: companyCnpj,
         note_number: seriesNumber[1] || null,
         series: seriesNumber[0] || null,
         status_code: cancelled ? "101" : active ? "100" : null,
