@@ -45,5 +45,11 @@ Deno.serve(async req=>{try{
   while(probes<maxProbes&&!cooldown&&n<=16777216){const c=await near(n);if(c){if(c.relation==="before"){if(!low||c.note_number>low.note_number)low=c;n=Math.max(n*2,c.note_number*2);continue}if(c.relation==="after"){high=c;break}/* same month without XML: stay safe and treat as upper bound */high=c;break}else{if(low){high={note_number:n,missing:true};break}n*=2}}
   if(low&&high&&!cooldown){let lo=low.note_number,hi=Number(high.note_number||lo+1);for(let i=0;i<8&&hi-lo>3&&probes<maxProbes;i++){const mid=Math.floor((lo+hi)/2);const c=await near(mid);if(!c){hi=mid;continue}if(c.relation==="before"){if(c.note_number>low.note_number)low=c;lo=Math.max(lo,c.note_number)}else{hi=Math.min(hi,c.note_number)}}}
   if(!low)return J({ok:true,company_id:companyId,model,series,start_date:start,end_date:today,anchor_date:target,anchor_found:false,probes,cooldown,retry:true});
+  const ty=2000+Number(targetMonth.slice(0,2)),tm=Number(targetMonth.slice(2));
+  const ay=2000+Number(String(low.key_month||"0000").slice(0,2)),am=Number(String(low.key_month||"0000").slice(2));
+  const monthDistance=(ty*12+tm)-(ay*12+am);
+  if(!Number.isFinite(monthDistance)||monthDistance<0||monthDistance>3){
+    return J({ok:true,company_id:companyId,model,series,start_date:start,end_date:today,anchor_date:target,anchor_found:false,reason:"stale_anchor",stale_candidate:{note_number:low.note_number,key_month:low.key_month},probes,cooldown,retry:true});
+  }
   return J({ok:true,company_id:companyId,model,series,start_date:start,end_date:today,anchor_date:target,anchor_found:true,anchor_number:low.note_number,anchor_key:low.access_key,anchor_issue_date:low.issue_date,anchor_key_month:low.key_month,xml_confirmed:low.xml_confirmed,probes,cooldown,search_high:high?.note_number||null});
 }catch(e){return J({error:e instanceof Error?e.message:String(e)},500)}});
