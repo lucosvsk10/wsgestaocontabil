@@ -513,6 +513,36 @@ Deno.serve(async req => {
 
         const latest = Math.max(baseLatest, discovered);
 
+        // Do not reopen a fully reconciled interval when discovery found no newer NFC-e.
+        // This also protects previously verified history from being rewritten by an older worker.
+        if (
+          Boolean(state?.reconciliation_complete) &&
+          Number(state?.reconciliation_pending || 0) === 0 &&
+          latest <= baseLatest
+        ) {
+          const completedAt = new Date().toISOString();
+          await admin.from("fiscal_sales_sync_state").update({
+            status: "idle",
+            last_error: null,
+            last_completed_at: completedAt,
+            next_scheduled_at: next.toISOString(),
+            updated_at: completedAt,
+          }).eq("company_id", company.id);
+          await admin.from("fiscal_companies").update({ last_sync_at: completedAt }).eq("id", company.id);
+          out.push({
+            company_id: company.id,
+            status: "ok",
+            latest,
+            previous_latest: oldLatest,
+            discovery,
+            reconciliation: { skipped: true, reason: "already_complete_no_new_number" },
+            state_credential_status: stateCredentialStatus,
+            target_model: targetModel,
+            target_series: targetSeries,
+          });
+          continue;
+        }
+
         await admin.from("fiscal_sales_sync_state").upsert({
           company_id: company.id,
           status: "reconciling",
