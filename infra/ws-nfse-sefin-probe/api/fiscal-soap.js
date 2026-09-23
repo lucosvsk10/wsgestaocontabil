@@ -267,65 +267,6 @@ function buildSpNfeRecoveryProbe(body) {
 }
 
 
-function buildAlNfeRecoveryProbe(body) {
-  const cnpj = digits(body.issuer_cnpj);
-  const ie = digits(body.issuer_ie);
-  const cMun = digits(body.issuer_city_code);
-  const cep = digits(body.issuer_zip || '57000000');
-  const series = digits(body.series || '1').padStart(3, '0').slice(-3);
-  const nNF = digits(body.note_number).padStart(9, '0').slice(-9);
-  if (!/^\d{14}$/.test(cnpj) || !ie || !/^27\d{5}$/.test(cMun) || !/^\d{9}$/.test(nNF)) {
-    throw new Error('invalid_al_recovery_issuer');
-  }
-  const dhEmi = saoPauloNowIso();
-  const aamm = dhEmi.slice(2, 4) + dhEmi.slice(5, 7);
-  const seedHex = sha256(`AL|${cnpj}|${series}|${nNF}|${dhEmi}`).slice(0, 12);
-  const cNF = String(Number(BigInt('0x' + seedHex) % 100000000n)).padStart(8, '0');
-  const base = `27${aamm}${cnpj}55${series}${nNF}1${cNF}`;
-  const accessKey = base + String(nfeDv(base));
-  const crtInput = digits(body.crt);
-  const crt = ['1', '2', '3', '4'].includes(crtInput) ? crtInput : '1';
-  const issuerName = xmlEscape(body.issuer_name || 'EMITENTE');
-  const tradeName = xmlEscape(body.issuer_trade_name || body.issuer_name || 'EMITENTE');
-  const street = xmlEscape(body.issuer_street || 'RUA TESTE');
-  const number = xmlEscape(body.issuer_number || 'S/N');
-  const district = xmlEscape(body.issuer_district || 'CENTRO');
-  const city = xmlEscape(body.issuer_city || 'MACEIO');
-  const tax = crt === '1'
-    ? '<ICMS><ICMSSN102><orig>0</orig><CSOSN>102</CSOSN></ICMSSN102></ICMS>'
-    : '<ICMS><ICMS00><orig>0</orig><CST>00</CST><modBC>3</modBC><vBC>1.00</vBC><pICMS>19.0000</pICMS><vICMS>0.19</vICMS></ICMS00></ICMS>';
-  const federalTax = crt === '3'
-    ? '<PIS><PISAliq><CST>01</CST><vBC>1.00</vBC><pPIS>1.6500</pPIS><vPIS>0.02</vPIS></PISAliq></PIS><COFINS><COFINSAliq><CST>01</CST><vBC>1.00</vBC><pCOFINS>7.6000</pCOFINS><vCOFINS>0.08</vCOFINS></COFINSAliq></COFINS>'
-    : '<PIS><PISOutr><CST>49</CST><qBCProd>0.0000</qBCProd><vAliqProd>0.0000</vAliqProd><vPIS>0.00</vPIS></PISOutr></PIS><COFINS><COFINSOutr><CST>49</CST><qBCProd>0.0000</qBCProd><vAliqProd>0.0000</vAliqProd><vCOFINS>0.00</vCOFINS></COFINSOutr></COFINS>';
-  const totals = crt === '3' ? { bc: '1.00', icms: '0.19', pis: '0.02', cofins: '0.08' } : { bc: '0.00', icms: '0.00', pis: '0.00', cofins: '0.00' };
-
-  // Safety invariant for AL:
-  // - If the natural key already exists, rule 539 returns the real access key.
-  // - If it does not exist, the deliberately invalid recipient CNPJ must reject
-  //   before authorization. A cStat 100 is treated as a critical failure.
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><NFe xmlns="http://www.portalfiscal.inf.br/nfe"><infNFe Id="NFe${accessKey}" versao="4.00"><ide><cUF>27</cUF><cNF>${cNF}</cNF><natOp>VENDA</natOp><mod>55</mod><serie>${Number(series)}</serie><nNF>${Number(nNF)}</nNF><dhEmi>${dhEmi}</dhEmi><tpNF>1</tpNF><idDest>1</idDest><cMunFG>${cMun}</cMunFG><tpImp>1</tpImp><tpEmis>1</tpEmis><cDV>${accessKey.slice(-1)}</cDV><tpAmb>1</tpAmb><finNFe>1</finNFe><indFinal>0</indFinal><indPres>1</indPres><indIntermed>0</indIntermed><procEmi>0</procEmi><verProc>WSRECOVERY-AL1</verProc></ide><emit><CNPJ>${cnpj}</CNPJ><xNome>${issuerName}</xNome><xFant>${tradeName}</xFant><enderEmit><xLgr>${street}</xLgr><nro>${number}</nro><xBairro>${district}</xBairro><cMun>${cMun}</cMun><xMun>${city}</xMun><UF>AL</UF><CEP>${cep}</CEP><cPais>1058</cPais><xPais>BRASIL</xPais></enderEmit><IE>${ie}</IE><CRT>${crt}</CRT></emit><dest><CNPJ>00000000000000</CNPJ><xNome>DESTINATARIO INVALIDO PARA CONSULTA TECNICA</xNome><enderDest><xLgr>${street}</xLgr><nro>${number}</nro><xBairro>${district}</xBairro><cMun>${cMun}</cMun><xMun>${city}</xMun><UF>AL</UF><CEP>${cep}</CEP><cPais>1058</cPais><xPais>BRASIL</xPais></enderDest><indIEDest>9</indIEDest></dest><det nItem="1"><prod><cProd>WSRECOVERY</cProd><cEAN>SEM GTIN</cEAN><xProd>CONSULTA TECNICA DE CHAVE NF-E</xProd><NCM>01012100</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>1.0000</qCom><vUnCom>1.0000000000</vUnCom><vProd>1.00</vProd><cEANTrib>SEM GTIN</cEANTrib><uTrib>UN</uTrib><qTrib>1.0000</qTrib><vUnTrib>1.0000000000</vUnTrib><indTot>1</indTot></prod><imposto>${tax}${federalTax}<IBSCBS><CST>000</CST><cClassTrib>000001</cClassTrib><gIBSCBS><vBC>1.00</vBC><gIBSUF><pIBSUF>0.1000</pIBSUF><vIBSUF>0.00</vIBSUF></gIBSUF><gIBSMun><pIBSMun>0.0000</pIBSMun><vIBSMun>0.00</vIBSMun></gIBSMun><vIBS>0.00</vIBS><gCBS><pCBS>0.9000</pCBS><vCBS>0.01</vCBS></gCBS></gIBSCBS></IBSCBS></imposto><vItem>1.00</vItem></det><total><ICMSTot><vBC>${totals.bc}</vBC><vICMS>${totals.icms}</vICMS><vICMSDeson>0.00</vICMSDeson><vFCP>0.00</vFCP><vBCST>0.00</vBCST><vST>0.00</vST><vFCPST>0.00</vFCPST><vFCPSTRet>0.00</vFCPSTRet><vProd>1.00</vProd><vFrete>0.00</vFrete><vSeg>0.00</vSeg><vDesc>0.00</vDesc><vII>0.00</vII><vIPI>0.00</vIPI><vIPIDevol>0.00</vIPIDevol><vPIS>${totals.pis}</vPIS><vCOFINS>${totals.cofins}</vCOFINS><vOutro>0.00</vOutro><vNF>1.00</vNF></ICMSTot><IBSCBSTot><vBCIBSCBS>1.00</vBCIBSCBS><gIBS><gIBSUF><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vIBSUF>0.00</vIBSUF></gIBSUF><gIBSMun><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vIBSMun>0.00</vIBSMun></gIBSMun><vIBS>0.00</vIBS><vCredPres>0.00</vCredPres><vCredPresCondSus>0.00</vCredPresCondSus></gIBS><gCBS><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vCBS>0.01</vCBS><vCredPres>0.00</vCredPres><vCredPresCondSus>0.00</vCredPresCondSus></gCBS></IBSCBSTot><vNFTot>1.00</vNFTot></total><transp><modFrete>9</modFrete></transp><pag><detPag><indPag>0</indPag><tPag>01</tPag><vPag>1.00</vPag></detPag></pag></infNFe></NFe>`;
-  const privateKey = String(body.private_key_pem || '');
-  const cert = String(body.certificate_pem || '');
-  if (!privateKey || !cert) throw new Error('pem_required_for_al_recovery');
-  const signer = new SignedXml({
-    privateKey,
-    publicCert: cert,
-    canonicalizationAlgorithm: 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315',
-    signatureAlgorithm: 'http://www.w3.org/2000/09/xmldsig#rsa-sha1',
-  });
-  signer.addReference({
-    xpath: "//*[local-name(.)='infNFe']",
-    transforms: [
-      'http://www.w3.org/2000/09/xmldsig#enveloped-signature',
-      'http://www.w3.org/TR/2001/REC-xml-c14n-20010315',
-    ],
-    digestAlgorithm: 'http://www.w3.org/2000/09/xmldsig#sha1',
-  });
-  signer.getKeyInfoContent = SignedXml.getKeyInfoContent;
-  signer.computeSignature(xml, { location: { reference: "//*[local-name(.)='infNFe']", action: 'after' } });
-  return { signedXml: signer.getSignedXml(), probeKey: accessKey };
-}
-
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' });
   if (!authorized(req)) return json(res, 401, { error: 'unauthorized' });
@@ -452,35 +393,6 @@ module.exports = async function handler(req, res) {
         scripts,
         excerpt: text.replace(/\s+/g, ' ').slice(0, 12000),
       });
-    }
-
-    if (action === 'al-nfe-recover-key') {
-      if (env !== 'production') return json(res, 400, { error: 'al_recovery_requires_production' });
-      const { signedXml, probeKey } = buildAlNfeRecoveryProbe(b);
-      const endpoint = nfeEndpoint('55', env);
-      const idLote = String(Date.now()).slice(-15).padStart(15, '0');
-      const inner = `<enviNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><idLote>${idLote}</idLote><indSinc>1</indSinc>${stripDecl(signedXml)}</enviNFe>`;
-      const ns = 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4';
-      const soap = envelope('nfeDadosMsg', ns, inner);
-      const result = await requestHttps(endpoint, material, {
-        body: soap,
-        contentType: `application/soap+xml; charset=utf-8; action="${ns}/nfeAutorizacaoLote"`,
-        accept: 'application/soap+xml, text/xml, */*',
-      });
-      const text = String(result.text || '');
-      const cStats = [...text.matchAll(/<(?:\w+:)?cStat>(\d+)<\/(?:\w+:)?cStat>/g)].map(m => m[1]);
-      const motives = [...text.matchAll(/<(?:\w+:)?xMotivo>([\s\S]*?)<\/(?:\w+:)?xMotivo>/g)].map(m => m[1].trim());
-      const cStat = cStats[cStats.length - 1] || '';
-      const xMotivo = motives[motives.length - 1] || '';
-      const recoveredKey = [...xMotivo.matchAll(/(\d{44})/g)].map(m => m[1]).find(k => k !== probeKey) || '';
-      if (cStat === '539' && /^\d{44}$/.test(recoveredKey)) {
-        return json(res, 200, { ok: true, exists: true, cStat, xMotivo, access_key: recoveredKey, safety: 'natural_key_duplicate' });
-      }
-      if (cStat === '100') {
-        console.error('CRITICAL: AL recovery probe unexpectedly authorized', { note_number: String(b.note_number || ''), series: String(b.series || '') });
-        return json(res, 500, { error: 'al_recovery_probe_unexpected_authorization', critical: true, cStat, xMotivo });
-      }
-      return json(res, 200, { ok: true, exists: false, cStat, xMotivo, safety: 'rejected_probe' });
     }
 
     if (action === 'sp-nfe-recover-key') {
