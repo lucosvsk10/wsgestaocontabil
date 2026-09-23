@@ -50,11 +50,14 @@ async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}
     `https://nfeas.sefaz.al.gov.br/relatorio/relatorioEntradasIhSaidas.${format}?${q.toString()}`,
   ];
   let report=null,usedUrl='';
+  const attempts=[];
   for(const url of candidates){
     const current=await requestUrl(url,{headers:{'Cookie':cookie,'Referer':app,'Accept':format==='csv'?'text/csv,text/plain,*/*':'application/pdf,*/*'}});
+    attempts.push({route:new URL(url).pathname,status:current.status,content_type:String(current.headers['content-type']||''),bytes:current.body.length});
     if(!report||current.status!==404){report=current;usedUrl=url}
     if(current.status!==404)break;
   }
+  console.log('SEFAZ AL sales report routes',{landing_http:landing.status,attempts});
   const contentType=String(report?.headers?.['content-type']||'');
   const text=report?.body?.toString('utf8')||'';
   const loginPage=/sca_default_login_page|sca_security_check|name=["']sca_login/i.test(text);
