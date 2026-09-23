@@ -124,13 +124,15 @@ Deno.serve(async req=>{
     let companyQuery=admin.from("fiscal_companies")
       .select("id,cnpj,razao_social,uf,ambiente_padrao,status,created_by")
       .in("id",only?[only]:ids).eq("status","ativa").order("last_sync_at",{ascending:true,nullsFirst:true});
-    if(!only)companyQuery=companyQuery.limit(maxCompanies);
     const {data:companies,error:companyError}=await companyQuery;
     if(companyError)throw companyError;
 
     const out:any[]=[];
+    let processed=0;
     const minDate=/^\d{4}-\d{2}-\d{2}$/.test(String(historyStart||""))?String(historyStart):"";
     for(const company of companies||[]){
+      if(!only&&processed>=maxCompanies)break;
+      let touched=false;
       const companyId=String(company.id),cnpj=dg(company.cnpj),ufCode=UF[String(company.uf||"").toUpperCase()]||"27";
       const environment=company.ambiente_padrao==="homologacao"?"homologacao":"producao";
       const {data:cert}=await admin.from("fiscal_certificates")
@@ -150,6 +152,7 @@ Deno.serve(async req=>{
           companyResult.families[family]={status:"cooldown",cooldown_until:state.cooldown_until};
           continue;
         }
+        touched=true;
         let current=dg(state?.ult_nsu||"0").padStart(15,"0").slice(-15);
         let max=dg(state?.max_nsu||current).padStart(15,"0").slice(-15);
         let lastCode="",lastMessage="",saved=0,eventsSaved=0,batches=0,skippedOlder=0;
@@ -256,9 +259,10 @@ Deno.serve(async req=>{
           skipped_older:skippedOlder,error:familyError
         };
       }
+      if(touched)processed++;
       out.push(companyResult);
     }
-    return J({ok:true,companies:out});
+    return J({ok:true,processed,companies:out});
   }catch(error){
     console.error("fiscal-transport-dfe-sync",error);
     return J({error:error instanceof Error?error.message:String(error)},500);
