@@ -422,7 +422,7 @@ Deno.serve(async req => {
               company_id: company.id,
               status: "waiting_sales_reference",
               last_error: bootstrap?.error || "Procurando automaticamente uma NFC-e anterior ao período para iniciar a sequência.",
-              next_scheduled_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+              next_scheduled_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
               updated_at: new Date().toISOString(),
             });
           out.push({
