@@ -55,6 +55,7 @@ async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}
     tipoOperacao:'-1',
   });
   const candidates=[
+    `https://nfeas.sefaz.al.gov.br/gwtapp/arquivozip/notasFiscais.zip?${q.toString()}`,
     `https://nfeas.sefaz.al.gov.br/gwtapp/relatorio/relatorioEntradasIhSaidas.${format}?${q.toString()}`,
     `https://nfeas.sefaz.al.gov.br/relatorio/relatorioEntradasIhSaidas.${format}?${q.toString()}`,
   ];
@@ -64,7 +65,7 @@ async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}
     const current=await requestUrl(url,{headers:{'Cookie':cookie,'Referer':app,'Accept':format==='csv'?'text/csv,text/plain,*/*':'application/pdf,*/*'}});
     attempts.push({route:new URL(url).pathname,status:current.status,content_type:String(current.headers['content-type']||''),bytes:current.body.length});
     if(!report||current.status!==404){report=current;usedUrl=url}
-    if(current.status!==404)break;
+    if(current.status>=200&&current.status<300&&current.body.length>0)break;
   }
   const safeExcerpt=(report?.body?.toString('utf8')||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,320);
   console.log('SEFAZ AL sales report routes',{login:session.meta,landing_http:landing.status,attempts,response_excerpt:safeExcerpt});
