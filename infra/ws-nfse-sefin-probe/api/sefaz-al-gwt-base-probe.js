@@ -7,5 +7,7 @@ module.exports=async(req,res)=>{try{
  const names=['IG','JG','KG','HG'];
  const out={};
  for(const n of names){const i=t.indexOf('function '+n+'(');out[n]=i<0?null:t.slice(i,i+700)}
- return J(res,200,{ok:true,...out});
+ const html=[...new Set([...t.matchAll(/['"]([^'"]+\.(?:html?|jsp)(?:\?[^'"]*)?)['"]/gi)].map(m=>m[1]))].filter(x=>x.length<180).slice(0,120);
+ const paths=[...new Set([...t.matchAll(/['"]([^'"]*(?:relatorio|gwtapp|nfe)[^'"]*)['"]/gi)].map(m=>m[1]))].filter(x=>x.length>0&&x.length<180).slice(0,160);
+ return J(res,200,{ok:true,...out,html,paths});
 }catch(e){return J(res,500,{error:e.message})}}
