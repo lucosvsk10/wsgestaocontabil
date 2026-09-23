@@ -144,6 +144,29 @@ Deno.serve(async req=>{
       const password=await decrypt(cert.password_ciphertext,cert.password_iv);
       const companyResult:any={company_id:companyId,name:company.razao_social,families:{}};
 
+      if(body.issuer_probe===true){
+        try{
+          const raw=await gateway(gatewayToken,{
+            action:"mdfe-nonclosed",
+            environment:environment==="homologacao"?"homologation":"production",
+            certificate_base64:pfx,certificate_password:password,cnpj
+          });
+          const keys=[...new Set([...raw.matchAll(/<chMDFe>(\\d{44})<\\/chMDFe>/g)].map(x=>x[1]))];
+          const protocols=[...raw.matchAll(/<nProt>([^<]+)<\\/nProt>/g)].map(x=>x[1]);
+          companyResult.issuer_probe={
+            mdfe_nonclosed:{
+              cStat:tag(raw,"cStat")||null,
+              xMotivo:tag(raw,"xMotivo")||null,
+              keys,
+              protocols,
+              count:keys.length
+            }
+          };
+        }catch(error){
+          companyResult.issuer_probe={mdfe_nonclosed:{error:error instanceof Error?error.message:String(error)}};
+        }
+      }
+
       for(const family of families){
         const {data:state}=await admin.from("fiscal_transport_sync_state").select("*")
           .eq("company_id",companyId).eq("document_family",family).eq("environment",environment).maybeSingle();
