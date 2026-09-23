@@ -22,8 +22,17 @@ module.exports=async function(req,res){
     for(const file of candidates){
       const r=await get(base+file);
       const txt=r.text||'';
-      const hits=[...(focus?[focus]:[]),'consultarNotasFiscaisDeEntradaIhSaidaPaginada','consultarQuantidadeNotasFiscaisDeEntradaIhSaida','consultarRelatoriosEntradaIhSaida','numeroCnpjEntrada','numeroCacealEntrada','dataEmissaoInicial','dataEmissaoFinal','codigoStatus','NotaFiscalConsultaDTO','NFeRelatoriosRemoteService']
-        .map(term=>{const i=txt.indexOf(term);return i>=0?{term,index:i,snippet:txt.slice(Math.max(0,i-1400),i+3500)}:null}).filter(Boolean);
+      const baseTerms=['consultarNotasFiscaisDeEntradaIhSaidaPaginada','consultarQuantidadeNotasFiscaisDeEntradaIhSaida','consultarRelatoriosEntradaIhSaida','numeroCnpjEntrada','numeroCacealEntrada','dataEmissaoInicial','dataEmissaoFinal','codigoStatus','NotaFiscalConsultaDTO','NFeRelatoriosRemoteService'];
+      const hits=[];
+      for(const term of [...new Set([...(focus?[focus]:[]),...baseTerms])]){
+        let from=0,n=0;
+        while(n<12){
+          const i=txt.indexOf(term,from);
+          if(i<0)break;
+          hits.push({term,index:i,snippet:txt.slice(Math.max(0,i-1800),i+5000)});
+          from=i+Math.max(1,term.length);n++;
+        }
+      }
       inspected.push({file,http:r.status,bytes:Buffer.byteLength(txt),hits});
     }
     return json(res,200,{ok:true,bootstrap_http:boot.status,bootstrap_bytes:Buffer.byteLength(boot.text),scripts:candidates,strong_names:strong.slice(0,30),inspected});
