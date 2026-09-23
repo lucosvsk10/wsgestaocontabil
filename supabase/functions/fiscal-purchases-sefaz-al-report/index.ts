@@ -186,8 +186,14 @@ Deno.serve(async (req) => {
     const password = await decrypt(credential.password_ciphertext, credential.password_iv);
     const companyCnpj = digits(company.cnpj);
     const bytes = await fetchReport(gatewayToken, username, password, companyCnpj, start, end);
-    const salesBytes = await fetchSalesReport(gatewayToken, username, password, companyCnpj, digits(company.inscricao_estadual), start, end);
-    const officialSalesRows = salesCsvRows(salesBytes, companyCnpj);
+    let officialSalesRows: any[] = [];
+    let salesReportError: string | null = null;
+    try {
+      const salesBytes = await fetchSalesReport(gatewayToken, username, password, companyCnpj, digits(company.inscricao_estadual), start, end);
+      officialSalesRows = salesCsvRows(salesBytes, companyCnpj);
+    } catch (error) {
+      salesReportError = error instanceof Error ? error.message : String(error);
+    }
     const workbook = XLSX.read(bytes, { type: "array", cellDates: false });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const textRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false }) as any[][];
@@ -243,8 +249,22 @@ Deno.serve(async (req) => {
 
     const purchaseAllKeys = [...new Set(parsed.filter((row) => row.direction === "entrada").map((row) => row.access_key))];
     const purchaseKeys = [...new Set(parsed.filter((row) => row.direction === "entrada" && row.status_code !== "101").map((row) => row.access_key))];
-    const selfIssuedKeys = [...new Set(officialSalesRows.map((row) => row.access_key))];
-    const salesByKey = new Map(officialSalesRows.map((row) => [row.access_key, row]));
+    const embeddedSalesRows = parsed
+      .filter((row) => row.direction === "saida" && String(row.model) === "55")
+      .map((row) => ({
+        access_key: row.access_key,
+        issue_date: row.issue_date,
+        status_code: row.status_code,
+        status_text: row.status_text,
+        series: row.series,
+        note_number: row.note_number,
+      }));
+    const combinedSalesByKey = new Map<string, any>();
+    for (const row of embeddedSalesRows) combinedSalesByKey.set(String(row.access_key), row);
+    for (const row of officialSalesRows) combinedSalesByKey.set(String(row.access_key), row);
+    const combinedSalesRows = [...combinedSalesByKey.values()];
+    const selfIssuedKeys = [...combinedSalesByKey.keys()];
+    const salesByKey = combinedSalesByKey;
     for (const key of selfIssuedKeys) {
       const sale = salesByKey.get(key)!;
       const priorIndex = parsed.findIndex((row) => row.access_key === key);
@@ -357,6 +377,9 @@ Deno.serve(async (req) => {
       purchase_existing_keys: Math.min(purchaseKeys.length, purchaseExistingKeys),
       self_issued_unique_keys: selfIssuedKeys.length,
       sales_report_rows: officialSalesRows.length,
+      embedded_sales_rows: embeddedSalesRows.length,
+      combined_sales_rows: combinedSalesRows.length,
+      sales_report_error: salesReportError,
       existing_keys: existing.size,
       inserted,
       updated,
