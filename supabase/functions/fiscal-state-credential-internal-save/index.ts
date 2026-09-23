@@ -51,7 +51,8 @@ Deno.serve(async req=>{
 
     const ie=digits(c.inscricao_estadual);
     const expected=ie.length===9?ie.slice(0,-1):(ie.length===8?ie:"");
-    if(!expected||digits(username)!==expected)return J({error:"username_not_derived_from_ie"},422);
+    if(!expected)return J({error:"username_not_derived_from_ie"},422);
+    if(action!=="copy_verified_shared"&&digits(username)!==expected)return J({error:"username_not_derived_from_ie"},422);
 
     const {data:attempt,error:ae}=await admin.from("fiscal_state_credential_attempts")
       .select("company_id,outcome,request_id").eq("company_id",companyId).eq("uf","AL").eq("strategy","ie_minus_last_shared_password").maybeSingle();
