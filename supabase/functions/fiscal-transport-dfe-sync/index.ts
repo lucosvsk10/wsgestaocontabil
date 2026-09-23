@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { Buffer } from "node:buffer";
+import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
 
 const J=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json","cache-control":"no-store"}});
 const E=new TextEncoder(),D=new TextDecoder(),B=(v:string)=>Uint8Array.from(atob(v),c=>c.charCodeAt(0));
@@ -142,6 +144,12 @@ Deno.serve(async req=>{
       if(cert.valid_until&&new Date(cert.valid_until)<new Date()){out.push({company_id:companyId,name:company.razao_social,status:"certificate_expired"});continue}
       const pfx=await decrypt(cert.certificate_ciphertext,cert.certificate_iv);
       const password=await decrypt(cert.password_ciphertext,cert.password_iv);
+      const parsedCertificate=lerCertificado(Buffer.from(pfx,"base64"),password);
+      const certificateMaterial={
+        certificate_pem:parsedCertificate.certificadoPem,
+        private_key_pem:parsedCertificate.chavePrivadaPem,
+        chain_pem:parsedCertificate.cadeiaPem||[]
+      };
       const companyResult:any={company_id:companyId,name:company.razao_social,families:{}};
 
       if(body.issuer_probe===true){
@@ -149,7 +157,7 @@ Deno.serve(async req=>{
           const raw=await gateway(gatewayToken,{
             action:"mdfe-nonclosed",
             environment:environment==="homologacao"?"homologation":"production",
-            certificate_base64:pfx,certificate_password:password,cnpj
+            ...certificateMaterial,cnpj
           });
           const keys=[...new Set([...raw.matchAll(/<chMDFe>(\d{44})<\/chMDFe>/g)].map(x=>x[1]))];
           const protocols=[...raw.matchAll(/<nProt>([^<]+)<\/nProt>/g)].map(x=>x[1]);
@@ -187,7 +195,7 @@ Deno.serve(async req=>{
             const rawIssuer=await gateway(gatewayToken,{
               action:"mdfe-nonclosed",
               environment:environment==="homologacao"?"homologation":"production",
-              certificate_base64:pfx,certificate_password:password,cnpj
+              ...certificateMaterial,cnpj
             });
             const issuerCode=tag(rawIssuer,"cStat");
             const issuerMessage=tag(rawIssuer,"xMotivo");
@@ -222,7 +230,7 @@ Deno.serve(async req=>{
             const raw=await gateway(gatewayToken,{
               action:family==="cte57"?"cte-distribution":"mdfe-distribution",
               environment:environment==="homologacao"?"homologation":"production",
-              certificate_base64:pfx,certificate_password:password,
+              ...certificateMaterial,
               cnpj,uf_code:ufCode,ult_nsu:current
             });
             lastCode=tag(raw,"cStat");
