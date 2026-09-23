@@ -180,6 +180,42 @@ Deno.serve(async req=>{
         let max=dg(state?.max_nsu||current).padStart(15,"0").slice(-15);
         let lastCode="",lastMessage="",saved=0,eventsSaved=0,batches=0,skippedOlder=0;
         let familyError:string|null=null;
+        let issuerNonclosed:any=null;
+
+        if(family==="mdfe58"){
+          try{
+            const rawIssuer=await gateway(gatewayToken,{
+              action:"mdfe-nonclosed",
+              environment:environment==="homologacao"?"homologation":"production",
+              certificate_base64:pfx,certificate_password:password,cnpj
+            });
+            const issuerCode=tag(rawIssuer,"cStat");
+            const issuerMessage=tag(rawIssuer,"xMotivo");
+            const keys=[...new Set([...rawIssuer.matchAll(/<chMDFe>(\d{44})<\/chMDFe>/g)].map(x=>x[1]))];
+            const protMatches=[...rawIssuer.matchAll(/<infMDFe>([\s\S]*?)<\/infMDFe>/g)];
+            const protocols=new Map<string,string>();
+            for(const m of protMatches){
+              const key=tag(m[1],"chMDFe"),prot=tag(m[1],"nProt");
+              if(key)protocols.set(key,prot);
+            }
+            if(issuerCode==="111"&&keys.length){
+              await saveDocs(admin,keys.map(key=>({
+                user_id:company.created_by,company_id:companyId,cnpj,environment,uf_code:ufCode,
+                nsu:`MDFEOWN:${key}`,source:"mdfe_nonclosed_issuer",source_id:key,
+                schema_name:"retConsMDFeNaoEnc_v3.00",document_kind:"documento",
+                direction:"saida",access_key:key,model:"58",issue_date:null,value:null,
+                issuer_cnpj:cnpj,issuer_name:company.razao_social||null,recipient_cnpj:null,
+                note_number:String(Number(key.slice(25,34))),series:String(Number(key.slice(22,25))),
+                status_code:"100",status_text:"Autorizado e não encerrado; protocolo "+(protocols.get(key)||""),
+                full_xml:false,xml:null,parse_error:"official_summary_only",updated_at:new Date().toISOString()
+              })));
+            }
+            issuerNonclosed={cStat:issuerCode||null,xMotivo:issuerMessage||null,count:keys.length,keys};
+          }catch(error){
+            issuerNonclosed={error:error instanceof Error?error.message:String(error)};
+          }
+        }
+
         try{
           for(let i=0;i<maxBatches;i++){
             if(i)await sleep(1300);
@@ -279,7 +315,8 @@ Deno.serve(async req=>{
         companyResult.families[family]={
           status:familyError?"error":(current>=max||lastCode==="137"?"caught_up":"progress"),
           cStat:lastCode||null,ult_nsu:current,max_nsu:max,new_documents:saved,new_events:eventsSaved,
-          skipped_older:skippedOlder,error:familyError
+          skipped_older:skippedOlder,error:familyError,
+          ...(family==="mdfe58"?{issuer_nonclosed:issuerNonclosed}:{})
         };
       }
       if(touched)processed++;
