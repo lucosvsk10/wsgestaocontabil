@@ -11,7 +11,7 @@ function readBody(req){return new Promise((resolve,reject)=>{let raw='';req.setE
 function mergeCookies(current,setCookie){const jar=new Map();for(const p of String(current||'').split(/;\s*/)){const i=p.indexOf('=');if(i>0)jar.set(p.slice(0,i),p.slice(i+1))}const arr=Array.isArray(setCookie)?setCookie:setCookie?[setCookie]:[];for(const raw of arr){const pair=String(raw||'').split(';',1)[0];const i=pair.indexOf('=');if(i>0)jar.set(pair.slice(0,i),pair.slice(i+1))}return [...jar].map(([k,v])=>`${k}=${v}`).join('; ')}
 function requestUrl(url,{method='GET',headers={},body=''}={}){const target=new URL(url);return new Promise((resolve,reject)=>{const r=https.request({hostname:target.hostname,port:443,path:target.pathname+target.search,method,minVersion:'TLSv1.2',rejectUnauthorized:true,servername:target.hostname,timeout:60000,headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36','Connection':'close',...headers,...(body?{'Content-Length':Buffer.byteLength(body)}:{})}},x=>{const chunks=[];x.on('data',c=>chunks.push(Buffer.from(c)));x.on('end',()=>resolve({status:x.statusCode||0,headers:x.headers,body:Buffer.concat(chunks)}))});r.on('timeout',()=>r.destroy(new Error('sefaz_al_sales_timeout')));r.on('error',reject);if(body)r.write(body);r.end()})}
 async function login(username,password){
-  const base='https://nfce.sefaz.al.gov.br';let cookie='';
+  const base='https://nfeas.sefaz.al.gov.br';let cookie='';
   let r=await requestUrl(base+'/sca_default_login_page');cookie=mergeCookies(cookie,r.headers['set-cookie']);
   const form=new URLSearchParams({sca_login:username,sca_senha:password,btn_entrar:'Entrar'}).toString();
   r=await requestUrl(base+'/sca_security_check',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Cookie':cookie,'Origin':base,'Referer':base+'/sca_default_login_page'},body:form});
@@ -46,8 +46,6 @@ async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}
     tipoOperacao:'-1',
   });
   const candidates=[
-    `https://nfeas.sefaz.al.gov.br/gwtapp/nfe/relatorio/relatorioEntradasIhSaidas.${format}?${q.toString()}`,
-    `${app}relatorio/relatorioEntradasIhSaidas.${format}?${q.toString()}`,
     `https://nfeas.sefaz.al.gov.br/relatorio/relatorioEntradasIhSaidas.${format}?${q.toString()}`,
   ];
   let report=null,usedUrl='';
