@@ -49,6 +49,7 @@ async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}
     tipoOperacao:'-1',
   });
   const candidates=[
+    `https://nfeas.sefaz.al.gov.br/gwtapp/relatorio/relatorioEntradasIhSaidas.${format}?${q.toString()}`,
     `https://nfeas.sefaz.al.gov.br/relatorio/relatorioEntradasIhSaidas.${format}?${q.toString()}`,
   ];
   let report=null,usedUrl='';
