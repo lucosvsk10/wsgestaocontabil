@@ -415,6 +415,36 @@ module.exports = async function handler(req, res) {
       if (cStat === '539' && /^\d{44}$/.test(recoveredKey)) {
         return json(res, 200, { ok: true, exists: true, cStat, xMotivo, access_key: recoveredKey });
       }
+      if (cStat === '204') {
+        const receipt = xMotivo.match(/\[nRec:(\d{15})\]/i)?.[1] || '';
+        if (receipt) {
+          const receiptEndpoint = 'https://nfe.fazenda.sp.gov.br/ws/nferetautorizacao4.asmx';
+          const receiptNs = 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeRetAutorizacao4';
+          const receiptInner = `<consReciNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>1</tpAmb><nRec>${receipt}</nRec></consReciNFe>`;
+          const receiptSoap = envelope('nfeDadosMsg', receiptNs, receiptInner);
+          const receiptResult = await requestHttps(receiptEndpoint, material, {
+            body: receiptSoap,
+            contentType: `application/soap+xml; charset=utf-8; action="${receiptNs}/nfeRetAutorizacaoLote"`,
+            accept: 'application/soap+xml, text/xml, */*',
+          });
+          const receiptText = String(receiptResult.text || '');
+          const candidates = [...receiptText.matchAll(/<(?:\w+:)?chNFe>(\d{44})<\/(?:\w+:)?chNFe>/g)].map(m => m[1]);
+          const expectedCnpj = digits(b.issuer_cnpj);
+          const expectedSeries = Number(b.series || 0);
+          const expectedNumber = Number(b.note_number || 0);
+          const key = candidates.find(k =>
+            k.slice(6, 20) === expectedCnpj &&
+            k.slice(20, 22) === '55' &&
+            Number(k.slice(22, 25)) === expectedSeries &&
+            Number(k.slice(25, 34)) === expectedNumber
+          ) || '';
+          if (/^\d{44}$/.test(key)) {
+            return json(res, 200, { ok: true, exists: true, cStat, xMotivo, access_key: key, receipt });
+          }
+          return json(res, 200, { ok: true, exists: false, ambiguous_duplicate: true, cStat, xMotivo, receipt });
+        }
+        return json(res, 200, { ok: true, exists: false, ambiguous_duplicate: true, cStat, xMotivo });
+      }
       if (cStat === '100') {
         console.error('CRITICAL: SP recovery probe unexpectedly authorized', { note_number: String(b.note_number || ''), series: String(b.series || '') });
         return json(res, 500, { error: 'sp_recovery_probe_unexpected_authorization', critical: true, cStat, xMotivo });
