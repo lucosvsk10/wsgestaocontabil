@@ -154,6 +154,7 @@ async function queueRecovery(admin:any,fiscalId:string){
       status:"pending",reason:"Credencial estadual validada; aguardando nova reconciliação.",checked_at:now,updated_at:now
     }).eq("company_id",fiscalId).in("document_type",["sale_nfe55","sale_nfce65"]).eq("status","blocked");
   }catch{}
+  try{ await admin.rpc("trigger_fiscal_sales_cron"); }catch{}
 }
 async function applyVerificationState(admin:any,fiscalId:string,code:string){
   const now=new Date().toISOString();
@@ -269,7 +270,32 @@ Deno.serve(async req=>{
       .eq("company_id",fiscal.id).eq("uf",uf||"AL").maybeSingle();
     if(credError)throw credError;
 
-    if(action==="status")return J({ok:true,status:publicStatus(cred,fiscal)});
+    if(action==="status"){
+      const [{data:salesState},{count:salesCount}]=await Promise.all([
+        ctx.admin.from("fiscal_sales_sync_state")
+          .select("status,last_error,last_started_at,last_completed_at,next_scheduled_at,reconciliation_total,reconciliation_resolved,reconciliation_found,reconciliation_pending,reconciliation_complete")
+          .eq("company_id",fiscal.id).maybeSingle(),
+        ctx.admin.from("fiscal_sales_documents")
+          .select("id",{count:"exact",head:true})
+          .eq("company_id",fiscal.id),
+      ]);
+      return J({
+        ok:true,
+        status:{
+          ...publicStatus(cred,fiscal),
+          sales_status:salesState?.status||null,
+          sales_error:salesState?.last_error||null,
+          sales_started_at:salesState?.last_started_at||null,
+          sales_completed_at:salesState?.last_completed_at||null,
+          sales_found:Number(salesState?.reconciliation_found||salesCount||0),
+          sales_documents:Number(salesCount||0),
+          reconciliation_total:Number(salesState?.reconciliation_total||0),
+          reconciliation_resolved:Number(salesState?.reconciliation_resolved||0),
+          reconciliation_pending:Number(salesState?.reconciliation_pending||0),
+          reconciliation_complete:Boolean(salesState?.reconciliation_complete),
+        }
+      });
+    }
     if(uf!=="AL")return J({error:`Automação estadual ainda não disponível para ${uf||"esta UF"}.`,status:publicStatus(cred,fiscal)},422);
 
     if(action==="save_deferred"){
@@ -290,6 +316,20 @@ Deno.serve(async req=>{
         last_error:"Credencial estadual salva; aguardando validação automática.",updated_at:now
       },{onConflict:"company_id"});
       await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_saved_pending","pending_verification");
+      const verifyTask=(async()=>{
+        try{
+          const verification=await verifyAl(ctx.admin,username,password,digits(fiscal.cnpj));
+          const verifiedAt=new Date().toISOString();
+          await ctx.admin.from("fiscal_state_credentials").update({
+            last_verified_at:verifiedAt,last_verification_status:verification.code,updated_at:verifiedAt
+          }).eq("company_id",fiscal.id).eq("uf","AL");
+          await applyVerificationState(ctx.admin,fiscal.id,verification.code);
+          await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_background_verified",verification.code);
+        }catch(error){
+          console.error("state credential background verification",{company_id:fiscal.id,error:error instanceof Error?error.message:String(error)});
+        }
+      })();
+      try{ (globalThis as any).EdgeRuntime?.waitUntil?.(verifyTask); }catch{}
       return J({ok:true,status:publicStatus(saved,fiscal),queued_for_verification:true},202);
     }
 
