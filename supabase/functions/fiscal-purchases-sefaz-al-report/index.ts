@@ -168,7 +168,6 @@ Deno.serve(async (req) => {
 
     const dryRun = Boolean(body.dry_run);
     const includeKeys = Boolean(body.include_keys);
-    const debugShape = Boolean(body.debug_shape);
     const { data: credential, error: credentialError } = await admin
       .from("fiscal_state_credentials")
       .select("username_ciphertext,username_iv,password_ciphertext,password_iv")
@@ -213,11 +212,12 @@ Deno.serve(async (req) => {
       if (configuredStart && issueDate && issueDate.slice(0, 10) < configuredStart) continue;
       const seriesNumber = String(row?.[15] || "").split("/").map((part: string) => part.trim());
       const issuerCnpj = digits(row?.[5] || raw?.[5]);
+      const typeText = String(row?.[18] || raw?.[18] || "").trim();
       const statusText = String(row?.[21] || "").trim();
       const active = /ativa/i.test(statusText);
       const cancelled = /cancel/i.test(statusText);
       const value = money(raw?.[23] !== "" ? raw?.[23] : row?.[23]);
-      const direction = issuerCnpj && issuerCnpj === companyCnpj ? "saida" : "entrada";
+      const direction = /sa[íi]da/i.test(typeText) ? "saida" : "entrada";
       parsed.push({
         user_id: company.created_by,
         company_id: companyId,
@@ -236,7 +236,7 @@ Deno.serve(async (req) => {
         value: Number.isFinite(value) ? value : 0,
         issuer_cnpj: issuerCnpj || null,
         issuer_name: String(row?.[13] || "").trim() || null,
-        recipient_cnpj: companyCnpj,
+        recipient_cnpj: direction === "entrada" ? companyCnpj : null,
         note_number: seriesNumber[1] || null,
         series: seriesNumber[0] || null,
         status_code: cancelled ? "101" : active ? "100" : null,
@@ -250,18 +250,8 @@ Deno.serve(async (req) => {
 
     const purchaseAllKeys = [...new Set(parsed.filter((row) => row.direction === "entrada").map((row) => row.access_key))];
     const purchaseKeys = [...new Set(parsed.filter((row) => row.direction === "entrada" && row.status_code !== "101").map((row) => row.access_key))];
-    const embeddedSalesRows = parsed
-      .filter((row) => row.direction === "saida" && String(row.model) === "55")
-      .map((row) => ({
-        access_key: row.access_key,
-        issue_date: row.issue_date,
-        status_code: row.status_code,
-        status_text: row.status_text,
-        series: row.series,
-        note_number: row.note_number,
-      }));
+    const embeddedSalesRows: any[] = [];
     const combinedSalesByKey = new Map<string, any>();
-    for (const row of embeddedSalesRows) combinedSalesByKey.set(String(row.access_key), row);
     for (const row of officialSalesRows) combinedSalesByKey.set(String(row.access_key), row);
     const combinedSalesRows = [...combinedSalesByKey.values()];
     const selfIssuedKeys = [...combinedSalesByKey.keys()];
@@ -390,10 +380,6 @@ Deno.serve(async (req) => {
       by_status: byStatus,
       by_model: byModel,
       ...(includeKeys ? { purchase_keys: purchaseKeys, purchase_all_keys: purchaseAllKeys, self_issued_keys: selfIssuedKeys } : {}),
-      ...(debugShape ? {
-        report_headers: (textRows[headerIndex] || []).map((value:any,index:number)=>({index,label:String(value||"").trim()})),
-        report_samples: textRows.slice(headerIndex+1,headerIndex+4).map((row:any[])=>row.map((value:any,index:number)=>({index,value:String(value??"").slice(0,160)})))
-      } : {}),
       transport: "vercel-node",
     });
   } catch (error) {
