@@ -225,6 +225,10 @@ Deno.serve(async req=>{try{
   const pfx=await dec(cert.certificate_ciphertext,cert.certificate_iv),pass=await dec(cert.password_ciphertext,cert.password_iv);
   const parsedCertificate=lerCertificado(Buffer.from(pfx,"base64"),pass);
   const gatewayCertificate={certificate_pem:parsedCertificate.certificadoPem,private_key_pem:parsedCertificate.chavePrivadaPem,chain_pem:parsedCertificate.cadeiaPem||[]};
+  if(b.portal_probe){
+    const portal=await gatewayObject(gatewayToken,{action:"sp-nfe-portal-probe",environment:"production",...gatewayCertificate});
+    return J({ok:true,company_id:companyId,portal});
+  }
   const historyStart=/^\d{4}-\d{2}-\d{2}$/.test(String(minHistory||""))?String(minHistory):new Date(Date.now()-99*86400000).toISOString().slice(0,10);
   const nfe55=await syncSpNfe55FromIssuerEvents(admin,c,gatewayToken,gatewayCertificate,historyStart);
   const now=new Date(),maxStart=new Date(now.getTime()-99*86400000),configured=/^\d{4}-\d{2}-\d{2}$/.test(String(minHistory||""))?new Date(String(minHistory)+"T00:00:00-03:00"):maxStart;
