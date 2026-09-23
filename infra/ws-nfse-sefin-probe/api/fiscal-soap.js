@@ -318,6 +318,29 @@ module.exports = async function handler(req, res) {
     }
 
 
+    if (action === 'sp-nfe-portal-probe') {
+      const result = await requestHttps('https://nfe.fazenda.sp.gov.br/ConsultaNFe/consulta/publica/ConsultarNFe.aspx', material, {
+        method: 'GET',
+        accept: 'text/html,application/xhtml+xml,*/*',
+      });
+      const text = String(result.text || '');
+      const forms = [...text.matchAll(/<form\b[\s\S]*?<\/form>/gi)].slice(0, 4).map(m => m[0].replace(/\s+/g, ' ').slice(0, 5000));
+      const links = [...text.matchAll(/(?:href|action)=["']([^"']+)["']/gi)].map(m => m[1]).filter(Boolean).slice(0, 80);
+      const scripts = [...text.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(m => m[1]).filter(Boolean).slice(0, 40);
+      return json(res, result.status >= 200 && result.status < 400 ? 200 : 502, {
+        ok: result.status >= 200 && result.status < 400,
+        http: result.status,
+        endpoint: result.endpoint,
+        title: text.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim() || '',
+        captcha: /captcha|recaptcha|imagem.*seguran|c[oó]digo.*imagem/i.test(text),
+        certificate_hint: /certificado digital|certificate/i.test(text),
+        forms,
+        links,
+        scripts,
+        excerpt: text.replace(/\s+/g, ' ').slice(0, 12000),
+      });
+    }
+
     if (action === 'sp-nfe-recover-key') {
       if (env !== 'production') return json(res, 400, { error: 'sp_recovery_requires_production' });
       const { signedXml, probeKey } = buildSpNfeRecoveryProbe(b);
