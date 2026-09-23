@@ -6,7 +6,7 @@ module.exports=async(req,res)=>{try{
  const h=await get(base);
  const scripts=[...h.text.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(m=>new URL(m[1],base).toString());
  const out=[];
- const terms=['notas-fiscais-entrada','notas-fiscais-saida','notas-fiscais','relatorios/','saida','entrada'];
+ const terms=['notas-fiscais-entrada','notas-fiscais-saida','emitirRelatorioContribuinteNotasFiscaisDeEntrada','resourceNotasFiscaisEntrada','saidaNFe','saidaNFCe','entradaNFe','relatorioContribuinte','notas-fiscais','relatorios/'];
  for(const url of scripts.slice(-12)){
    const r=await get(url);
    const hits=[];
