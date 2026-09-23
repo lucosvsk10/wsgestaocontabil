@@ -151,8 +151,8 @@ Deno.serve(async req=>{
             environment:environment==="homologacao"?"homologation":"production",
             certificate_base64:pfx,certificate_password:password,cnpj
           });
-          const keys=[...new Set([...raw.matchAll(/<chMDFe>(\\d{44})<\\/chMDFe>/g)].map(x=>x[1]))];
-          const protocols=[...raw.matchAll(/<nProt>([^<]+)<\\/nProt>/g)].map(x=>x[1]);
+          const keys=[...new Set([...raw.matchAll(/<chMDFe>(\d{44})<\/chMDFe>/g)].map(x=>x[1]))];
+          const protocols=[...raw.matchAll(/<nProt>([^<]+)<\/nProt>/g)].map(x=>x[1]);
           companyResult.issuer_probe={
             mdfe_nonclosed:{
               cStat:tag(raw,"cStat")||null,
