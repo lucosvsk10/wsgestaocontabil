@@ -78,7 +78,7 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
     }).eq("company_id",c.id);
     return{processed:0,found:0,cancelled:0,unused:0,failed:1,pending:candidates.length,complete:false,cooldown,probe_validated:false,scopes,failures:failures.slice(0,6)};
   }
-  for(const item of candidates.slice(0,Math.max(1,Math.min(14,batch)))){
+  for(const item of candidates.slice(0,Math.max(1,Math.min(4,batch)))){
     const now=new Date().toISOString();
     try{
       const recovery=await gatewayObject(gatewayToken,probeBody(item.series,item.n));
@@ -122,7 +122,7 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
       const msg=e instanceof Error?e.message:String(e);failed++;failures.push({series:item.series,note_number:item.n,error:msg});
       if(msg.includes("656")||/Consumo Indevido/i.test(msg)){cooldown=true;break}
     }
-    await new Promise(r=>setTimeout(r,180));
+    await new Promise(r=>setTimeout(r,850));
   }
   const {data:after,error:ae}=await admin.from("fiscal_sales_reconciliation").select("series,note_number,status,access_key").eq("company_id",c.id).eq("model","55").limit(10000);if(ae)throw ae;
   let total=0,resolved=0,pending=0,foundTotal=0,cancelTotal=0,notAuthTotal=0;const finalScopes:any[]=[];
@@ -132,9 +132,9 @@ async function recoverSpNfe55Numbers(admin:any,c:any,gatewayToken:string,gateway
     finalScopes.push({...scope,max_known:recoveredMax,end,pending:localPending});
   }
   const complete=total>0&&pending===0&&failed===0,now=new Date().toISOString();
-  const waitMinutes=cooldown?65:(complete?30:65);
+  const waitMinutes=cooldown?65:(complete?30:15);
   await admin.from("fiscal_sales_sync_state").update({status:cooldown?"cooldown":(complete?"idle":"queued"),latest_number:Math.max(0,...(after||[]).filter((r:any)=>["found","cancelled"].includes(String(r.status))).map((r:any)=>Number(r.note_number)||0))||null,cursor_number:Math.max(0,...(after||[]).filter((r:any)=>["found","cancelled"].includes(String(r.status))).map((r:any)=>Number(r.note_number)||0))||null,reconciliation_total:total,reconciliation_resolved:resolved,reconciliation_found:foundTotal,reconciliation_cancelled:cancelTotal,reconciliation_not_authorized:notAuthTotal,reconciliation_pending:pending,reconciliation_complete:complete,reconciliation_completed_at:complete?now:null,last_error:cooldown?"SEFAZ 656: cooldown automático":(failed?String(failed)+" falha(s) NF-e 55/SP":null),next_scheduled_at:new Date(Date.now()+waitMinutes*60000).toISOString(),updated_at:now}).eq("company_id",c.id);
-  return{processed:Math.min(14,Math.min(batch,candidates.length)),found,cancelled,unused,failed,pending,complete,cooldown,probe_validated:true,scopes:finalScopes,failures:failures.slice(0,6)};
+  return{processed:Math.min(4,Math.min(batch,candidates.length)),found,cancelled,unused,failed,pending,complete,cooldown,probe_validated:true,scopes:finalScopes,failures:failures.slice(0,6)};
 }
 
 
@@ -310,7 +310,7 @@ Deno.serve(async req=>{try{
     updated_at:completedAt
   },{onConflict:"company_id"});
   await admin.from("fiscal_companies").update({last_sync_at:completedAt}).eq("id",companyId);
-  const nfe55Recovery=b.skip_nfe55_recovery?{skipped:true}:await recoverSpNfe55Numbers(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_batch||12),Number(b.nfe55_lookahead||15));
+  const nfe55Recovery=b.skip_nfe55_recovery?{skipped:true}:await recoverSpNfe55Numbers(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_batch||4),Number(b.nfe55_lookahead||15));
   const nfe55Xml=(b.skip_nfe55_xml||nfe55Recovery?.cooldown)?{skipped:true,reason:nfe55Recovery?.cooldown?"recovery_cooldown":"requested"}:await backfillSpNfe55Xml(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_xml_batch||1));
   if(nfe55Xml?.cooldown){
     const coolUntil=new Date(Date.now()+65*60000).toISOString();
