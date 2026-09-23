@@ -23,5 +23,14 @@ module.exports=async(req,res)=>{try{
      routeTests.push({path:u.pathname,...result});
    }catch(e){routeTests.push({path:url,error:e.message})}
  }
- return J(res,200,{ok:true,...out,html,paths,routeTests});
+ const loginHtml=await get('https://nfeas.sefaz.al.gov.br/sca_default_login_page');
+ const formAction=loginHtml.match(/<form[^>]+action=["']([^"']+)["']/i)?.[1]||null;
+ const inputs=[...loginHtml.matchAll(/<input\b([^>]*)>/gi)].map(m=>{
+   const attrs=m[1];
+   const name=attrs.match(/\bname=["']([^"']+)["']/i)?.[1]||null;
+   const type=attrs.match(/\btype=["']([^"']+)["']/i)?.[1]||'text';
+   const value=attrs.match(/\bvalue=["']([^"']*)["']/i)?.[1]||'';
+   return name?{name,type,value:type.toLowerCase()==='hidden'?value:null}:null;
+ }).filter(Boolean);
+ return J(res,200,{ok:true,...out,html,paths,routeTests,loginForm:{action:formAction,inputs}});
 }catch(e){return J(res,500,{error:e.message})}}
