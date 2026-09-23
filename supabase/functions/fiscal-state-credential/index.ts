@@ -200,6 +200,7 @@ Deno.serve(async req=>{
       const {data:rows,error}=await admin.from("fiscal_state_credentials")
         .select("id,company_id,uf,username_ciphertext,username_iv,password_ciphertext,password_iv,last_verified_at")
         .eq("uf","AL").eq("is_active",true)
+        .or("last_verification_status.is.null,last_verification_status.neq.invalid_credentials")
         .order("last_verified_at",{ascending:true,nullsFirst:true})
         .limit(6);
       if(error)throw error;
@@ -233,6 +234,27 @@ Deno.serve(async req=>{
 
     if(action==="status")return J({ok:true,status:publicStatus(cred,fiscal)});
     if(uf!=="AL")return J({error:`Automação estadual ainda não disponível para ${uf||"esta UF"}.`,status:publicStatus(cred,fiscal)},422);
+
+    if(action==="save_deferred"){
+      const username=clean(body.username)||alPortalUsername(fiscal),password=String(body.password||"");
+      if(username.length<2||username.length>180)return J({error:"Não foi possível identificar automaticamente o usuário da SEFAZ/AL. Atualize a inscrição estadual da empresa."},422);
+      if(password.length<1||password.length>240)return J({error:"Informe a senha do portal da SEFAZ/AL."},422);
+      const userCrypt=await encrypt(username),passCrypt=await encrypt(password),now=new Date().toISOString();
+      const payload={
+        company_id:fiscal.id,uf:"AL",portal_name:"SCA SEFAZ/AL",
+        username_ciphertext:userCrypt.ciphertext,username_iv:userCrypt.iv,
+        password_ciphertext:passCrypt.ciphertext,password_iv:passCrypt.iv,
+        is_active:true,last_verified_at:null,last_verification_status:"pending_verification",updated_at:now,created_by:ctx.user.id,
+      };
+      const {data:saved,error}=await ctx.admin.from("fiscal_state_credentials").upsert(payload,{onConflict:"company_id,uf"}).select("id,portal_name,last_verified_at,last_verification_status").single();
+      if(error)throw error;
+      await ctx.admin.from("fiscal_sales_sync_state").upsert({
+        company_id:fiscal.id,status:"waiting_state_credentials",paused:false,next_scheduled_at:null,
+        last_error:"Credencial estadual salva; aguardando validação automática.",updated_at:now
+      },{onConflict:"company_id"});
+      await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_saved_pending","pending_verification");
+      return J({ok:true,status:publicStatus(saved,fiscal),queued_for_verification:true},202);
+    }
 
     if(action==="save_verify"){
       const username=clean(body.username)||alPortalUsername(fiscal),password=String(body.password||"");
