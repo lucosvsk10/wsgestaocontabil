@@ -145,25 +145,43 @@ Deno.serve(async req=>{
         const cte57Out=docs.filter(r=>r.direction==="saida"&&String(r.model)==="57");
         const mdfe58Out=docs.filter(r=>r.direction==="saida"&&String(r.model)==="58");
 
-        // NF-e purchases: exact AL portal when available, otherwise national DFe cursor completeness.
-        if(uf==="AL"&&alReport?.ok&&Array.isArray(alReport.purchase_all_keys)){
-          const source=new Set<string>(alReport.purchase_all_keys.map(dg).filter((k:string)=>k.length===44));
-          await upsert(admin,companyId,start,end,"purchase_nfe55",{
-            sourceName:"SEFAZ/AL relatório NF-e",
-            sourceConfirmed:true,sourceKeys:source,siteKeys:keySet(nfe55In),
-            xmlPending:nfe55In.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfe55In.length-keySet(nfe55In).size,
-            details:{cancelled:Number(alReport.purchase_cancelled_unique_keys||0),portal_credential:true},
-          });
-        }else{
+        // NF-e purchases: national DFe cursor is the completeness backbone.
+        // In AL the state entry report is complementary (it can legitimately omit
+        // documents that NFeDistribuicaoDFe already delivered), so never flag
+        // national full-XML purchases as "extras" merely because that report omitted them.
+        {
           const caughtUp=Boolean(dfe&&String(dfe.ult_nsu||"")===String(dfe.max_nsu||"")&&String(dfe.last_status_code||"")!=="");
           const site=keySet(nfe55In);
+          const source=new Set<string>();
+          if(uf==="AL"&&alReport?.ok&&Array.isArray(alReport.purchase_all_keys)){
+            for(const key of alReport.purchase_all_keys.map(dg).filter((k:string)=>k.length===44))source.add(key);
+          }
+          for(const row of nfe55In){
+            const src=String(row.source||"");
+            if(
+              src==="national_dfe"||
+              src==="national_dfe_cron"||
+              src.startsWith("xml_backfill_")||
+              src==="xml_recovery_direct"
+            ){
+              const key=dg(row.access_key);if(key.length===44)source.add(key);
+            }
+          }
+          // If no materialized official key set is available, a caught-up national
+          // distribution still proves the site snapshot it produced is current.
+          if(!source.size&&caughtUp)for(const key of site)source.add(key);
+          const confirmed=caughtUp&&(uf!=="AL"||Boolean(alReport?.ok));
           await upsert(admin,companyId,start,end,"purchase_nfe55",{
-            sourceName:"NFeDistribuicaoDFe",
-            sourceConfirmed:caughtUp,sourceKeys:site,siteKeys:site,
-            xmlPending:nfe55In.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfe55In.length-keySet(nfe55In).size,
-            blocked:!caughtUp,
-            reason:caughtUp?null:"Distribuição nacional ainda não está comprovadamente em dia.",
-            details:{ult_nsu:dfe?.ult_nsu||null,max_nsu:dfe?.max_nsu||null,cstat:dfe?.last_status_code||null},
+            sourceName:uf==="AL"?"NFeDistribuicaoDFe + SEFAZ/AL relatório de entradas":"NFeDistribuicaoDFe",
+            sourceConfirmed:confirmed,sourceKeys:source,siteKeys:site,
+            xmlPending:nfe55In.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfe55In.length-site.size,
+            blocked:!confirmed,
+            reason:confirmed?null:(caughtUp?"Relatório estadual complementar de entradas indisponível.":"Distribuição nacional ainda não está comprovadamente em dia."),
+            details:{
+              ult_nsu:dfe?.ult_nsu||null,max_nsu:dfe?.max_nsu||null,cstat:dfe?.last_status_code||null,
+              state_report_keys:uf==="AL"&&alReport?.ok?Number(alReport.purchase_all_unique_keys||0):null,
+              national_cursor_caught_up:caughtUp,
+            },
           });
         }
 
