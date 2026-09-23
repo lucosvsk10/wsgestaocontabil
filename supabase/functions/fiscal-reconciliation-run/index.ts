@@ -170,6 +170,7 @@ Deno.serve(async req=>{
         // NF-e 55 sales in AL need the authenticated state report; SP has no implemented issuer listing yet.
         if(uf==="AL"&&alReport?.ok&&Array.isArray(alReport.self_issued_keys)){
           const source55=new Set<string>(alReport.self_issued_keys.map(dg).filter((k:string)=>k.length===44&&k.slice(20,22)==="55"));
+          const salesSourceConfirmed=alReport?.sales_source_confirmed===true;
           const directValidated=await paged<any>((from,to)=>admin.from("fiscal_sales_documents")
             .select("access_key,source_reference,issue_date")
             .eq("company_id",companyId).eq("model","55")
@@ -180,9 +181,17 @@ Deno.serve(async req=>{
           for(const key of directKeys)source55.add(key);
           await upsert(admin,companyId,start,end,"sale_nfe55",{
             sourceName:"SEFAZ/AL relatório NF-e emitidas + Consulta Protocolo",
-            sourceConfirmed:true,sourceKeys:source55,siteKeys:keySet(nfe55Out),
+            sourceConfirmed:salesSourceConfirmed,sourceKeys:source55,siteKeys:keySet(nfe55Out),
             xmlPending:nfe55Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfe55Out.length-keySet(nfe55Out).size,
-            details:{portal_credential:true,direct_protocol_confirmed:directKeys.length},
+            blocked:!salesSourceConfirmed,
+            reason:salesSourceConfirmed?null:"A fonte dedicada de NF-e emitidas da SEFAZ/AL não confirmou o período. Vendas positivas do relatório combinado podem ser aproveitadas, mas zero não é considerado conclusivo.",
+            details:{
+              portal_credential:true,
+              direct_protocol_confirmed:directKeys.length,
+              sales_source_mode:alReport?.sales_source_mode||null,
+              sales_report_error:alReport?.sales_report_error||null,
+              embedded_positive_rows:Number(alReport?.embedded_sales_rows||0),
+            },
           });
         }else if(uf==="SP"){
           const official55=await paged<any>((from,to)=>admin.from("fiscal_sales_documents")
