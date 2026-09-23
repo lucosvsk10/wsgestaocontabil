@@ -22,6 +22,12 @@ Deno.serve(async req=>{try{
  const today=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Maceio",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
  const{data:minStart}=await a.rpc("extractor_minimum_history_start");const start=/^\d{4}-\d{2}-\d{2}$/.test(String(b.start||""))?String(b.start):String(minStart||today.slice(0,8)+"01"),end=/^\d{4}-\d{2}-\d{2}$/.test(String(b.end||""))?String(b.end):today;
  const root=dg(c.cnpj).slice(0,8),comps=competenceList(start,end),results:any[]=[];
+ const year=Number(end.slice(0,4));
+ const summaryUrl=new URL("https://contribuinte.sefaz.al.gov.br/malhafiscal/sfz-malhafiscal-api/api/escrituracao-nao-extemporaneo");
+ summaryUrl.searchParams.set("raizCnpj",root);summaryUrl.searchParams.set("anoCompetencia",String(year));
+ const summaryResp=await get(summaryUrl.toString(),token,"application/json");
+ let summary:any=null;try{summary=JSON.parse(new TextDecoder().decode(summaryResp.buf))}catch{summary=null}
+
  for(const comp of comps){
    const u=new URL("https://contribuinte.sefaz.al.gov.br/malhafiscal/sfz-malhafiscal-api/api/relatorios/escrituacao-nao-extemporaneo");
    u.searchParams.set("raizCnpj",root);u.searchParams.set("tipo","xlsx");u.searchParams.set("competencia",comp);
@@ -31,5 +37,5 @@ Deno.serve(async req=>{try{
    const rows=sheets.flatMap(s=>s.rows||[]),keys=[...new Set(rows.map(keyFromRow).filter((k:string)=>/^\d{44}$/.test(k)&&k.slice(6,20)===dg(c.cnpj)))];
    results.push({competencia:comp,http:r.status,type:r.type,bytes:r.buf.length,sheets:sheets.map(s=>({sheet:s.sheet,rows:s.rows.length,columns:s.rows[0]?Object.keys(s.rows[0]).slice(0,30):[]})),keys:keys.length,access_keys:keys.slice(0,500)});
  }
- return J({ok:true,company_id:cid,period:{start,end},root_cnpj:root,results,total_keys:results.reduce((n,x)=>n+Number(x.keys||0),0)});
+ return J({ok:true,company_id:cid,period:{start,end},root_cnpj:root,summary_http:summaryResp.status,summary_type:summaryResp.type,summary:Array.isArray(summary)?summary.slice(0,500):summary,results,total_keys:results.reduce((n,x)=>n+Number(x.keys||0),0)});
 }catch(e){return J({error:e instanceof Error?e.message:String(e)},500)}});
