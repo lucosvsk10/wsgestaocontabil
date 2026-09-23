@@ -12,6 +12,20 @@ const numericNote = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const monthCodesBetween = (start: string, end: string) => {
+  const out: string[] = [];
+  const sy = Number(start.slice(0, 4)), sm = Number(start.slice(5, 7));
+  const ey = Number(end.slice(0, 4)), em = Number(end.slice(5, 7));
+  for (let y = sy; y <= ey; y += 1) {
+    for (let m = 1; m <= 12; m += 1) {
+      if (y === sy && m < sm) continue;
+      if (y === ey && m > em) break;
+      out.push(String(y).slice(-2) + String(m).padStart(2, "0"));
+    }
+  }
+  return out.slice(-6);
+};
+
 Deno.serve(async req => {
   try {
     const admin = createClient(
@@ -29,7 +43,7 @@ Deno.serve(async req => {
     }
 
     const now = new Date();
-    const next = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+    const next = new Date(now.getTime() + 15 * 60 * 1000);
     const [{ data: minimumHistory }, { data: localToday }] = await Promise.all([
       admin.rpc("extractor_minimum_history_start"),
       admin.rpc("extractor_local_date"),
@@ -45,6 +59,7 @@ Deno.serve(async req => {
       ? String(localToday)
       : brazilNow.toISOString().slice(0, 10);
     const historyStartMonth = historyStart.slice(2, 4) + historyStart.slice(5, 7);
+    const discoveryMonths = monthCodesBetween(historyStart, historyEnd);
     const base = Deno.env.get("SUPABASE_URL")!;
     const headers = {
       "content-type": "application/json",
@@ -326,13 +341,20 @@ Deno.serve(async req => {
         ].filter((value: number) => value > 0);
         const priorLatest = Math.max(0, ...priorNumbers);
         const oldLatest = Number(state?.latest_number || 0);
-        let baseLatest = Math.max(oldLatest, maxSaved, maxKnownDfe, priorLatest);
+        const persistedFloor = Number(state?.initial_floor_number || 0);
+        const trustedStateLatest =
+          persistedFloor > 0 || maxSaved > 0 || maxKnownDfe > 0 || priorLatest > 0
+            ? oldLatest
+            : 0;
+        let baseLatest = Math.max(trustedStateLatest, maxSaved, maxKnownDfe, priorLatest);
         let scopeStartNumber = isExtractor
-          ? priorLatest > 0
-            ? priorLatest + 1
-            : Number.isFinite(minKnownWindow)
-              ? Math.max(1, minKnownWindow)
-              : 0
+          ? persistedFloor > 0
+            ? persistedFloor
+            : priorLatest > 0
+              ? priorLatest + 1
+              : Number.isFinite(minKnownWindow)
+                ? Math.max(1, minKnownWindow)
+                : 0
           : 1;
 
         let bootstrap: any = null;
@@ -341,30 +363,72 @@ Deno.serve(async req => {
             await admin.from("fiscal_sales_sync_state").upsert({
               company_id: company.id,
               status: "waiting_sales_reference",
-              last_error: "Aguardando turno do bootstrap automático de vendas.",
-              next_scheduled_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+              last_error: "Descoberta automática da referência aguardando o próximo turno.",
+              next_scheduled_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
               updated_at: new Date().toISOString(),
-            });
-            out.push({ company_id: company.id, status: "waiting_sales_reference", reason: "bootstrap_queue" });
+            }, { onConflict: "company_id" });
+            out.push({ company_id: company.id, status: "waiting_sales_reference", reason: "anchor_queue" });
             continue;
           }
           bootstrapAttempted = true;
           try {
-            const bootstrapResponse = await fetch(`${base}/functions/v1/fiscal-sales-discover-latest`, {
+            const anchorResponse = await fetch(`${base}/functions/v1/fiscal-sales-anchor-discover`, {
               method: "POST",
               headers,
               body: JSON.stringify({
                 company_id: company.id,
-                base_number: 0,
-                bootstrap_start: 1,
-                lookahead: 12,
+                start_date: companyHistoryStart || historyStart,
+                model: "65",
+                series: 1,
+                max_probes: 28,
               }),
-              signal: AbortSignal.timeout(60000),
+              signal: AbortSignal.timeout(110000),
             });
-            bootstrap = await bootstrapResponse.json().catch(() => ({}));
-            if (bootstrapResponse.ok && !bootstrap?.cooldown && Number(bootstrap?.latest || 0) > 0) {
-              baseLatest = Number(bootstrap.latest);
-              scopeStartNumber = 1;
+            bootstrap = await anchorResponse.json().catch(() => ({}));
+            if (anchorResponse.ok && bootstrap?.anchor_found && Number(bootstrap?.anchor_number || 0) > 0) {
+              baseLatest = Number(bootstrap.anchor_number);
+              scopeStartNumber = baseLatest + 1;
+              await admin.from("fiscal_sales_sync_state").upsert({
+                company_id: company.id,
+                latest_number: baseLatest,
+                cursor_number: baseLatest,
+                initial_floor_number: scopeStartNumber,
+                history_start_month: historyStartMonth,
+                status: "running",
+                last_error: null,
+                next_scheduled_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }, { onConflict: "company_id" });
+            } else if (!bootstrap?.cooldown) {
+              const fallbackResponse = await fetch(`${base}/functions/v1/fiscal-sales-discover-latest`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                  company_id: company.id,
+                  base_number: 0,
+                  bootstrap_start: 1,
+                  lookahead: 24,
+                  months: discoveryMonths,
+                }),
+                signal: AbortSignal.timeout(90000),
+              });
+              const fallback = await fallbackResponse.json().catch(() => ({}));
+              bootstrap = { anchor: bootstrap, fallback };
+              if (fallbackResponse.ok && !fallback?.cooldown && Number(fallback?.latest || 0) > 0) {
+                baseLatest = Number(fallback.latest);
+                scopeStartNumber = 1;
+                await admin.from("fiscal_sales_sync_state").upsert({
+                  company_id: company.id,
+                  latest_number: baseLatest,
+                  cursor_number: baseLatest,
+                  initial_floor_number: 1,
+                  history_start_month: historyStartMonth,
+                  status: "running",
+                  last_error: null,
+                  next_scheduled_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                }, { onConflict: "company_id" });
+              }
             }
           } catch (err) {
             bootstrap = { error: err instanceof Error ? err.message : String(err) };
@@ -377,8 +441,8 @@ Deno.serve(async req => {
             .upsert({
               company_id: company.id,
               status: "waiting_sales_reference",
-              last_error: bootstrap?.error || "Ainda não foi encontrada uma referência inicial de NFC-e. O bootstrap automático continuará tentando.",
-              next_scheduled_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+              last_error: bootstrap?.error || "Procurando automaticamente uma NFC-e anterior ao período para iniciar a sequência.",
+              next_scheduled_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
               updated_at: new Date().toISOString(),
             });
           out.push({
@@ -399,7 +463,9 @@ Deno.serve(async req => {
             body: JSON.stringify({
               company_id: company.id,
               base_number: baseLatest,
-              lookahead: 12,
+              lookahead: 72,
+              months: discoveryMonths,
+              preferred_month: bootstrap?.anchor_key_month || historyStartMonth,
             }),
             signal: AbortSignal.timeout(60000),
           });
@@ -418,7 +484,8 @@ Deno.serve(async req => {
           status: "reconciling",
           latest_number: latest,
           cursor_number: latest,
-          reconciliation_total: latest,
+          initial_floor_number: isExtractor ? scopeStartNumber : 1,
+          reconciliation_total: Math.max(0, latest - (isExtractor ? scopeStartNumber : 1) + 1),
           reconciliation_started_at: state?.reconciliation_started_at || now.toISOString(),
           next_scheduled_at: next.toISOString(),
           last_error: null,
