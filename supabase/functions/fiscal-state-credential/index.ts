@@ -271,14 +271,28 @@ Deno.serve(async req=>{
     if(credError)throw credError;
 
     if(action==="status"){
-      const [{data:salesState},{count:salesCount}]=await Promise.all([
+      const [{data:salesState},{count:salesCount},{data:sourceRows}]=await Promise.all([
         ctx.admin.from("fiscal_sales_sync_state")
           .select("status,last_error,last_started_at,last_completed_at,next_scheduled_at,reconciliation_total,reconciliation_resolved,reconciliation_found,reconciliation_pending,reconciliation_complete")
           .eq("company_id",fiscal.id).maybeSingle(),
         ctx.admin.from("fiscal_sales_documents")
           .select("id",{count:"exact",head:true})
           .eq("company_id",fiscal.id),
+        ctx.admin.from("fiscal_source_reconciliation")
+          .select("document_type,status,source_confirmed,source_count,site_count,missing_count,checked_at")
+          .eq("company_id",fiscal.id)
+          .in("document_type",["sale_nfe55","sale_nfce65"])
+          .order("checked_at",{ascending:false})
+          .limit(8),
       ]);
+      const latestByType=new Map<string,any>();
+      for(const row of sourceRows||[])if(!latestByType.has(String(row.document_type)))latestByType.set(String(row.document_type),row);
+      const latestSources=[...latestByType.values()];
+      const applicableSources=latestSources.filter((row:any)=>row);
+      const salesSourceConfirmed=applicableSources.length>0&&applicableSources.every((row:any)=>row.source_confirmed===true);
+      const salesSourceMissing=applicableSources.reduce((sum:number,row:any)=>sum+Number(row.missing_count||0),0);
+      const salesSourceCount=applicableSources.reduce((sum:number,row:any)=>sum+Number(row.source_count||0),0);
+      const salesSiteCount=applicableSources.reduce((sum:number,row:any)=>sum+Number(row.site_count||0),0);
       return J({
         ok:true,
         status:{
@@ -287,12 +301,16 @@ Deno.serve(async req=>{
           sales_error:salesState?.last_error||null,
           sales_started_at:salesState?.last_started_at||null,
           sales_completed_at:salesState?.last_completed_at||null,
-          sales_found:Number(salesState?.reconciliation_found||salesCount||0),
+          sales_found:Number(salesCount||0),
           sales_documents:Number(salesCount||0),
           reconciliation_total:Number(salesState?.reconciliation_total||0),
           reconciliation_resolved:Number(salesState?.reconciliation_resolved||0),
           reconciliation_pending:Number(salesState?.reconciliation_pending||0),
           reconciliation_complete:Boolean(salesState?.reconciliation_complete),
+          sales_source_confirmed:salesSourceConfirmed,
+          sales_source_count:salesSourceCount,
+          sales_site_count:salesSiteCount,
+          sales_source_missing:salesSourceMissing,
         }
       });
     }
