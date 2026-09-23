@@ -45,17 +45,26 @@ async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}
     tipoProcessoEmissao:'-1',
     tipoOperacao:'-1',
   });
-  const url=`${app}relatorio/relatorioEntradasIhSaidas.${format}?${q.toString()}`;
-  const report=await requestUrl(url,{headers:{'Cookie':cookie,'Referer':app,'Accept':format==='csv'?'text/csv,text/plain,*/*':'application/pdf,*/*'}});
-  const contentType=String(report.headers['content-type']||'');
-  const text=report.body.toString('utf8');
+  const candidates=[
+    `${app}relatorio/relatorioEntradasIhSaidas.${format}?${q.toString()}`,
+    `https://nfeas.sefaz.al.gov.br/relatorio/relatorioEntradasIhSaidas.${format}?${q.toString()}`,
+  ];
+  let report=null,usedUrl='';
+  for(const url of candidates){
+    const current=await requestUrl(url,{headers:{'Cookie':cookie,'Referer':app,'Accept':format==='csv'?'text/csv,text/plain,*/*':'application/pdf,*/*'}});
+    if(!report||current.status!==404){report=current;usedUrl=url}
+    if(current.status!==404)break;
+  }
+  const contentType=String(report?.headers?.['content-type']||'');
+  const text=report?.body?.toString('utf8')||'';
   const loginPage=/sca_default_login_page|sca_security_check|name=["']sca_login/i.test(text);
-  const ok=report.status>=200&&report.status<300&&!loginPage&&report.body.length>0;
+  const ok=Boolean(report&&report.status>=200&&report.status<300&&!loginPage&&report.body.length>0);
   return {
     ok,
-    error: ok ? null : (loginPage ? 'sales_report_auth_required' : ('sales_report_http_'+report.status)),
-    http:report.status,content_type:contentType,bytes:report.body.length,
+    error: ok ? null : (loginPage ? 'sales_report_auth_required' : ('sales_report_http_'+String(report?.status||0))),
+    http:report?.status||0,content_type:contentType,bytes:report?.body?.length||0,
     landing_http:landing.status,
+    route:usedUrl?new URL(usedUrl).pathname:null,
     ...(ok?{data_base64:report.body.toString('base64')}:{response_excerpt:text.replace(/\s+/g,' ').slice(0,700)}),
   };
 }
