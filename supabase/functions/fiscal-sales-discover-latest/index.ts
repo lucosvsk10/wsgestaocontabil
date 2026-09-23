@@ -34,8 +34,8 @@ function dv(base: string) {
   return String(result);
 }
 
-function syntheticKey(cnpj: string, monthCode: string, noteNumber: number) {
-  const base = `27${monthCode}${cnpj}65${"001"}${String(noteNumber).padStart(9, "0")}1${"00000000"}`;
+function syntheticKey(cnpj: string, monthCode: string, noteNumber: number, model: string, series: number) {
+  const base = `27${monthCode}${cnpj}${model}${String(series).padStart(3, "0")}${String(noteNumber).padStart(9, "0")}1${"00000000"}`;
   return base + dv(base);
 }
 
@@ -79,6 +79,9 @@ Deno.serve(async req => {
     const companyId = String(body.company_id || "");
     if (!companyId) return json({ error: "company_id_required" }, 400);
     const lookahead = Math.min(12, Math.max(1, Number(body.lookahead || 6)));
+    const model = String(body.model || "65").replace(/\D/g, "");
+    const series = Math.max(1, Math.min(999, Number(body.series || 1)));
+    if (!["55","65"].includes(model)) return json({ error: "unsupported_model" }, 422);
 
     const { data: company, error: companyError } = await admin
       .from("fiscal_companies")
@@ -103,11 +106,11 @@ Deno.serve(async req => {
 
     const [{ data: state }, { data: savedRows }] = await Promise.all([
       admin.from("fiscal_sales_sync_state").select("latest_number").eq("company_id", companyId).maybeSingle(),
-      admin.from("fiscal_sales_documents").select("document_number").eq("company_id", companyId).order("document_number", { ascending: false }).limit(100),
+      admin.from("fiscal_sales_documents").select("document_number,model,series").eq("company_id", companyId).eq("model", model).eq("series", String(series)).order("document_number", { ascending: false }).limit(100),
     ]);
     const maxSaved = Math.max(0, ...(savedRows || []).map((row: any) => Number(row.document_number) || 0));
     const requestedBase = Number(body.base_number || 0);
-    const knownBase = Math.max(Number(state?.latest_number || 0), maxSaved);
+    const knownBase = Math.max(model === "65" && series === 1 ? Number(state?.latest_number || 0) : 0, maxSaved);
     const baseNumber = requestedBase > 0 ? requestedBase : knownBase;
     const bootstrap = baseNumber <= 0;
     const bootstrapStart = Math.max(1, Number(body.bootstrap_start || 1));
@@ -115,7 +118,10 @@ Deno.serve(async req => {
     const pfx = await decrypt(cert.certificate_ciphertext, cert.certificate_iv);
     const password = await decrypt(cert.password_ciphertext, cert.password_iv);
     const cnpj = digits(company.cnpj);
-    const months = monthCodes();
+    const requestedMonths = Array.isArray(body.months)
+      ? body.months.map((v: unknown) => String(v)).filter((v: string) => /^\d{4}$/.test(v)).slice(0, 2)
+      : [];
+    const months = requestedMonths.length ? requestedMonths : monthCodes();
     let latest = bootstrap ? 0 : baseNumber;
     let cooldown = false;
     const hits: Array<{ note_number: number; access_key: string; month: string }> = [];
@@ -125,7 +131,7 @@ Deno.serve(async req => {
 
     for (let noteNumber = firstNumber; noteNumber <= lastNumber && !cooldown; noteNumber += 1) {
       for (const month of months) {
-        const result = await consult(pfx, password, syntheticKey(cnpj, month, noteNumber));
+        const result = await consult(pfx, password, syntheticKey(cnpj, month, noteNumber, model, series));
         probes += 1;
         if (result.cStat === "656") {
           cooldown = true;
@@ -134,8 +140,9 @@ Deno.serve(async req => {
         if (result.realKey) {
           const keyMonth = result.realKey.slice(2, 6);
           const keyModel = result.realKey.slice(20, 22);
+          const keySeries = Number(result.realKey.slice(22, 25));
           const keyNumber = Number(result.realKey.slice(25, 34));
-          if (keyMonth === month && keyModel === "65" && keyNumber === noteNumber) {
+          if (keyMonth === month && keyModel === model && keySeries === series && keyNumber === noteNumber) {
             const confirmed = await consult(pfx, password, result.realKey);
             if (["100","101","110","301","302"].includes(String(confirmed.cStat || ""))) {
               latest = Math.max(latest, noteNumber);
@@ -149,7 +156,7 @@ Deno.serve(async req => {
       await sleep(300);
     }
 
-    return json({ ok: true, company_id: companyId, base_number: baseNumber, bootstrap, bootstrap_start: bootstrapStart, latest, advanced: bootstrap ? latest > 0 : latest > baseNumber, hits, probes, months, cooldown });
+    return json({ ok: true, company_id: companyId, model, series, base_number: baseNumber, bootstrap, bootstrap_start: bootstrapStart, latest, advanced: bootstrap ? latest > 0 : latest > baseNumber, hits, probes, months, cooldown });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
