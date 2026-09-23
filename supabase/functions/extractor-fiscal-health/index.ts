@@ -163,7 +163,7 @@ Deno.serve(async req => {
         });
       }
 
-      const [documentRows, reconciliationRows] = await Promise.all([
+      const [documentRows, undatedRows, reconciliationRows] = await Promise.all([
         paged((from, to) => admin.from('fiscal_dfe_documents')
           .select('id,access_key,source_id,nsu,document_kind,direction,issue_date')
           .eq('company_id', companyId)
@@ -171,6 +171,14 @@ Deno.serve(async req => {
           .gte('issue_date', `${start}T00:00:00-03:00`)
           .lte('issue_date', `${end}T23:59:59.999-03:00`)
           .order('issue_date', { ascending: true })
+          .range(from, to)),
+        paged((from, to) => admin.from('fiscal_dfe_documents')
+          .select('id,access_key,source_id,nsu,document_kind,direction,issue_date')
+          .eq('company_id', companyId)
+          .neq('document_kind', 'evento')
+          .is('issue_date', null)
+          .not('access_key', 'is', null)
+          .order('access_key', { ascending: true })
           .range(from, to)),
         paged((from, to) => admin.from('fiscal_sales_reconciliation')
           .select('access_key,note_number,status,issue_date')
@@ -184,10 +192,13 @@ Deno.serve(async req => {
 
       const seen = new Set<string>();
       const months: Record<string, { sales: number; purchases: number }> = {};
-      for (const row of [...documentRows, ...reconciliationRows.map((item: any) => ({ ...item, direction: 'saida' }))]) {
+      for (const row of [...documentRows, ...undatedRows, ...reconciliationRows.map((item: any) => ({ ...item, direction: 'saida' }))]) {
         const date = row.issue_date ? new Date(row.issue_date) : null;
-        if (!date || Number.isNaN(date.getTime())) continue;
-        const keyMonth = brazilDateParts(date).month;
+        const accessKey = String(row.access_key || '');
+        const keyYearMonth = !date && /^\d{44}$/.test(accessKey) ? accessKey.slice(2, 6) : null;
+        if (!keyYearMonth && (!date || Number.isNaN(date.getTime()))) continue;
+        if (keyYearMonth && (keyYearMonth < start.slice(2, 4) + start.slice(5, 7) || keyYearMonth > end.slice(2, 4) + end.slice(5, 7))) continue;
+        const keyMonth = keyYearMonth ? keyYearMonth.slice(2) : brazilDateParts(date!).month;
         const unique = String(row.access_key || row.nsu || row.source_id || row.note_number || row.id || '');
         const dedupe = `${keyMonth}:${unique}`;
         if (unique && seen.has(dedupe)) continue;
