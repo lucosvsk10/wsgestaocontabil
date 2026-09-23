@@ -219,7 +219,7 @@ Deno.serve(async req=>{
           const sourceStart=Date.parse(String(sState?.nfce_source_period_start||""));
           const sourceEnd=Date.parse(String(sState?.nfce_source_period_end||""));
           const requestedStart=Date.parse(startTs(start)),requestedEnd=Date.parse(endTs(end));
-          const periodCovered=Number.isFinite(sourceStart)&&Number.isFinite(sourceEnd)&&sourceStart<=requestedStart&&sourceEnd>=requestedEnd;
+          const periodCovered=Number.isFinite(sourceStart)&&Number.isFinite(sourceEnd)&&sourceStart<=requestedStart&&sourceEnd+1000>=requestedEnd;
           const confirmed=Boolean(sState?.nfce_source_status==="ok"&&sState?.nfce_source_confirmed_at&&periodCovered);
           await upsert(admin,companyId,start,end,"sale_nfce65",{
             sourceName:"SEFAZ/SP SAE-NFC-e",sourceConfirmed:confirmed,
