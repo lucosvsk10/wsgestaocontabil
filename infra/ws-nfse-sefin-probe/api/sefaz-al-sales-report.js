@@ -23,7 +23,8 @@ async function login(username,password){
   const rejected=/senha inv[aá]lida|usu[aá]rio inv[aá]lido|sca_default_login_page/i.test(String(r.headers.location||'')+' '+text);
   if(rejected||!cookie)throw Object.assign(new Error('invalid_credentials'),{status:422});
   const cookieNames=String(cookie||'').split(/;\s*/).map(x=>x.split('=',1)[0]).filter(Boolean);
-  return {cookie,meta:{final_status:r.status,final_path:new URL(lastUrl).pathname,redirect:location||null,cookie_names:cookieNames}};
+  const pageTitle=(text.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'').replace(/\s+/g,' ').trim().slice(0,180);
+  return {cookie,meta:{final_status:r.status,final_path:new URL(lastUrl).pathname,redirect:location||null,cookie_names:cookieNames,page_title:pageTitle}};
 }
 function brDate(iso){const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return'';return `${m[3]}/${m[2]}/${m[1]}`}
 async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}){
