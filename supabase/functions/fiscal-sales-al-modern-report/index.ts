@@ -27,8 +27,8 @@ Deno.serve(async req=>{try{
  for(const comp of comps){
    const year=comp.slice(0,4),month=String(Number(comp.slice(4,6)));
    for(const tipoDocumento of ["NFE","NFCE"]){
-     const u=new URL("https://contribuinte.sefaz.al.gov.br/malhafiscal/sfz-malhafiscal-api/api/notaFiscal");
-     const params={caceal,anoCompetencia:year,mesCompetencia:month,tipoDocumento,tipoOperacao:"S",pagina:"1",tamanhoPagina:"200",ehExpurgo:"false",apenasNfe:"false",chaveAcesso:""};
+     const u=new URL("https://contribuinte.sefaz.al.gov.br/malhafiscal/sfz-malhafiscal-api/api/notaFiscal/notasOmissas/contestacao");
+     const params={caceal,anoCompetencia:year,mesCompetencia:month,tipoDocumento,tipoOperacao:"P",pagina:"1",tamanhoPagina:"200",ehExpurgo:"false",apenasNfe:"false",chaveAcesso:""};
      for(const [k,v] of Object.entries(params))u.searchParams.set(k,v);
      const rr=await get(u.toString(),token,"application/json");
      const txt=new TextDecoder().decode(rr.buf);
