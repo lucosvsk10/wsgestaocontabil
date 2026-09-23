@@ -19,7 +19,8 @@ module.exports=async(req,res)=>{try{
        from=i+term.length;count++;
      }
    }
-   if(hits.length)out.push({url,status:r.status,bytes:Buffer.byteLength(r.text),hits});
+   const routeStrings=[...new Set([...r.text.matchAll(/["'`]([^"'\`]{1,260})["'`]/g)].map(m=>m[1]).filter(v=>/(api\/|nfe|nfce|nota|chave|saida|omiss|detalh|escritur|pendencia|relatorio)/i.test(v)))].slice(0,500);
+   if(hits.length||routeStrings.length)out.push({url,status:r.status,bytes:Buffer.byteLength(r.text),hits,route_strings:routeStrings});
  }
  return J(res,200,{ok:true,page_http:h.status,scripts,out});
 }catch(e){return J(res,500,{error:e instanceof Error?e.message:String(e)})}}
