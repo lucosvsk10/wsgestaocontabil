@@ -33,11 +33,65 @@ async function login(username,password){
   return {cookie,meta:{final_status:r.status,final_path:new URL(lastUrl).pathname,redirect:location||null,cookie_names:cookieNames,page_title:pageTitle,safe_links:safeLinks}};
 }
 function brDate(iso){const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return'';return `${m[3]}/${m[2]}/${m[1]}`}
-async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}){
+function gwtEscape(v){return String(v||'').replace(/\\/g,'\\\\').replace(/\|/g,'\\!').replace(/\0/g,'\\0')}
+function gwtCountPayload({cnpj,ie,start,end}){
+  const strings=[
+    'https://nfeas.sefaz.al.gov.br/gwtapp/',
+    '65B6BD5745F6531C4EBB72A58A01D410',
+    'br.gov.al.sefaz.nfe.relatorios.web.client.shared.NFeRelatoriosRemoteService',
+    'consultarQuantidadeNotasFiscaisDeEntradaIhSaida',
+    'br.gov.al.sefaz.nfe.shared.legado.NotaFiscalConsultaDTO/3510275579',
+    "'A','C','D'",
+    brDate(end)+' 23:59',
+    brDate(start)+' 00:00',
+    ie,cnpj,'-1','AL'
+  ];
+  const values=[1,2,3,4,1,5,5,6,-1,0,0,7,8,0,0,0,9,0,10,0,0,0,11,0,12];
+  return '7|0|'+strings.length+'|'+strings.map(gwtEscape).join('|')+'|'+values.join('|')+'|';
+}
+async function gwtReportAccess(cookie,params){
+  const r=await requestUrl('https://nfeas.sefaz.al.gov.br/gwtapp/nfeRelatoriosRemoteService.rpc',{
+    method:'POST',
+    headers:{
+      'Content-Type':'text/x-gwt-rpc; charset=utf-8',
+      'X-GWT-Permutation':'17B9688C7FCB092178ADBD10B81EA1F8',
+      'X-GWT-Module-Base':'https://nfeas.sefaz.al.gov.br/gwtapp/',
+      'Origin':'https://nfeas.sefaz.al.gov.br',
+      'Referer':'https://nfeas.sefaz.al.gov.br/gwtapp/'
+    },
+    body:gwtCountPayload(params)
+  });
+  const text=r.body.toString('utf8');
+  const permitted=r.status>=200&&r.status<300&&/^\/\/OK/.test(text);
+  const denied=/n[aã]o possui permiss[aã]o|sem permiss[aã]o|access denied/i.test(text);
+  return {http:r.status,permitted,denied,response_excerpt:text.replace(/\s+/g,' ').slice(0,420)};
+}
+
+async function getSalesReport({username,password,cnpj,ie,start,end,format='csv',verifyOnly=false}){
   const session=await login(username,password);let cookie=session.cookie;
   const app='https://nfeas.sefaz.al.gov.br/gwtapp/';
   const landing=await requestUrl(app,{headers:{'Cookie':cookie,'Accept':'text/html,*/*'}});
   cookie=mergeCookies(cookie,landing.headers['set-cookie']);
+  const access=await gwtReportAccess(cookie,{cnpj,ie,start,end});
+  if(verifyOnly){
+    return {
+      ok:access.permitted,
+      login_valid:true,
+      report_access:access.permitted,
+      permission_denied:access.denied,
+      http:access.http,
+      landing_http:landing.status,
+      rpc:access,
+      error:access.permitted?null:(access.denied?'sales_report_permission_denied':'sales_report_access_unconfirmed')
+    };
+  }
+  if(!access.permitted){
+    return {
+      ok:false,error:access.denied?'sales_report_permission_denied':'sales_report_access_unconfirmed',
+      login_valid:true,report_access:false,permission_denied:access.denied,http:access.http,
+      landing_http:landing.status,rpc:access
+    };
+  }
   const q=new URLSearchParams({
     ufEntrada:'AL',
     numeroCnpjEntrada:cnpj,
@@ -87,10 +141,10 @@ module.exports=async function(req,res){
   if(!authorized(req))return json(res,401,{error:'unauthorized'});
   try{
     const b=await readBody(req);
-    const username=String(b.username||''),password=String(b.password||''),cnpj=digits(b.cnpj),ie=digits(b.ie),start=String(b.start||''),end=String(b.end||''),format=String(b.format||'csv').toLowerCase()==='pdf'?'pdf':'csv';
+    const username=String(b.username||''),password=String(b.password||''),cnpj=digits(b.cnpj),ie=digits(b.ie),start=String(b.start||''),end=String(b.end||''),format=String(b.format||'csv').toLowerCase()==='pdf'?'pdf':'csv',verifyOnly=Boolean(b.verify_only);
     if(!username||!password||!/^[0-9]{14}$/.test(cnpj)||!/^\d{8,9}$/.test(ie)||!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||start>end)return json(res,400,{error:'invalid_payload'});
-    const result=await getSalesReport({username,password,cnpj,ie,start,end,format});
-    return json(res,result.ok?200:502,result);
+    const result=await getSalesReport({username,password,cnpj,ie,start,end,format,verifyOnly});
+    return json(res,result.ok?200:(result.permission_denied?403:502),result);
   }catch(e){
     const message=e instanceof Error?e.message:String(e);
     return json(res,message==='invalid_credentials'?422:500,{error:message,login_valid:message==='invalid_credentials'?false:null});
