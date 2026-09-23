@@ -554,6 +554,14 @@ module.exports = async function handler(req, res) {
       const inner = `<consStatServMDFe xmlns="http://www.portalfiscal.inf.br/mdfe" versao="3.00"><tpAmb>${env === 'production' ? '1' : '2'}</tpAmb><xServ>STATUS</xServ></consStatServMDFe>`;
       const ns = 'http://www.portalfiscal.inf.br/mdfe/wsdl/MDFeStatusServico';
       soap = envelope('mdfeDadosMsg', ns, inner);
+    } else if (action === 'mdfe-nonclosed') {
+      const cnpj = digits(b.cnpj);
+      if (!/^\d{14}$/.test(cnpj)) return json(res, 400, { error: 'invalid_mdfe_issuer' });
+      endpoint = `${mdfeBase(env)}/MDFeConsultaNaoEnc/MDFeConsultaNaoEnc.asmx`;
+      const inner = `<consMDFeNaoEnc xmlns="http://www.portalfiscal.inf.br/mdfe" versao="3.00"><tpAmb>${env === 'production' ? '1' : '2'}</tpAmb><xServ>CONSULTAR NÃO ENCERRADOS</xServ><CNPJ>${cnpj}</CNPJ></consMDFeNaoEnc>`;
+      const ns = 'http://www.portalfiscal.inf.br/mdfe/wsdl/MDFeConsultaNaoEnc';
+      soap = envelope('mdfeDadosMsg', ns, inner);
+      contentType = `application/soap+xml; charset=utf-8; action="${ns}/mdfeConsNaoEnc"`;
     } else if (action === 'mdfe-authorize') {
       endpoint = `${mdfeBase(env)}/MDFeRecepcaoSinc/MDFeRecepcaoSinc.asmx`;
       const xml = stripDecl(b.signed_xml);
