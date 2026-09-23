@@ -11,21 +11,23 @@ function readBody(req){return new Promise((resolve,reject)=>{let raw='';req.setE
 function mergeCookies(current,setCookie){const jar=new Map();for(const p of String(current||'').split(/;\s*/)){const i=p.indexOf('=');if(i>0)jar.set(p.slice(0,i),p.slice(i+1))}const arr=Array.isArray(setCookie)?setCookie:setCookie?[setCookie]:[];for(const raw of arr){const pair=String(raw||'').split(';',1)[0];const i=pair.indexOf('=');if(i>0)jar.set(pair.slice(0,i),pair.slice(i+1))}return [...jar].map(([k,v])=>`${k}=${v}`).join('; ')}
 function requestUrl(url,{method='GET',headers={},body=''}={}){const target=new URL(url);return new Promise((resolve,reject)=>{const r=https.request({hostname:target.hostname,port:443,path:target.pathname+target.search,method,minVersion:'TLSv1.2',rejectUnauthorized:true,servername:target.hostname,timeout:60000,headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36','Connection':'close',...headers,...(body?{'Content-Length':Buffer.byteLength(body)}:{})}},x=>{const chunks=[];x.on('data',c=>chunks.push(Buffer.from(c)));x.on('end',()=>resolve({status:x.statusCode||0,headers:x.headers,body:Buffer.concat(chunks)}))});r.on('timeout',()=>r.destroy(new Error('sefaz_al_sales_timeout')));r.on('error',reject);if(body)r.write(body);r.end()})}
 async function login(username,password){
-  const base='https://nfeas.sefaz.al.gov.br';let cookie='';
-  let r=await requestUrl(base+'/sca_default_login_page');cookie=mergeCookies(cookie,r.headers['set-cookie']);
+  const base='https://nfeas.sefaz.al.gov.br';let cookie='',lastUrl=base+'/sca_default_login_page';
+  let r=await requestUrl(lastUrl);cookie=mergeCookies(cookie,r.headers['set-cookie']);
   const form=new URLSearchParams({sca_login:username,sca_senha:password,btn_entrar:'Entrar'}).toString();
-  r=await requestUrl(base+'/sca_security_check',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Cookie':cookie,'Origin':base,'Referer':base+'/sca_default_login_page'},body:form});
+  lastUrl=base+'/sca_security_check';
+  r=await requestUrl(lastUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Cookie':cookie,'Origin':base,'Referer':base+'/sca_default_login_page'},body:form});
   cookie=mergeCookies(cookie,r.headers['set-cookie']);
   let location=r.headers.location;
-  for(let i=0;i<8&&location;i++){const next=new URL(location,base).toString();r=await requestUrl(next,{headers:{'Cookie':cookie,'Referer':base}});cookie=mergeCookies(cookie,r.headers['set-cookie']);location=r.headers.location}
+  for(let i=0;i<8&&location;i++){const next=new URL(location,base).toString();lastUrl=next;r=await requestUrl(next,{headers:{'Cookie':cookie,'Referer':base}});cookie=mergeCookies(cookie,r.headers['set-cookie']);location=r.headers.location}
   const text=r.body.toString('utf8');
   const rejected=/senha inv[aá]lida|usu[aá]rio inv[aá]lido|sca_default_login_page/i.test(String(r.headers.location||'')+' '+text);
   if(rejected||!cookie)throw Object.assign(new Error('invalid_credentials'),{status:422});
-  return cookie;
+  const cookieNames=String(cookie||'').split(/;\s*/).map(x=>x.split('=',1)[0]).filter(Boolean);
+  return {cookie,meta:{final_status:r.status,final_path:new URL(lastUrl).pathname,redirect:location||null,cookie_names:cookieNames}};
 }
 function brDate(iso){const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return'';return `${m[3]}/${m[2]}/${m[1]}`}
 async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}){
-  let cookie=await login(username,password);
+  const session=await login(username,password);let cookie=session.cookie;
   const app='https://nfeas.sefaz.al.gov.br/gwtapp/';
   const landing=await requestUrl(app,{headers:{'Cookie':cookie,'Accept':'text/html,*/*'}});
   cookie=mergeCookies(cookie,landing.headers['set-cookie']);
@@ -56,7 +58,8 @@ async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}
     if(!report||current.status!==404){report=current;usedUrl=url}
     if(current.status!==404)break;
   }
-  console.log('SEFAZ AL sales report routes',{landing_http:landing.status,attempts});
+  const safeExcerpt=(report?.body?.toString('utf8')||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,320);
+  console.log('SEFAZ AL sales report routes',{login:session.meta,landing_http:landing.status,attempts,response_excerpt:safeExcerpt});
   const contentType=String(report?.headers?.['content-type']||'');
   const text=report?.body?.toString('utf8')||'';
   const loginPage=/sca_default_login_page|sca_security_check|name=["']sca_login/i.test(text);
