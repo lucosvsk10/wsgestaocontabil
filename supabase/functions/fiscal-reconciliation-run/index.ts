@@ -184,7 +184,7 @@ Deno.serve(async req=>{
             sourceConfirmed:salesSourceConfirmed,sourceKeys:source55,siteKeys:keySet(nfe55Out),
             xmlPending:nfe55Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfe55Out.length-keySet(nfe55Out).size,
             blocked:!salesSourceConfirmed,
-            reason:salesSourceConfirmed?null:"A fonte dedicada de NF-e emitidas da SEFAZ/AL não confirmou o período. Vendas positivas do relatório combinado podem ser aproveitadas, mas zero não é considerado conclusivo.",
+            reason:salesSourceConfirmed?null:"A fonte dedicada de NF-e emitidas da SEFAZ/AL não confirmou o período. Chaves positivas confirmadas por protocolo/eventos são mantidas, mas a cobertura de NF-e 55 emitidas ainda não é exaustiva.",
             details:{
               portal_credential:true,
               direct_protocol_confirmed:directKeys.length,
@@ -227,8 +227,9 @@ Deno.serve(async req=>{
             .gte("issue_date",startTs(start)).lte("issue_date",endTs(end)).range(from,to));
           const sourceStart=Date.parse(String(sState?.nfce_source_period_start||""));
           const sourceEnd=Date.parse(String(sState?.nfce_source_period_end||""));
-          const requestedStart=Date.parse(startTs(start)),requestedEnd=Date.parse(endTs(end));
-          const periodCovered=Number.isFinite(sourceStart)&&Number.isFinite(sourceEnd)&&sourceStart<=requestedStart&&sourceEnd+1000>=requestedEnd;
+          const requestedStart=Date.parse(startTs(start));
+          const requestedEnd=end===defaultEnd?Date.now():Date.parse(endTs(end));
+          const periodCovered=Number.isFinite(sourceStart)&&Number.isFinite(sourceEnd)&&sourceStart<=requestedStart&&sourceEnd+5*60*1000>=requestedEnd;
           const confirmed=Boolean(sState?.nfce_source_status==="ok"&&sState?.nfce_source_confirmed_at&&periodCovered);
           await upsert(admin,companyId,start,end,"sale_nfce65",{
             sourceName:"SEFAZ/SP SAE-NFC-e",sourceConfirmed:confirmed,
@@ -251,7 +252,11 @@ Deno.serve(async req=>{
             sourceKeys:keySet(rec),siteKeys:keySet(nfce65Out),
             xmlPending:nfce65Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfce65Out.length-keySet(nfce65Out).size,
             blocked:!confirmed,
-            reason:confirmed?null:(sState?.last_error||(hasOfficialKeys?"Reconciliação de NFC-e ainda não foi concluída.":"Não há fonte oficial suficiente para confirmar zero NFC-e no período.")),
+            reason:confirmed?null:(
+              hasOfficialKeys
+                ? "Reconciliação de NFC-e ainda não foi concluída."
+                : "Não há fonte oficial suficiente para confirmar zero NFC-e no período."
+            ),
             details:{
               latest_number:sState?.latest_number||null,
               reconciliation_total:sState?.reconciliation_total||0,
