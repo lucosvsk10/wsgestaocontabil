@@ -68,25 +68,31 @@ Deno.serve(async req=>{
 
       const credStatus=String(cred?.last_verification_status||"not_configured");
       if(uf==="AL"){
-        const ok=credStatus==="valid";
-        const sale55Ok=Boolean(ok&&s55?.status==="ok"&&s55?.source_confirmed);
+        const loginUsable=["valid","valid_without_report_permission"].includes(credStatus);
+        const reportPermission=credStatus==="valid";
+        const sale55Ok=Boolean(s55?.status==="ok"&&s55?.source_confirmed);
         rows.push({
           document_type:"nfe55",direction:"saida",applicability:"required",
-          source_name:"SEFAZ/AL relatório de emitidas",source_mode:"state_portal",
-          coverage_status:sale55Ok?"covered":ok?"partial":"blocked",source_confirmed:sale55Ok,
+          source_name:"SEFAZ/AL relatório de emitidas + reconciliação A1/SVRS",source_mode:"state_portal_or_a1_recovery",
+          coverage_status:sale55Ok?"covered":loginUsable?"partial":"blocked",source_confirmed:sale55Ok,
           last_verified_at:s55?.checked_at||cred?.last_verified_at||null,last_success_at:sale55Ok?(s55?.checked_at||null):null,
-          last_error:sale55Ok?null:ok?(s55?.reason||"Credencial validada; reconciliação por período ainda precisa concluir."):"Credencial SEFAZ/AL ausente, inválida ou sem permissão.",
-          details:{credential_status:credStatus,reconciliation_status:s55?.status||null,source_count:s55?.source_count??null,site_count:s55?.site_count??null,xml_pending_count:s55?.xml_pending_count??null},
+          last_error:sale55Ok?null:reportPermission
+            ?(s55?.reason||"Credencial validada; reconciliação por período ainda precisa concluir.")
+            :loginUsable
+              ?"Login estadual válido, mas o relatório de NF-e emitidas não foi liberado para este usuário. A recuperação por A1 continua como fallback."
+              :"Credencial SEFAZ/AL ausente ou inválida.",
+          details:{credential_status:credStatus,report_permission:reportPermission,reconciliation_status:s55?.status||null,source_count:s55?.source_count??null,site_count:s55?.site_count??null,xml_pending_count:s55?.xml_pending_count??null},
         });
+        const nfceComplete=Boolean(ss?.reconciliation_complete&&Number(ss?.reconciliation_pending||0)===0&&!ss?.last_error);
         rows.push({
           document_type:"nfce65",direction:"saida",applicability:"required",
-          source_name:"SEFAZ/AL + reconciliação NFC-e",source_mode:"state_portal_and_probe",
-          coverage_status:ok&&ss?.reconciliation_complete?"covered":ok?"partial":"blocked",
-          source_confirmed:Boolean(ok&&ss?.reconciliation_complete),
-          last_verified_at:ss?.last_completed_at||cred?.last_verified_at||null,
-          last_success_at:ok&&ss?.reconciliation_complete?(ss?.last_completed_at||null):null,
-          last_error:ok?(ss?.reconciliation_complete?null:"Reconciliação NFC-e ainda não concluída."):"Credencial SEFAZ/AL não validada.",
-          details:{credential_status:credStatus,reconciliation_complete:Boolean(ss?.reconciliation_complete),reconciliation_pending:Number(ss?.reconciliation_pending||0)},
+          source_name:"SVRS/SEFAZ NFC-e reconciliation",source_mode:"a1_sequence",
+          coverage_status:nfceComplete?"covered":ss?.last_error?"partial":"partial",
+          source_confirmed:nfceComplete,
+          last_verified_at:ss?.last_completed_at||null,
+          last_success_at:nfceComplete?(ss?.last_completed_at||null):null,
+          last_error:nfceComplete?null:(ss?.last_error||"Reconciliação NFC-e ainda não concluída."),
+          details:{credential_status:credStatus,portal_required:false,reconciliation_complete:Boolean(ss?.reconciliation_complete),reconciliation_pending:Number(ss?.reconciliation_pending||0)},
         });
       }else if(uf==="SP"){
         const sp55Known=sp55.length,sp55Xml=sp55.filter((r:any)=>Boolean(r.xml)).length;
