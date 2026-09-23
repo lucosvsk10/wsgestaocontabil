@@ -11,6 +11,7 @@ const numericNote = (value: unknown) => {
   const parsed = Number(String(value ?? "").replace(/\D/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;
 };
+const digits = (value: unknown) => String(value ?? "").replace(/\D/g, "");
 
 const monthCodesBetween = (start: string, end: string) => {
   const out: string[] = [];
@@ -69,7 +70,7 @@ Deno.serve(async req => {
     const [{ data: companies, error }, { data: extractorLinks }] = await Promise.all([
       admin
         .from("fiscal_companies")
-        .select("id,status,uf,fiscal_settings")
+        .select("id,cnpj,status,uf,fiscal_settings")
         .eq("status", "ativa"),
       admin
         .from("extractor_companies")
@@ -234,14 +235,56 @@ Deno.serve(async req => {
             .eq("company_id", company.id);
         }
 
+        const companyCnpj = digits(company.cnpj);
+        const [{ data: knownSalesModels }, { data: issuerEventRows }] = await Promise.all([
+          admin.from("fiscal_sales_documents")
+            .select("model,series,document_number,issue_date")
+            .eq("company_id", company.id)
+            .in("model", ["55","65"])
+            .order("issue_date", { ascending: false })
+            .limit(2500),
+          admin.from("fiscal_dfe_events")
+            .select("access_key,event_at")
+            .eq("company_id", company.id)
+            .order("event_at", { ascending: false })
+            .limit(5000),
+        ]);
+
+        const seriesScores = new Map<string, { model: string; series: string; score: number; eventNumbers: number[]; eventKeys: string[] }>();
+        const addSeries = (model: string, series: string, weight: number, noteNumber = 0, accessKey = "") => {
+          if (!["55","65"].includes(model) || !/^\d{1,3}$/.test(series)) return;
+          const normalizedSeries = String(Math.max(1, Number(series)));
+          const key = model + ":" + normalizedSeries;
+          const current = seriesScores.get(key) || { model, series: normalizedSeries, score: 0, eventNumbers: [], eventKeys: [] };
+          current.score += weight;
+          if (noteNumber > 0 && !current.eventNumbers.includes(noteNumber)) current.eventNumbers.push(noteNumber);
+          if (accessKey && !current.eventKeys.includes(accessKey)) current.eventKeys.push(accessKey);
+          seriesScores.set(key, current);
+        };
+        for (const row of knownSalesModels || []) addSeries(String(row.model || ""), String(row.series || "1"), 8);
+        for (const row of issuerEventRows || []) {
+          const accessKey = digits(row.access_key);
+          if (accessKey.length !== 44 || accessKey.slice(6,20) !== companyCnpj) continue;
+          const model = accessKey.slice(20,22);
+          const series = String(Number(accessKey.slice(22,25)));
+          const noteNumber = Number(accessKey.slice(25,34));
+          addSeries(model, series, 3, noteNumber, accessKey);
+        }
+        const chosen = [...seriesScores.values()].sort((a,b) => b.score - a.score || Number(a.series) - Number(b.series))[0] || null;
+        const targetModel = chosen?.model || "65";
+        const targetSeries = chosen?.series || "1";
+        const issuerSeedNumbers = chosen?.eventNumbers || [];
+        const maxIssuerEvent = Math.max(0, ...issuerSeedNumbers);
+        const minIssuerEvent = Math.min(...issuerSeedNumbers.filter((n:number) => n > 0), Number.POSITIVE_INFINITY);
+
         let dfeQuery = admin
           .from("fiscal_dfe_documents")
           .select("note_number,issue_date")
           .eq("company_id", company.id)
           .eq("direction", "saida")
           .neq("document_kind", "evento")
-          .eq("model", "65")
-          .eq("series", "1")
+          .eq("model", targetModel)
+          .eq("series", targetSeries)
           .order("issue_date", { ascending: false })
           .limit(2000);
         if (companyHistoryStart) {
@@ -255,8 +298,8 @@ Deno.serve(async req => {
           .from("fiscal_sales_documents")
           .select("document_number")
           .eq("company_id", company.id)
-          .eq("model", "65")
-          .eq("series", "1")
+          .eq("model", targetModel)
+          .eq("series", targetSeries)
           .order("document_number", { ascending: false })
           .limit(2000);
         if (companyHistoryStart) {
@@ -322,19 +365,22 @@ Deno.serve(async req => {
         const priorLatest = Math.max(0, ...priorNumbers);
         const oldLatest = Number(state?.latest_number || 0);
         const persistedFloor = Number(state?.initial_floor_number || 0);
+        const legacyStateCompatible = targetModel === "65" && targetSeries === "1";
         const trustedStateLatest =
-          persistedFloor > 0 || maxSaved > 0 || maxKnownDfe > 0 || priorLatest > 0
+          legacyStateCompatible && (persistedFloor > 0 || maxSaved > 0 || maxKnownDfe > 0 || priorLatest > 0)
             ? oldLatest
             : 0;
-        let baseLatest = Math.max(trustedStateLatest, maxSaved, maxKnownDfe, priorLatest);
+        let baseLatest = Math.max(trustedStateLatest, maxSaved, maxKnownDfe, priorLatest, maxIssuerEvent);
         let scopeStartNumber = isExtractor
-          ? persistedFloor > 0
+          ? legacyStateCompatible && persistedFloor > 0
             ? persistedFloor
             : priorLatest > 0
               ? priorLatest + 1
               : Number.isFinite(minKnownWindow)
                 ? Math.max(1, minKnownWindow)
-                : 0
+                : Number.isFinite(minIssuerEvent)
+                  ? Math.max(1, minIssuerEvent)
+                  : 0
           : 1;
 
         let bootstrap: any = null;
@@ -358,8 +404,8 @@ Deno.serve(async req => {
               body: JSON.stringify({
                 company_id: company.id,
                 start_date: companyHistoryStart || historyStart,
-                model: "65",
-                series: 1,
+                model: targetModel,
+                series: Number(targetSeries),
                 max_probes: 28,
               }),
               signal: AbortSignal.timeout(110000),
@@ -388,6 +434,8 @@ Deno.serve(async req => {
                   base_number: 0,
                   bootstrap_start: 1,
                   lookahead: 24,
+                  model: targetModel,
+                  series: Number(targetSeries),
                   months: discoveryMonths,
                 }),
                 signal: AbortSignal.timeout(90000),
@@ -443,6 +491,8 @@ Deno.serve(async req => {
             body: JSON.stringify({
               company_id: company.id,
               base_number: baseLatest,
+              model: targetModel,
+              series: Number(targetSeries),
               lookahead: 72,
               months: discoveryMonths,
               preferred_month: bootstrap?.anchor_key_month || historyStartMonth,
@@ -479,6 +529,8 @@ Deno.serve(async req => {
             headers,
             body: JSON.stringify({
               company_id: company.id,
+              model: targetModel,
+              series: Number(targetSeries),
               batch: 24,
               ...(isExtractor ? { start_number: scopeStartNumber } : {}),
             }),
@@ -502,7 +554,9 @@ Deno.serve(async req => {
             }
           );
           classification = await response.json().catch(() => ({}));
-          if (!response.ok) {
+          if (targetModel !== "65" || targetSeries !== "1") {
+            classification = { skipped: true, reason: "series_specific_gap_classifier_pending", model: targetModel, series: targetSeries };
+          } else if (!response.ok) {
             classification = {
               error: classification?.error || "Falha ao classificar lacunas",
             };
@@ -540,6 +594,9 @@ Deno.serve(async req => {
           reconciliation,
           classification,
           state_credential_status: stateCredentialStatus,
+          target_model: targetModel,
+          target_series: targetSeries,
+          issuer_event_seed: maxIssuerEvent || null,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
