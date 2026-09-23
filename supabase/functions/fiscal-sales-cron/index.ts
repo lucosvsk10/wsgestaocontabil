@@ -188,6 +188,10 @@ Deno.serve(async req => {
           continue;
         }
 
+        // NFC-e 65 can be discovered/reconciled from the A1 + SVRS sequence.
+        // The SEFAZ/AL portal credential remains useful for exhaustive NF-e 55 issuer reporting,
+        // but it must not block the NFC-e engine.
+        let stateCredentialStatus = "not_configured";
         if (isExtractor) {
           const { data: stateCredential, error: credentialError } = await admin
             .from("fiscal_state_credentials")
@@ -197,31 +201,7 @@ Deno.serve(async req => {
             .eq("is_active", true)
             .maybeSingle();
           if (credentialError) throw credentialError;
-
-          if (!stateCredential || stateCredential.last_verification_status !== "valid") {
-            const verificationStatus = stateCredential?.last_verification_status || "not_configured";
-            const reason =
-              verificationStatus === "invalid_credentials"
-                ? "Usuário ou senha inválidos no portal estadual."
-                : verificationStatus === "valid_without_report_permission"
-                  ? "Login estadual válido, mas sem permissão suficiente para o relatório fiscal."
-                  : verificationStatus === "portal_unavailable"
-                    ? "A última validação do portal estadual não foi concluída."
-                    : "Credencial estadual SEFAZ/AL ainda não configurada e validada.";
-            await admin.from("fiscal_sales_sync_state").upsert({
-              company_id: company.id,
-              status: "waiting_state_credentials",
-              last_error: reason,
-              next_scheduled_at: null,
-              updated_at: now.toISOString(),
-            }, { onConflict: "company_id" });
-            out.push({
-              company_id: company.id,
-              status: "waiting_state_credentials",
-              verification_status: verificationStatus,
-            });
-            continue;
-          }
+          stateCredentialStatus = stateCredential?.last_verification_status || "not_configured";
         }
 
         await admin.from("fiscal_sales_sync_state").upsert({
@@ -559,6 +539,7 @@ Deno.serve(async req => {
           discovery,
           reconciliation,
           classification,
+          state_credential_status: stateCredentialStatus,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
