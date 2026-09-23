@@ -97,7 +97,7 @@ function requestHttps(url, material, { method = 'POST', body = '', contentType =
       headers['Content-Type'] = contentType;
       headers['Content-Length'] = Buffer.byteLength(body);
     }
-    const needsIcpBrasilV10 = ['nfe.fazenda.sp.gov.br', 'homologacao.nfe.fazenda.sp.gov.br', 'nfce.fazenda.sp.gov.br', 'homologacao.nfce.fazenda.sp.gov.br'].includes(target.hostname);
+    const needsIcpBrasilV10 = ['nfe.fazenda.sp.gov.br', 'www.nfe.fazenda.sp.gov.br', 'homologacao.nfe.fazenda.sp.gov.br', 'nfce.fazenda.sp.gov.br', 'homologacao.nfce.fazenda.sp.gov.br'].includes(target.hostname);
     const request = https.request({
       hostname: target.hostname,
       port: 443,
@@ -319,7 +319,7 @@ module.exports = async function handler(req, res) {
 
 
     if (action === 'sp-nfe-portal-probe') {
-      const result = await requestHttps('https://nfe.fazenda.sp.gov.br/ConsultaNFe/consulta/publica/ConsultarNFe.aspx', material, {
+      const result = await requestHttps('https://www.nfe.fazenda.sp.gov.br/ConsultaNFe/consulta/publica/ConsultarNFe.aspx', material, {
         method: 'GET',
         accept: 'text/html,application/xhtml+xml,*/*',
       });
