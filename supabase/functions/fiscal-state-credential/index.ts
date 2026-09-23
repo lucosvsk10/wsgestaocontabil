@@ -279,7 +279,7 @@ Deno.serve(async req=>{
           .select("id",{count:"exact",head:true})
           .eq("company_id",fiscal.id),
         ctx.admin.from("fiscal_source_reconciliation")
-          .select("document_type,status,source_confirmed,source_count,site_count,missing_count,checked_at")
+          .select("document_type,status,source_confirmed,source_count,site_count,missing_count,reason,checked_at")
           .eq("company_id",fiscal.id)
           .in("document_type",["sale_nfe55","sale_nfce65"])
           .order("checked_at",{ascending:false})
@@ -293,12 +293,14 @@ Deno.serve(async req=>{
       const salesSourceMissing=applicableSources.reduce((sum:number,row:any)=>sum+Number(row.missing_count||0),0);
       const salesSourceCount=applicableSources.reduce((sum:number,row:any)=>sum+Number(row.source_count||0),0);
       const salesSiteCount=applicableSources.reduce((sum:number,row:any)=>sum+Number(row.site_count||0),0);
+      const sourceIssue=applicableSources.find((row:any)=>row.source_confirmed!==true||["blocked","error","pending"].includes(String(row.status||"")));
+      const salesSourceError=clean(sourceIssue?.reason)||clean(salesState?.last_error)||null;
       return J({
         ok:true,
         status:{
           ...publicStatus(cred,fiscal),
           sales_status:salesState?.status||null,
-          sales_error:salesState?.last_error||null,
+          sales_error:salesSourceError,
           sales_started_at:salesState?.last_started_at||null,
           sales_completed_at:salesState?.last_completed_at||null,
           sales_found:Number(salesCount||0),
