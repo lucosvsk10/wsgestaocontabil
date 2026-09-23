@@ -11,12 +11,20 @@ async function vaultKey(){
   const secret=Deno.env.get("ACCOUNTING_ENGINE_SESSION_SECRET")||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if(!secret)throw new Error("vault_secret_missing");
   const digest=await crypto.subtle.digest("SHA-256",E.encode(`ws-fiscal-vault:${secret}`));
-  return crypto.subtle.importKey("raw",digest,{name:"AES-GCM"},false,["encrypt"]);
+  return crypto.subtle.importKey("raw",digest,{name:"AES-GCM"},false,["encrypt","decrypt"]);
 }
 async function encrypt(value:string){
   const iv=crypto.getRandomValues(new Uint8Array(12));
   const cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},await vaultKey(),E.encode(value));
   return{ciphertext:b64(new Uint8Array(cipher)),iv:b64(iv)};
+}
+async function decrypt(ciphertext:string,iv:string){
+  const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:B(iv)},await vaultKey(),B(ciphertext));
+  return D.decode(plain);
+}
+async function sha256Hex(value:string){
+  const digest=await crypto.subtle.digest("SHA-256",E.encode(value));
+  return Array.from(new Uint8Array(digest)).map(x=>x.toString(16).padStart(2,"0")).join("");
 }
 
 Deno.serve(async req=>{
@@ -29,11 +37,12 @@ Deno.serve(async req=>{
     if(!supplied||supplied!==String(t?.token||""))return J({error:"unauthorized"},403);
 
     const b=await req.json().catch(()=>({})) as any;
+    const action=String(b.action||"save");
     const companyId=String(b.company_id||"");
     const username=String(b.username||"").trim();
     const password=String(b.password||"");
     const requestId=Number(b.request_id||0)||null;
-    if(!companyId||!username||!password)return J({error:"company_username_password_required"},400);
+    if(!companyId)return J({error:"company_required"},400);
 
     const {data:c,error:ce}=await admin.from("fiscal_companies")
       .select("id,inscricao_estadual,uf,status").eq("id",companyId).maybeSingle();
@@ -50,7 +59,26 @@ Deno.serve(async req=>{
     if(!attempt||attempt.outcome!=="valid")return J({error:"successful_one_shot_verification_required"},409);
     if(requestId&&attempt.request_id&&Number(attempt.request_id)!==requestId)return J({error:"verification_request_mismatch"},409);
 
-    const [u,p]=await Promise.all([encrypt(username),encrypt(password)]);
+    let resolvedUsername=username,resolvedPassword=password;
+    if(action==="copy_verified_shared"){
+      const sourceCompanyId=String(b.source_company_id||"");
+      const expectedHash=String(b.expected_password_sha256||"").toLowerCase();
+      if(!sourceCompanyId||!/^[a-f0-9]{64}$/.test(expectedHash))return J({error:"source_and_hash_required"},400);
+      const {data:source,error:se}=await admin.from("fiscal_state_credentials")
+        .select("password_ciphertext,password_iv,last_verification_status,is_active")
+        .eq("company_id",sourceCompanyId).eq("uf","AL").eq("is_active",true).maybeSingle();
+      if(se)throw se;
+      if(!source||source.last_verification_status!=="valid")return J({error:"source_credential_not_valid"},409);
+      const sourcePassword=await decrypt(source.password_ciphertext,source.password_iv);
+      if(await sha256Hex(sourcePassword)!==expectedHash)return J({error:"source_password_hash_mismatch"},409);
+      resolvedUsername=expected;
+      resolvedPassword=sourcePassword;
+    }else{
+      if(!resolvedUsername||!resolvedPassword)return J({error:"company_username_password_required"},400);
+      if(digits(resolvedUsername)!==expected)return J({error:"username_not_derived_from_ie"},422);
+    }
+
+    const [u,p]=await Promise.all([encrypt(resolvedUsername),encrypt(resolvedPassword)]);
     const now=new Date().toISOString();
     const {error:saveError}=await admin.from("fiscal_state_credentials").upsert({
       company_id:companyId,uf:"AL",portal_name:"SCA SEFAZ/AL",
