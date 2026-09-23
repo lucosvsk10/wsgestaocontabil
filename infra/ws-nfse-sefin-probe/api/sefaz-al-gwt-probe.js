@@ -16,7 +16,7 @@ module.exports=async function(req,res){
     const strong=uniq([
       ...[...boot.text.matchAll(/['"]([A-F0-9]{20,})['"]/g)].map(m=>m[1]),
     ]);
-    const candidates=scripts.slice(0,12);
+    const candidates=(scripts.length?scripts:strong.map(x=>x+'.cache.js')).slice(0,12);
     const inspected=[];
     for(const file of candidates){
       const r=await get(base+file);
