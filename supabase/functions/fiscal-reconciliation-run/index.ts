@@ -244,13 +244,14 @@ Deno.serve(async req=>{
             .eq("company_id",companyId).eq("model","65")
             .in("status",["found","cancelled"])
             .gte("issue_date",startTs(start)).lte("issue_date",endTs(end)).range(from,to));
-          const confirmed=Boolean(sState?.reconciliation_complete&&Number(sState?.reconciliation_pending||0)===0);
+          const hasOfficialKeys=rec.some((r:any)=>dg(r.access_key).length===44&&["found","cancelled"].includes(String(r.status||"")));
+          const confirmed=Boolean(sState?.reconciliation_complete&&Number(sState?.reconciliation_pending||0)===0&&hasOfficialKeys);
           await upsert(admin,companyId,start,end,"sale_nfce65",{
             sourceName:"SVRS/SEFAZ NFC-e reconciliation",sourceConfirmed:confirmed,
             sourceKeys:keySet(rec),siteKeys:keySet(nfce65Out),
             xmlPending:nfce65Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfce65Out.length-keySet(nfce65Out).size,
             blocked:!confirmed,
-            reason:confirmed?null:(sState?.last_error||"Reconciliação de NFC-e ainda não foi concluída."),
+            reason:confirmed?null:(sState?.last_error||(hasOfficialKeys?"Reconciliação de NFC-e ainda não foi concluída.":"Não há fonte oficial suficiente para confirmar zero NFC-e no período.")),
             details:{
               latest_number:sState?.latest_number||null,
               reconciliation_total:sState?.reconciliation_total||0,
