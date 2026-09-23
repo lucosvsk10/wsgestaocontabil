@@ -24,7 +24,13 @@ async function login(username,password){
   if(rejected||!cookie)throw Object.assign(new Error('invalid_credentials'),{status:422});
   const cookieNames=String(cookie||'').split(/;\s*/).map(x=>x.split('=',1)[0]).filter(Boolean);
   const pageTitle=(text.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'').replace(/\s+/g,' ').trim().slice(0,180);
-  return {cookie,meta:{final_status:r.status,final_path:new URL(lastUrl).pathname,redirect:location||null,cookie_names:cookieNames,page_title:pageTitle}};
+  const safeLinks=[...text.matchAll(/href=["']([^"'#]+)["']/gi)]
+    .map(m=>String(m[1]||''))
+    .filter(h=>/(nfe|relat|consulta|gwt)/i.test(h))
+    .map(h=>{try{return new URL(h,base).pathname}catch{return h.slice(0,180)}})
+    .filter((v,i,a)=>v&&a.indexOf(v)===i)
+    .slice(0,30);
+  return {cookie,meta:{final_status:r.status,final_path:new URL(lastUrl).pathname,redirect:location||null,cookie_names:cookieNames,page_title:pageTitle,safe_links:safeLinks}};
 }
 function brDate(iso){const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return'';return `${m[3]}/${m[2]}/${m[1]}`}
 async function getSalesReport({username,password,cnpj,ie,start,end,format='csv'}){
