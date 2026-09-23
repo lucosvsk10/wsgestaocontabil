@@ -279,6 +279,24 @@ Deno.serve(async req=>{
       return J({ok:true,status:publicStatus(saved,fiscal),verification:verification.details},verification.code==="portal_unavailable"?202:200);
     }
 
+    if(action==="request_verify"){
+      if(!cred?.id)return J({error:"Credencial estadual não configurada."},404);
+      if(cred.last_verification_status==="invalid_credentials"){
+        return J({error:"Esta credencial já foi rejeitada. Salve uma nova senha antes de tentar novamente."},409);
+      }
+      const now=new Date().toISOString();
+      const {data:updated,error}=await ctx.admin.from("fiscal_state_credentials").update({
+        last_verified_at:null,last_verification_status:"pending_verification",updated_at:now
+      }).eq("id",cred.id).select("id,portal_name,last_verified_at,last_verification_status").single();
+      if(error)throw error;
+      await ctx.admin.from("fiscal_sales_sync_state").upsert({
+        company_id:fiscal.id,status:"waiting_state_credentials",paused:false,next_scheduled_at:null,
+        last_error:"Credencial estadual aguardando validação automática.",updated_at:now
+      },{onConflict:"company_id"});
+      await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_verification_queued","pending_verification");
+      return J({ok:true,status:publicStatus(updated,fiscal),queued_for_verification:true},202);
+    }
+
     if(action==="verify"){
       if(!cred?.id)return J({error:"Credencial estadual não configurada."},404);
       const username=await decrypt(cred.username_ciphertext,cred.username_iv);
