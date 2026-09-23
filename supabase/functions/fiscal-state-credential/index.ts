@@ -193,6 +193,43 @@ Deno.serve(async req=>{
     const body=await req.json().catch(()=>({})) as any;
     const action=clean(body.action)||"status";
 
+    if(action==="sales_probe_internal"){
+      const supplied=req.headers.get("x-debug-token")||"";
+      const [{data:internal},{data:g}]=await Promise.all([
+        admin.from("_fiscal_sales_debug_token").select("token").eq("id",true).maybeSingle(),
+        admin.from("_fiscal_vercel_gateway_token").select("token").eq("id",true).maybeSingle(),
+      ]);
+      if(!supplied||supplied!==String(internal?.token||""))return J({error:"unauthorized"},403);
+      const companyId=clean(body.company_id);
+      if(!companyId)return J({error:"company_id_required"},400);
+      const {data:fiscal,error:fe}=await admin.from("fiscal_companies")
+        .select("id,cnpj,inscricao_estadual,uf,status").eq("id",companyId).maybeSingle();
+      if(fe)throw fe;
+      if(!fiscal||fiscal.status!=="ativa"||String(fiscal.uf||"").toUpperCase()!=="AL")return J({error:"company_not_active_al"},422);
+      const {data:stored,error:se}=await admin.from("fiscal_state_credentials")
+        .select("username_ciphertext,username_iv,password_ciphertext,password_iv,last_verification_status,is_active")
+        .eq("company_id",companyId).eq("uf","AL").eq("is_active",true).maybeSingle();
+      if(se)throw se;
+      if(!stored||stored.last_verification_status!=="valid")return J({error:"state_credential_not_valid"},409);
+      const userValue=await decrypt(stored.username_ciphertext,stored.username_iv);
+      const secretValue=await decrypt(stored.password_ciphertext,stored.password_iv);
+      const end=clean(body.end)||new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Maceio",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+      const start=clean(body.start)||end.slice(0,8)+"01";
+      const response=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-sales-report",{
+        method:"POST",
+        headers:{"content-type":"application/json","authorization":`Bearer ${String(g?.token||"")}`},
+        body:JSON.stringify({username:userValue,password:secretValue,cnpj:digits(fiscal.cnpj),ie:digits(fiscal.inscricao_estadual),start,end,format:"csv"}),
+        signal:AbortSignal.timeout(90000),
+      });
+      const payload=await response.json().catch(()=>({})) as any;
+      if(!response.ok||!payload?.ok||!payload?.data_base64)return J({ok:false,gateway_http:response.status,gateway:payload},502);
+      const bytes=Uint8Array.from(atob(String(payload.data_base64)),x=>x.charCodeAt(0));
+      let text=new TextDecoder("utf-8").decode(bytes).replace(/^\uFEFF/,"");
+      if((text.match(/�/g)||[]).length>4){try{text=new TextDecoder("windows-1252").decode(bytes)}catch{}}
+      const lines=text.split(/\r?\n/).filter((x:string)=>x.trim());
+      return J({ok:true,company_id:companyId,period:{start,end},gateway:{http:payload.http,content_type:payload.content_type,bytes:payload.bytes},line_count:lines.length,preview:lines.slice(0,8)});
+    }
+
     if(action==="verify_due_internal"){
       const supplied=req.headers.get("x-debug-token")||"";
       const {data:internal}=await admin.from("_fiscal_sales_debug_token").select("token").eq("id",true).maybeSingle();
