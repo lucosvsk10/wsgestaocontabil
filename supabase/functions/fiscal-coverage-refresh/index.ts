@@ -100,14 +100,21 @@ Deno.serve(async req=>{
           last_error:s55?.status==="ok"&&s55?.source_confirmed?null:"As chaves oficiais encontradas são capturadas e validadas, mas a enumeração exaustiva por período ainda não foi comprovada.",
           details:{official_keys_captured:sp55Known,xml_ready:sp55Xml,xml_pending:Math.max(0,sp55Known-sp55Xml),reconciliation_status:s55?.status||null,reason:"issuer_nfe55_exhaustive_enumeration_not_proven"},
         });
-        const spOk=Boolean(ss?.status==="idle"&&!ss?.last_error&&ss?.last_completed_at);
+        const spNfceOk=Boolean(ss?.nfce_source_status==="ok"&&ss?.nfce_source_confirmed_at);
         rows.push({
           document_type:"nfce65",direction:"saida",applicability:"required",
           source_name:"SEFAZ/SP SAE-NFC-e",source_mode:"state_webservice",
-          coverage_status:spOk?"covered":ss?.last_error?"error":"partial",
-          source_confirmed:spOk,last_verified_at:ss?.last_completed_at||null,last_success_at:spOk?ss?.last_completed_at:null,
-          last_error:spOk?null:(ss?.last_error||"SAE-NFC-e ainda não concluído."),
-          details:{sync_status:ss?.status||null},
+          coverage_status:spNfceOk?"covered":ss?.nfce_source_error?"error":"partial",
+          source_confirmed:spNfceOk,
+          last_verified_at:ss?.nfce_source_confirmed_at||null,
+          last_success_at:spNfceOk?(ss?.nfce_source_confirmed_at||null):null,
+          last_error:spNfceOk?null:(ss?.nfce_source_error||"SAE-NFC-e ainda não concluído."),
+          details:{
+            source_status:ss?.nfce_source_status||null,
+            source_count:ss?.nfce_source_count??null,
+            source_period_start:ss?.nfce_source_period_start||null,
+            source_period_end:ss?.nfce_source_period_end||null
+          },
         });
       }else{
         rows.push({
