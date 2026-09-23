@@ -310,7 +310,7 @@ Deno.serve(async req=>{try{
     updated_at:completedAt
   },{onConflict:"company_id"});
   await admin.from("fiscal_companies").update({last_sync_at:completedAt}).eq("id",companyId);
-  const nfe55Recovery=b.skip_nfe55_recovery?{skipped:true}:await recoverSpNfe55Numbers(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_batch||4),Number(b.nfe55_lookahead||15));
+  const nfe55Recovery={skipped:true,reason:"disabled_after_unexpected_authorization_guard"};
   const nfe55Xml=(b.skip_nfe55_xml||nfe55Recovery?.cooldown)?{skipped:true,reason:nfe55Recovery?.cooldown?"recovery_cooldown":"requested"}:await backfillSpNfe55Xml(admin,c,gatewayToken,gatewayCertificate,historyStart,Number(b.nfe55_xml_batch||1));
   if(nfe55Xml?.cooldown){
     const coolUntil=new Date(Date.now()+65*60000).toISOString();
