@@ -15,6 +15,16 @@ type CredentialStatus = {
   can_reconcile: boolean;
   username_automatic: boolean;
   username_source: string | null;
+  sales_status?: string | null;
+  sales_error?: string | null;
+  sales_started_at?: string | null;
+  sales_completed_at?: string | null;
+  sales_found?: number;
+  sales_documents?: number;
+  reconciliation_total?: number;
+  reconciliation_resolved?: number;
+  reconciliation_pending?: number;
+  reconciliation_complete?: boolean;
 };
 
 async function callCredential(body: Record<string, unknown>) {
@@ -71,21 +81,32 @@ export function StateCredentialPanel({
     ? { fiscal_company_id: fiscalCompanyId }
     : officeCompanyId ? { office_company_id: officeCompanyId } : {}, [fiscalCompanyId, officeCompanyId]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const result = await callCredential({ action: 'status', ...base });
       setStatus(result.status || null);
+      if (silent) setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (!silent) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [base]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const active =
+      status?.verification_status === 'pending_verification' ||
+      status?.verification_status === 'valid' &&
+        ['queued', 'reconciling', 'waiting_sales_reference', 'running'].includes(String(status?.sales_status || ''));
+    if (!active) return;
+    const timer = window.setInterval(() => void load(true), 3000);
+    return () => window.clearInterval(timer);
+  }, [load, status?.verification_status, status?.sales_status]);
 
   const saveAndTest = async () => {
     if ((!status?.username_automatic && !username.trim()) || !password) return;
@@ -97,13 +118,7 @@ export function StateCredentialPanel({
       setStatus(result.status || null);
       setUsername('');
       setPassword('');
-      if (result.status?.verification_status === 'pending_verification') {
-        setMessage('Acesso salvo no cofre fiscal. A validação será feita pelo sincronizador interno, sem manter a senha no navegador.');
-      } else if (result.status?.verification_status === 'valid') {
-        setMessage('Acesso validado. A empresa foi recolocada automaticamente na fila de reconciliação do Extrator.');
-      } else {
-        setMessage(result.status?.verification_label || 'Credencial salva.');
-      }
+      setMessage('');
       onChanged?.(result.status || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -130,6 +145,28 @@ export function StateCredentialPanel({
   };
 
   const effectiveUf = String(status?.uf || state || '').toUpperCase();
+  const liveStatus = (() => {
+    if (!status?.configured) return { text: 'Informe a senha do portal para iniciar.', busy: false, kind: 'muted' };
+    if (status.verification_status === 'pending_verification')
+      return { text: 'Validando acesso na SEFAZ/AL…', busy: true, kind: 'warning' };
+    if (status.verification_status === 'invalid_credentials')
+      return { text: 'Senha inválida. Atualize o acesso para continuar.', busy: false, kind: 'error' };
+    if (status.verification_status === 'valid_without_report_permission')
+      return { text: 'Acesso confirmado, mas sem permissão para consultar o relatório fiscal.', busy: false, kind: 'error' };
+    if (status.verification_status === 'portal_unavailable')
+      return { text: 'SEFAZ indisponível no momento. A validação será tentada novamente automaticamente.', busy: true, kind: 'warning' };
+    if (status.verification_status === 'valid') {
+      const found = Number(status.sales_documents || status.sales_found || 0);
+      if (status.reconciliation_complete)
+        return { text: `Sincronização concluída · ${found} nota${found === 1 ? '' : 's'} encontrada${found === 1 ? '' : 's'}.`, busy: false, kind: 'success' };
+      if (['reconciling', 'running'].includes(String(status.sales_status || '')))
+        return { text: `Acesso confirmado. Buscando notas emitidas…${found ? ` ${found} encontrada${found === 1 ? '' : 's'} até agora.` : ''}`, busy: true, kind: 'success' };
+      if (status.sales_status === 'error')
+        return { text: 'Acesso confirmado, mas a busca encontrou um erro e será retomada automaticamente.', busy: false, kind: 'warning' };
+      return { text: 'Acesso confirmado. Busca das notas emitidas iniciada.', busy: true, kind: 'success' };
+    }
+    return { text: status.verification_label || 'Aguardando processamento.', busy: false, kind: 'muted' };
+  })();
   if (loading) return <div className="h-28 animate-pulse rounded-xl bg-muted/25" />;
   if (effectiveUf && effectiveUf !== 'AL') {
     return (
@@ -151,24 +188,27 @@ export function StateCredentialPanel({
           </p>
         </div>
         <span className={'rounded-full px-2.5 py-1 text-[10px] font-semibold ' + tone(status?.verification_status)}>
-          {status?.configured ? status.verification_label : 'Não configurado'}
+          {status?.verification_status === 'valid'
+            ? (status.reconciliation_complete ? 'Sincronizado' : 'Buscando notas')
+            : status?.configured ? status.verification_label : 'Não configurado'}
         </span>
       </div>
 
-      {status?.configured && (
-        <div className={portal ? 'mt-4 rounded-lg border border-white/10 bg-white/[.025] p-3' : 'mt-4 rounded-lg border border-border/50 bg-background/50 p-3'}>
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4" />
-            <div>
-              <p className="text-xs font-medium">{status.portal_name || 'SCA SEFAZ/AL'}</p>
+      <div className={portal ? 'mt-4 rounded-lg border border-white/10 bg-white/[.025] p-3' : 'mt-4 rounded-lg border border-border/50 bg-background/50 p-3'}>
+        <div className="flex items-center gap-2">
+          {liveStatus.busy
+            ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+            : <ShieldCheck className="h-4 w-4 shrink-0" />}
+          <div className="min-w-0">
+            <p className="text-xs font-medium">{liveStatus.text}</p>
+            {status?.configured && status.last_verified_at && (
               <p className={portal ? 'mt-0.5 text-[10px] text-[#91a1b5]' : 'mt-0.5 text-[10px] text-muted-foreground'}>
-                {formatDate(status.last_verified_at) ? 'Último teste: ' + formatDate(status.last_verified_at) : 'Ainda não testado'}
-                {status.can_reconcile ? ' · pronto para reconciliação' : ''}
+                Última validação: {formatDate(status.last_verified_at)}
               </p>
-            </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       <div className={'mt-4 grid gap-3 ' + (status?.username_automatic ? '' : 'sm:grid-cols-2')}>
         {!status?.username_automatic && <label>
