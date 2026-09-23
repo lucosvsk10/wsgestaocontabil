@@ -17,11 +17,12 @@ module.exports=async function(req,res){
       ...[...boot.text.matchAll(/['"]([A-F0-9]{20,})['"]/g)].map(m=>m[1]),
     ]);
     const candidates=(scripts.length?scripts:strong.map(x=>x+'.cache.js')).slice(0,12);
+    const focus=String(req.query?.term||'').trim().slice(0,120);
     const inspected=[];
     for(const file of candidates){
       const r=await get(base+file);
       const txt=r.text||'';
-      const hits=['consultarNotasFiscaisDeEntradaIhSaidaPaginada','consultarQuantidadeNotasFiscaisDeEntradaIhSaida','consultarRelatoriosEntradaIhSaida','NotaFiscalConsultaDTO','NFeRelatoriosRemoteService']
+      const hits=[...(focus?[focus]:[]),'consultarNotasFiscaisDeEntradaIhSaidaPaginada','consultarQuantidadeNotasFiscaisDeEntradaIhSaida','consultarRelatoriosEntradaIhSaida','numeroCnpjEntrada','numeroCacealEntrada','dataEmissaoInicial','dataEmissaoFinal','codigoStatus','NotaFiscalConsultaDTO','NFeRelatoriosRemoteService']
         .map(term=>{const i=txt.indexOf(term);return i>=0?{term,index:i,snippet:txt.slice(Math.max(0,i-1400),i+3500)}:null}).filter(Boolean);
       inspected.push({file,http:r.status,bytes:Buffer.byteLength(txt),hits});
     }
