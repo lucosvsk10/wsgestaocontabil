@@ -93,16 +93,16 @@ export function StateCredentialPanel({
     setError('');
     setMessage('');
     try {
-      const result = await callCredential({ action: 'save_verify', ...base, username: username.trim(), password });
+      const result = await callCredential({ action: 'save_deferred', ...base, username: username.trim(), password });
       setStatus(result.status || null);
       setUsername('');
       setPassword('');
-      if (result.status?.verification_status === 'valid') {
+      if (result.status?.verification_status === 'pending_verification') {
+        setMessage('Acesso salvo no cofre fiscal. A validação será feita pelo sincronizador interno, sem manter a senha no navegador.');
+      } else if (result.status?.verification_status === 'valid') {
         setMessage('Acesso validado. A empresa foi recolocada automaticamente na fila de reconciliação do Extrator.');
-      } else if (result.status?.verification_status === 'valid_without_report_permission') {
-        setMessage('Login válido, mas o usuário não possui permissão suficiente para o relatório fiscal necessário.');
       } else {
-        setMessage('Credencial salva. A SEFAZ estava indisponível e o acesso continuará pendente de validação.');
+        setMessage(result.status?.verification_label || 'Credencial salva.');
       }
       onChanged?.(result.status || null);
     } catch (err) {
@@ -165,7 +165,7 @@ export function StateCredentialPanel({
           <p className={portal ? 'text-[10px] font-semibold uppercase tracking-[.12em] text-[#718096]' : 'text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground'}>SEFAZ Estadual · AL</p>
           <h3 className={portal ? 'mt-1 text-sm font-semibold text-white' : 'mt-1 text-sm font-semibold'}>Acesso para conferência completa das vendas</h3>
           <p className={portal ? 'mt-1 max-w-2xl text-xs leading-5 text-[#91a1b5]' : 'mt-1 max-w-2xl text-xs leading-5 text-muted-foreground'}>
-            O acesso é enviado direto ao cofre fiscal e nunca volta para a tela. Depois de validado, o Extrator compara a fonte estadual com os documentos exibidos no sistema.
+            O acesso é salvo no cofre fiscal e nunca volta para a tela. A validação ocorre no backend; depois de confirmada, o Extrator compara a fonte estadual com os documentos exibidos no sistema.
           </p>
         </div>
         <span className={'rounded-full px-2.5 py-1 text-[10px] font-semibold ' + tone(status?.verification_status)}>
@@ -215,7 +215,7 @@ export function StateCredentialPanel({
       <div className="mt-4 flex flex-wrap gap-2">
         <Button disabled={busy || (!status?.username_automatic && !username.trim()) || !password} onClick={() => void saveAndTest()}>
           {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Salvar e testar acesso
+          Salvar acesso
         </Button>
         {status?.configured && (
           <Button variant="outline" disabled={busy} onClick={() => void verifyAgain()}>
