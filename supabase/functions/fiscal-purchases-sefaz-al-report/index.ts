@@ -57,6 +57,48 @@ async function fetchReport(gatewayToken: string, username: string, password: str
   return B(String(payload.xlsx_base64));
 }
 
+async function fetchSalesReport(gatewayToken: string, username: string, password: string, cnpj: string, ie: string, start: string, end: string) {
+  const response = await fetch("https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-sales-report", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${gatewayToken}` },
+    body: JSON.stringify({ username, password, cnpj, ie, start, end, format: "csv" }),
+    signal: AbortSignal.timeout(90000),
+  });
+  const payload = await response.json().catch(() => ({})) as any;
+  if (!response.ok || !payload?.ok || !payload?.data_base64) {
+    throw new Error(`sefaz_sales_report_gateway_${response.status}:${String(payload?.error || "invalid_response").slice(0, 180)}`);
+  }
+  return B(String(payload.data_base64));
+}
+function salesCsvRows(bytes: Uint8Array, companyCnpj: string) {
+  let text = new TextDecoder("utf-8").decode(bytes).replace(/^\uFEFF/, "");
+  if ((text.match(/�/g) || []).length > 4) {
+    try { text = new TextDecoder("windows-1252").decode(bytes); } catch {}
+  }
+  const rows: any[] = [];
+  const seen = new Set<string>();
+  for (const line of text.split(/\r?\n/)) {
+    const keys = [...line.matchAll(/(?<!\d)(\d{44})(?!\d)/g)].map((m) => m[1]);
+    for (const key of keys) {
+      if (seen.has(key) || key.slice(6, 20) !== companyCnpj || key.slice(20, 22) !== "55") continue;
+      seen.add(key);
+      const dm = line.match(/(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?/);
+      const issueDate = dm ? `${dm[3]}-${dm[2]}-${dm[1]}T${dm[4] || "00"}:${dm[5] || "00"}:${dm[6] || "00"}-03:00` : null;
+      const cancelled = /cancelad/i.test(line);
+      const denied = /denegad/i.test(line);
+      rows.push({
+        access_key: key,
+        issue_date: issueDate,
+        status_code: cancelled ? "101" : denied ? "110" : "100",
+        status_text: cancelled ? "Cancelada" : denied ? "Denegada" : "Autorizada",
+        series: String(Number(key.slice(22, 25))),
+        note_number: String(Number(key.slice(25, 34))),
+      });
+    }
+  }
+  return rows;
+}
+
 Deno.serve(async (req) => {
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   try {
@@ -70,7 +112,7 @@ Deno.serve(async (req) => {
     const now = new Date();
     const { data: company, error: companyError } = await admin
       .from("fiscal_companies")
-      .select("cnpj,created_by,ambiente_padrao,uf,fiscal_settings")
+      .select("cnpj,created_by,ambiente_padrao,uf,inscricao_estadual,fiscal_settings")
       .eq("id", companyId)
       .single();
     if (companyError) throw companyError;
@@ -143,6 +185,8 @@ Deno.serve(async (req) => {
     const password = await decrypt(credential.password_ciphertext, credential.password_iv);
     const companyCnpj = digits(company.cnpj);
     const bytes = await fetchReport(gatewayToken, username, password, companyCnpj, start, end);
+    const salesBytes = await fetchSalesReport(gatewayToken, username, password, companyCnpj, digits(company.inscricao_estadual), start, end);
+    const officialSalesRows = salesCsvRows(salesBytes, companyCnpj);
     const workbook = XLSX.read(bytes, { type: "array", cellDates: false });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const textRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false }) as any[][];
@@ -196,10 +240,45 @@ Deno.serve(async (req) => {
       });
     }
 
-    const keys = [...new Set(parsed.map((row) => row.access_key))];
     const purchaseAllKeys = [...new Set(parsed.filter((row) => row.direction === "entrada").map((row) => row.access_key))];
     const purchaseKeys = [...new Set(parsed.filter((row) => row.direction === "entrada" && row.status_code !== "101").map((row) => row.access_key))];
-    const selfIssuedKeys = [...new Set(parsed.filter((row) => row.direction === "saida").map((row) => row.access_key))];
+    const selfIssuedKeys = [...new Set(officialSalesRows.map((row) => row.access_key))];
+    const salesByKey = new Map(officialSalesRows.map((row) => [row.access_key, row]));
+    for (const key of selfIssuedKeys) {
+      const sale = salesByKey.get(key)!;
+      const priorIndex = parsed.findIndex((row) => row.access_key === key);
+      const sourceRow = {
+        user_id: company.created_by,
+        company_id: companyId,
+        cnpj: companyCnpj,
+        environment,
+        uf_code: "27",
+        nsu: `al-sale:${key}`,
+        source: "sefaz_al_sales_report_vercel",
+        source_id: key,
+        schema_name: "sefaz-al-sales-report",
+        document_kind: "nfe",
+        direction: "saida",
+        access_key: key,
+        model: "55",
+        issue_date: sale.issue_date,
+        value: 0,
+        issuer_cnpj: companyCnpj,
+        issuer_name: null,
+        recipient_cnpj: null,
+        note_number: sale.note_number,
+        series: sale.series,
+        status_code: sale.status_code,
+        status_text: sale.status_text,
+        full_xml: false,
+        xml: null,
+        parse_error: "metadata_from_sefaz_al_sales_report",
+        updated_at: new Date().toISOString(),
+      };
+      if (priorIndex >= 0) parsed[priorIndex] = { ...parsed[priorIndex], ...sourceRow };
+      else parsed.push(sourceRow);
+    }
+    const keys = [...new Set(parsed.map((row) => row.access_key))];
     const existing = new Map<string, any[]>();
     for (let index = 0; index < keys.length; index += 100) {
       const { data: rows } = await admin
@@ -276,6 +355,7 @@ Deno.serve(async (req) => {
       purchase_cancelled_unique_keys: Math.max(0, purchaseAllKeys.length - purchaseKeys.length),
       purchase_existing_keys: Math.min(purchaseKeys.length, purchaseExistingKeys),
       self_issued_unique_keys: selfIssuedKeys.length,
+      sales_report_rows: officialSalesRows.length,
       existing_keys: existing.size,
       inserted,
       updated,
