@@ -77,7 +77,7 @@ async function gateway(token:string,body:any){
   });
   const payload=await response.json().catch(()=>({})) as any;
   if(!response.ok||!payload?.ok||!payload?.text){
-    throw new Error(`gateway_${response.status}:${String(payload?.error||"transport_failed").slice(0,300)}`);
+    throw new Error(`gateway_${response.status}:${String(payload?.error||payload?.text||"transport_failed").replace(/\\s+/g," ").slice(0,900)}`);
   }
   return String(payload.text);
 }
