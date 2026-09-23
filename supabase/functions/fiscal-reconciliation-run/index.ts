@@ -83,7 +83,14 @@ Deno.serve(async req=>{
     if(!token||token!==String(internal?.token||""))return J({error:"unauthorized"},403);
 
     const body=await req.json().catch(()=>({})) as any;
-    const start=String(body.start||"2026-07-31"),end=String(body.end||"2026-09-21");
+    const [{data:minimumHistory},{data:localToday}]=await Promise.all([
+      admin.rpc("extractor_minimum_history_start"),
+      admin.rpc("extractor_local_date"),
+    ]);
+    const fallbackToday=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Maceio",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+    const defaultStart=validDate(minimumHistory)?String(minimumHistory):fallbackToday;
+    const defaultEnd=validDate(localToday)?String(localToday):fallbackToday;
+    const start=String(body.start||defaultStart),end=String(body.end||defaultEnd);
     if(!validDate(start)||!validDate(end)||start>end)return J({error:"invalid_period"},400);
     const only=String(body.company_id||"");
 
