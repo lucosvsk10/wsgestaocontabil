@@ -78,7 +78,7 @@ Deno.serve(async req => {
     const body = await req.json().catch(() => ({})) as any;
     const companyId = String(body.company_id || "");
     if (!companyId) return json({ error: "company_id_required" }, 400);
-    const lookahead = Math.min(12, Math.max(1, Number(body.lookahead || 6)));
+    const lookahead = Math.min(72, Math.max(1, Number(body.lookahead || 24)));
     const model = String(body.model || "65").replace(/\D/g, "");
     const series = Math.max(1, Math.min(999, Number(body.series || 1)));
     if (!["55","65"].includes(model)) return json({ error: "unsupported_model" }, 422);
@@ -119,18 +119,22 @@ Deno.serve(async req => {
     const password = await decrypt(cert.password_ciphertext, cert.password_iv);
     const cnpj = digits(company.cnpj);
     const requestedMonths = Array.isArray(body.months)
-      ? body.months.map((v: unknown) => String(v)).filter((v: string) => /^\d{4}$/.test(v)).slice(0, 2)
+      ? body.months.map((v: unknown) => String(v)).filter((v: string) => /^\d{4}$/.test(v)).slice(0, 6)
       : [];
     const months = requestedMonths.length ? requestedMonths : monthCodes();
     let latest = bootstrap ? 0 : baseNumber;
     let cooldown = false;
     const hits: Array<{ note_number: number; access_key: string; month: string }> = [];
     let probes = 0;
+    let preferredMonth = String(body.preferred_month || months[0] || "");
+    let missStreak = 0;
     const firstNumber = bootstrap ? bootstrapStart : baseNumber + 1;
     const lastNumber = firstNumber + lookahead - 1;
 
     for (let noteNumber = firstNumber; noteNumber <= lastNumber && !cooldown; noteNumber += 1) {
-      for (const month of months) {
+      const orderedMonths = [preferredMonth, ...months].filter((value, index, array) => value && array.indexOf(value) === index);
+      let hit = false;
+      for (const month of orderedMonths) {
         const result = await consult(pfx, password, syntheticKey(cnpj, month, noteNumber, model, series));
         probes += 1;
         if (result.cStat === "656") {
@@ -142,21 +146,25 @@ Deno.serve(async req => {
           const keyModel = result.realKey.slice(20, 22);
           const keySeries = Number(result.realKey.slice(22, 25));
           const keyNumber = Number(result.realKey.slice(25, 34));
-          if (keyMonth === month && keyModel === model && keySeries === series && keyNumber === noteNumber) {
+          if (keyModel === model && keySeries === series && keyNumber === noteNumber && orderedMonths.includes(keyMonth)) {
             const confirmed = await consult(pfx, password, result.realKey);
             if (["100","101","110","301","302"].includes(String(confirmed.cStat || ""))) {
               latest = Math.max(latest, noteNumber);
-              hits.push({ note_number: noteNumber, access_key: result.realKey, month });
+              preferredMonth = keyMonth;
+              hits.push({ note_number: noteNumber, access_key: result.realKey, month: keyMonth });
+              hit = true;
               break;
             }
           }
         }
-        await sleep(220);
+        await sleep(120);
       }
-      await sleep(300);
+      missStreak = hit ? 0 : missStreak + 1;
+      if (missStreak >= 12 && latest >= baseNumber) break;
+      await sleep(180);
     }
 
-    return json({ ok: true, company_id: companyId, model, series, base_number: baseNumber, bootstrap, bootstrap_start: bootstrapStart, latest, advanced: bootstrap ? latest > 0 : latest > baseNumber, hits, probes, months, cooldown });
+    return json({ ok: true, company_id: companyId, model, series, base_number: baseNumber, bootstrap, bootstrap_start: bootstrapStart, latest, advanced: bootstrap ? latest > 0 : latest > baseNumber, hits, probes, months, preferred_month: preferredMonth, miss_streak: missStreak, cooldown });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
