@@ -109,7 +109,7 @@ function publicStatus(cred:any,fiscal:any){
     verification_status:code,
     verification_label:labels[code]||code,
     last_verified_at:cred?.last_verified_at||null,
-    can_reconcile:code==="valid",
+    can_reconcile:code==="valid"||code==="valid_without_report_permission",
     username_automatic:Boolean(alPortalUsername(fiscal)),
     username_source:alPortalUsername(fiscal)?"inscricao_estadual":null,
   };
@@ -142,6 +142,24 @@ async function verifyAl(admin:any,username:string,password:string,cnpj:string){
     return{code:"portal_unavailable",http:null,details:{reason:error instanceof Error?error.message:String(error)}};
   }
 }
+async function refineAlSalesPermission(admin:any,fiscalId:string,baseCode:string){
+  if(baseCode!=="valid")return baseCode;
+  try{
+    const {data:internal}=await admin.from("_fiscal_sales_debug_token").select("token").eq("id",true).maybeSingle();
+    const token=String(internal?.token||"");if(!token)return baseCode;
+    const day=new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Maceio",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+    const response=await fetch(Deno.env.get("SUPABASE_URL")!+"/functions/v1/fiscal-sales-al-portal-zip",{
+      method:"POST",
+      headers:{"content-type":"application/json","x-debug-token":token},
+      body:JSON.stringify({company_id:fiscalId,start:day,end:day,action:"permission"}),
+      signal:AbortSignal.timeout(70000),
+    });
+    const payload=await response.json().catch(()=>({})) as any;
+    if(response.ok&&payload?.permission==="denied")return"valid_without_report_permission";
+    if(response.ok&&payload?.permission==="granted")return"valid";
+    return baseCode;
+  }catch{return baseCode}
+}
 async function queueRecovery(admin:any,fiscalId:string){
   const now=new Date().toISOString();
   const {data:linked}=await admin.from("extractor_companies").select("id").eq("fiscal_company_id",fiscalId).eq("status","active").limit(1);
@@ -158,19 +176,23 @@ async function queueRecovery(admin:any,fiscalId:string){
 }
 async function applyVerificationState(admin:any,fiscalId:string,code:string){
   const now=new Date().toISOString();
-  if(code==="valid"){
+  if(code==="valid"||code==="valid_without_report_permission"){
     await queueRecovery(admin,fiscalId);
+    if(code==="valid_without_report_permission"){
+      await admin.from("fiscal_sales_sync_state").update({
+        last_error:"Login estadual válido, mas sem permissão para o relatório de NF-e emitidas. A reconciliação A1/SVRS continuará automaticamente.",
+        updated_at:now
+      }).eq("company_id",fiscalId);
+    }
     return;
   }
-  if(code==="invalid_credentials"||code==="valid_without_report_permission"){
+  if(code==="invalid_credentials"){
     await admin.from("fiscal_sales_sync_state").upsert({
       company_id:fiscalId,
       status:"waiting_state_credentials",
       paused:false,
       next_scheduled_at:null,
-      last_error:code==="invalid_credentials"
-        ?"Usuário ou senha inválidos no portal estadual."
-        :"Login estadual válido, mas sem permissão suficiente para o relatório fiscal.",
+      last_error:"Usuário ou senha inválidos no portal estadual.",
       updated_at:now
     },{onConflict:"company_id"});
   }
@@ -253,8 +275,10 @@ Deno.serve(async req=>{
           await admin.from("fiscal_state_credentials").update({
             last_verified_at:now,last_verification_status:verification.code,updated_at:now
           }).eq("id",cred.id);
-          await applyVerificationState(admin,fiscal.id,verification.code);
-          return{company_id:fiscal.id,status:verification.code};
+          const finalCode=await refineAlSalesPermission(admin,fiscal.id,verification.code);
+          if(finalCode!==verification.code)await admin.from("fiscal_state_credentials").update({last_verification_status:finalCode,updated_at:now}).eq("id",cred.id);
+          await applyVerificationState(admin,fiscal.id,finalCode);
+          return{company_id:fiscal.id,status:finalCode};
         }catch(error){
           return{company_id:cred.company_id,status:"portal_unavailable",error:error instanceof Error?error.message:String(error)};
         }
@@ -343,8 +367,10 @@ Deno.serve(async req=>{
           await ctx.admin.from("fiscal_state_credentials").update({
             last_verified_at:verifiedAt,last_verification_status:verification.code,updated_at:verifiedAt
           }).eq("company_id",fiscal.id).eq("uf","AL");
-          await applyVerificationState(ctx.admin,fiscal.id,verification.code);
-          await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_background_verified",verification.code);
+          const finalCode=await refineAlSalesPermission(ctx.admin,fiscal.id,verification.code);
+          if(finalCode!==verification.code)await ctx.admin.from("fiscal_state_credentials").update({last_verification_status:finalCode,updated_at:verifiedAt}).eq("company_id",fiscal.id).eq("uf","AL");
+          await applyVerificationState(ctx.admin,fiscal.id,finalCode);
+          await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_background_verified",finalCode);
         }catch(error){
           console.error("state credential background verification",{company_id:fiscal.id,error:error instanceof Error?error.message:String(error)});
         }
@@ -371,9 +397,11 @@ Deno.serve(async req=>{
       };
       const {data:saved,error}=await ctx.admin.from("fiscal_state_credentials").upsert(payload,{onConflict:"company_id,uf"}).select("id,portal_name,last_verified_at,last_verification_status").single();
       if(error)throw error;
-      await applyVerificationState(ctx.admin,fiscal.id,verification.code);
-      await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_saved",verification.code);
-      return J({ok:true,status:publicStatus(saved,fiscal),verification:verification.details},verification.code==="portal_unavailable"?202:200);
+      const finalCode=await refineAlSalesPermission(ctx.admin,fiscal.id,verification.code);
+      if(finalCode!==verification.code)await ctx.admin.from("fiscal_state_credentials").update({last_verification_status:finalCode,updated_at:now}).eq("id",saved.id);
+      await applyVerificationState(ctx.admin,fiscal.id,finalCode);
+      await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_saved",finalCode);
+      return J({ok:true,status:publicStatus({...saved,last_verification_status:finalCode},fiscal),verification:{...verification.details,sales_report_permission:finalCode==="valid"?"granted":finalCode==="valid_without_report_permission"?"denied":null}},verification.code==="portal_unavailable"?202:200);
     }
 
     if(action==="request_verify"){
@@ -404,9 +432,11 @@ Deno.serve(async req=>{
         last_verified_at:now,last_verification_status:verification.code,updated_at:now
       }).eq("id",cred.id).select("id,portal_name,last_verified_at,last_verification_status").single();
       if(error)throw error;
-      await applyVerificationState(ctx.admin,fiscal.id,verification.code);
-      await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_verified",verification.code);
-      return J({ok:true,status:publicStatus(updated,fiscal),verification:verification.details});
+      const finalCode=await refineAlSalesPermission(ctx.admin,fiscal.id,verification.code);
+      if(finalCode!==verification.code)await ctx.admin.from("fiscal_state_credentials").update({last_verification_status:finalCode,updated_at:now}).eq("id",cred.id);
+      await applyVerificationState(ctx.admin,fiscal.id,finalCode);
+      await audit(ctx.admin,ctx.user.id,fiscal.id,"state_credential_verified",finalCode);
+      return J({ok:true,status:publicStatus({...updated,last_verification_status:finalCode},fiscal),verification:{...verification.details,sales_report_permission:finalCode==="valid"?"granted":finalCode==="valid_without_report_permission"?"denied":null}});
     }
 
     if(action==="delete"){
