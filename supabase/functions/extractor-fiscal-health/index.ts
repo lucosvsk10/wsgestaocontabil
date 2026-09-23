@@ -212,7 +212,7 @@ Deno.serve(async req => {
       ? (fullStart > last30Start ? fullStart : last30Start)
       : fullStart;
 
-    const [docs, purchaseStateRes, salesStateRes, healthRes, certRes, reconciliation, syncHistoryRes] = await Promise.all([
+    const [docs, purchaseStateRes, salesStateRes, healthRes, certRes, reconciliation, syncHistoryRes, coverageRes] = await Promise.all([
       paged((from, to) => admin.from('fiscal_dfe_documents')
         .select('id,access_key,source_id,document_kind,direction,full_xml,xml,parse_error,issue_date,model,status_code,status_text')
         .eq('company_id', companyId)
@@ -243,6 +243,9 @@ Deno.serve(async req => {
         .eq('company_id', companyId)
         .order('created_at', { ascending: false })
         .limit(24),
+      admin.from('fiscal_extractor_coverage')
+        .select('document_type,direction,applicability,coverage_status,source_confirmed,source_name,last_error,last_verified_at')
+        .eq('company_id', companyId),
     ]);
 
     const purchases = uniqueDocs(docs, 'entrada');
@@ -354,6 +357,14 @@ Deno.serve(async req => {
     const pendingXml = Math.max(0, purchaseStored - purchaseXml) + Math.max(0, salesStored - salesXml);
     const persistent = purchaseFailures >= 3 || salesFailures >= 3;
 
+    const coverageRows = coverageRes.data || [];
+    const coverageBlocking = coverageRows.filter((row: any) =>
+      row.applicability !== 'not_applicable' && row.coverage_status !== 'covered'
+    );
+    const coverageRequiredBlocking = coverageBlocking.filter((row: any) =>
+      row.applicability === 'required' || row.applicability === 'observed'
+    );
+
     const purchaseStatus = String(purchaseState.status || '').toLowerCase();
     const purchaseBlocked = ['waiting_certificate', 'cooldown', 'error', 'failed', 'retry'].some(value => purchaseStatus.includes(value));
     const salesBlocked =
@@ -368,7 +379,8 @@ Deno.serve(async req => {
       purchaseBlocked ||
       salesBlocked ||
       purchaseExpected == null ||
-      salesExpected == null;
+      salesExpected == null ||
+      coverageBlocking.length > 0;
 
     const state = certExpired || (persistent && (purchaseMismatch || salesMismatch || pendingXml > 0))
       ? 'error'
@@ -398,6 +410,14 @@ Deno.serve(async req => {
         xml_ready: salesXml,
       },
       pending_xml: pendingXml,
+      coverage: {
+        complete: coverageBlocking.length === 0,
+        total: coverageRows.length,
+        covered: coverageRows.filter((row: any) => row.coverage_status === 'covered').length,
+        blocked: coverageBlocking.length,
+        required_blocked: coverageRequiredBlocking.length,
+        rows: coverageRows,
+      },
     };
 
     if (action === 'check') {
