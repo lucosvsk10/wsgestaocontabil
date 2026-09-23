@@ -247,7 +247,10 @@ Deno.serve(async req=>{try{
   const tok=req.headers.get("x-debug-token")||"";const {data:t}=await admin.from("_fiscal_sales_debug_token").select("token").eq("id",true).maybeSingle();if(!tok||tok!==String(t?.token||""))return J({error:"unauthorized"},403);
   const b=await req.json().catch(()=>({})) as any,companyId=String(b.company_id||"");
   const {data:c,error:ce}=await admin.from("fiscal_companies").select("id,cnpj,razao_social,nome_fantasia,inscricao_estadual,uf,codigo_municipio,municipio,regime_tributario,endereco,status,ambiente_padrao,created_by,fiscal_settings").eq("id",companyId).single();
-  if(ce||!c)throw Error("company_missing");if(c.status!=="ativa"||String(c.uf).toUpperCase()!=="SP")return J({ok:true,skipped:"company_not_sp"});
+  if(ce||!c)throw Error("company_missing");
+  if(c.status!=="ativa")return J({ok:true,skipped:"company_not_active"});
+  const companyUf=String(c.uf||"").toUpperCase();
+  if(!["SP","AL"].includes(companyUf))return J({ok:true,skipped:"company_not_supported"});
   const [{data:cert,error:cerror},{data:g},{data:state},{data:minHistory}]=await Promise.all([
     admin.from("fiscal_certificates").select("certificate_ciphertext,certificate_iv,password_ciphertext,password_iv,valid_until").eq("company_id",companyId).eq("is_active",true).order("created_at",{ascending:false}).limit(1).single(),
     admin.from("_fiscal_vercel_gateway_token").select("token").eq("id",true).maybeSingle(),
@@ -258,6 +261,21 @@ Deno.serve(async req=>{try{
   const pfx=await dec(cert.certificate_ciphertext,cert.certificate_iv),pass=await dec(cert.password_ciphertext,cert.password_iv);
   const parsedCertificate=lerCertificado(Buffer.from(pfx,"base64"),pass);
   const gatewayCertificate={certificate_pem:parsedCertificate.certificadoPem,private_key_pem:parsedCertificate.chavePrivadaPem,chain_pem:parsedCertificate.cadeiaPem||[]};
+  if(b.action==="al_nfe55_probe"){
+    if(companyUf!=="AL")return J({error:"al_probe_requires_al_company"},422);
+    const series=Math.max(1,Math.min(999,Number(b.series||1)));
+    const noteNumber=Math.max(1,Number(b.note_number||0));
+    if(!Number.isInteger(noteNumber))return J({error:"invalid_note_number"},400);
+    const probe=await gatewayObject(gatewayToken,{
+      action:"al-nfe-recover-key",environment:"production",...gatewayCertificate,
+      issuer_cnpj:c.cnpj,issuer_ie:c.inscricao_estadual,issuer_name:c.razao_social,issuer_trade_name:c.nome_fantasia,
+      issuer_city_code:c.codigo_municipio,issuer_city:c.municipio,issuer_street:c.endereco?.logradouro,
+      issuer_number:c.endereco?.numero,issuer_district:c.endereco?.bairro,issuer_zip:c.endereco?.cep,
+      crt:crtFor(c.regime_tributario),series,note_number:noteNumber
+    });
+    return J({ok:true,company_id:companyId,series,note_number:noteNumber,probe});
+  }
+  if(companyUf!=="SP")return J({ok:true,skipped:"company_not_sp"});
   if(b.action==="nfe55_xml_only"){
     const start=String(minHistory||"2026-08-01");
     const xml=await backfillSpNfe55Xml(admin,c,gatewayToken,gatewayCertificate,start,Math.max(1,Math.min(5,Number(b.batch||1))));
