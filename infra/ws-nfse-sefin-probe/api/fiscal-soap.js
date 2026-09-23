@@ -424,6 +424,37 @@ module.exports = async function handler(req, res) {
 
     // SEFAZ/SP NF-e 55: direct status consultation and authorization endpoint.
     // These routes are required because SP is a native authorizer and is not served by SVRS.
+
+    if (action === 'nfe-consult') {
+      const accessKey = String(b.access_key || b.chNFe || '').replace(/\D/g, '');
+      if (!/^\d{44}$/.test(accessKey) || accessKey.slice(20, 22) !== '55') {
+        return json(res, 400, { error: 'invalid_nfe_access_key' });
+      }
+      const ufCode = accessKey.slice(0, 2);
+      const isSp = ufCode === '35';
+      const endpoint = isSp
+        ? (env === 'production'
+          ? 'https://nfe.fazenda.sp.gov.br/ws/nfeconsultaprotocolo4.asmx'
+          : 'https://homologacao.nfe.fazenda.sp.gov.br/ws/nfeconsultaprotocolo4.asmx')
+        : (env === 'production'
+          ? 'https://nfe.svrs.rs.gov.br/ws/NfeConsulta/NfeConsulta4.asmx'
+          : 'https://nfe-homologacao.sefazrs.rs.gov.br/ws/NfeConsulta/NfeConsulta4.asmx');
+      const inner = `<consSitNFe xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><tpAmb>${env === 'production' ? '1' : '2'}</tpAmb><xServ>CONSULTAR</xServ><chNFe>${accessKey}</chNFe></consSitNFe>`;
+      const ns = 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeConsultaProtocolo4';
+      const soap = envelope('nfeDadosMsg', ns, inner);
+      const result = await requestHttps(endpoint, material, {
+        body: soap,
+        contentType: `application/soap+xml; charset=utf-8; action="${ns}/nfeConsultaNF"`,
+        accept: 'application/soap+xml, text/xml, */*',
+      });
+      return json(res, result.status >= 200 && result.status < 300 ? 200 : 502, {
+        ok: result.status >= 200 && result.status < 300,
+        http: result.status,
+        endpoint,
+        text: result.text,
+      });
+    }
+
     if (action === 'sp-nfe-consult') {
       const accessKey = String(b.access_key || b.chNFe || '').replace(/\D/g, '');
       if (!/^\d{44}$/.test(accessKey) || accessKey.slice(0, 2) !== '35' || accessKey.slice(20, 22) !== '55') {
