@@ -10,6 +10,30 @@ function digits(v){return String(v||'').replace(/\D/g,'')}
 function readBody(req){return new Promise((resolve,reject)=>{let raw='';req.setEncoding('utf8');req.on('data',c=>{raw+=c;if(raw.length>256*1024)reject(new Error('payload_too_large'))});req.on('end',()=>{try{resolve(raw?JSON.parse(raw):{})}catch{reject(new Error('invalid_json'))}});req.on('error',reject)})}
 function mergeCookies(current,setCookie){const jar=new Map();for(const p of String(current||'').split(/;\s*/)){const i=p.indexOf('=');if(i>0)jar.set(p.slice(0,i),p.slice(i+1))}const arr=Array.isArray(setCookie)?setCookie:setCookie?[setCookie]:[];for(const raw of arr){const pair=String(raw||'').split(';',1)[0];const i=pair.indexOf('=');if(i>0)jar.set(pair.slice(0,i),pair.slice(i+1))}return [...jar].map(([k,v])=>`${k}=${v}`).join('; ')}
 function requestUrl(url,{method='GET',headers={},body=''}={}){const target=new URL(url);return new Promise((resolve,reject)=>{const r=https.request({hostname:target.hostname,port:443,path:target.pathname+target.search,method,minVersion:'TLSv1.2',rejectUnauthorized:true,servername:target.hostname,timeout:60000,headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36','Connection':'close',...headers,...(body?{'Content-Length':Buffer.byteLength(body)}:{})}},x=>{const chunks=[];x.on('data',c=>chunks.push(Buffer.from(c)));x.on('end',()=>resolve({status:x.statusCode||0,headers:x.headers,body:Buffer.concat(chunks)}))});r.on('timeout',()=>r.destroy(new Error('sefaz_al_sales_timeout')));r.on('error',reject);if(body)r.write(body);r.end()})}
+async function modernSalesReport(username,password,cnpj,start,end){
+  const host='contribuinte.sefaz.al.gov.br';
+  const raw=JSON.stringify({username,password,rememberMe:false});
+  const auth=await requestUrl(`https://${host}/auth/authenticate`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body:raw
+  });
+  let payload={};try{payload=JSON.parse(auth.body.toString('utf8'))}catch{}
+  const token=String(payload.id_token||'');
+  if(!token)return{ok:false,http:auth.status,error:[400,401,403].includes(auth.status)?'invalid_credentials':'modern_auth_failed'};
+  const q=new URLSearchParams({numeroCnpj:cnpj,dataInicial:start,dataFinal:end,tipo:'xlsx'});
+  const path='/malhafiscal/sfz-malhafiscal-api/api/relatorios/notas-fiscais-saida';
+  const r=await requestUrl(`https://${host}${path}?${q.toString()}`,{
+    headers:{'Authorization':`Bearer ${token}`,'Accept':'application/octet-stream','Referer':`https://${host}/malhafiscal/`}
+  });
+  const type=String(r.headers['content-type']||'');
+  const ok=r.status>=200&&r.status<300&&r.body.length>100;
+  return{
+    ok,http:r.status,content_type:type,bytes:r.body.length,route:path,
+    error:ok?null:([401,403].includes(r.status)?'sales_report_permission_denied':'modern_sales_report_http_'+r.status),
+    ...(ok?{data_base64:r.body.toString('base64'),format:'xlsx'}:{response_excerpt:r.body.toString('utf8').replace(/\s+/g,' ').slice(0,500)})
+  };
+}
 async function login(username,password){
   const base='https://nfeas.sefaz.al.gov.br';let cookie='',lastUrl=base+'/sca_default_login_page';
   let r=await requestUrl(lastUrl);cookie=mergeCookies(cookie,r.headers['set-cookie']);
@@ -143,8 +167,14 @@ module.exports=async function(req,res){
     const b=await readBody(req);
     const username=String(b.username||''),password=String(b.password||''),cnpj=digits(b.cnpj),ie=digits(b.ie),start=String(b.start||''),end=String(b.end||''),format=String(b.format||'csv').toLowerCase()==='pdf'?'pdf':'csv',verifyOnly=Boolean(b.verify_only);
     if(!username||!password||!/^[0-9]{14}$/.test(cnpj)||!/^\d{8,9}$/.test(ie)||!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||start>end)return json(res,400,{error:'invalid_payload'});
+    const modern=await modernSalesReport(username,password,cnpj,start,end);
+    if(modern.ok)return json(res,200,{...modern,login_valid:true,report_access:true,modern:true});
+    if(modern.error==='invalid_credentials')return json(res,422,{...modern,login_valid:false,report_access:false});
     const result=await getSalesReport({username,password,cnpj,ie,start,end,format,verifyOnly});
-    return json(res,result.ok?200:(result.permission_denied?403:502),result);
+    return json(res,result.ok?200:(result.permission_denied?403:502),{
+      ...result,
+      modern_attempt:{http:modern.http,error:modern.error,route:modern.route,content_type:modern.content_type,bytes:modern.bytes}
+    });
   }catch(e){
     const message=e instanceof Error?e.message:String(e);
     return json(res,message==='invalid_credentials'?422:500,{error:message,login_valid:message==='invalid_credentials'?false:null});
