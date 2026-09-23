@@ -176,8 +176,11 @@ async function backfillSpNfe55Xml(admin:any,c:any,gatewayToken:string,gatewayCer
       failed++;const msg=e instanceof Error?e.message:String(e);failures.push({key,error:msg});
       const unavailable=/^distribution_no_document:(641|653):/.test(msg);
       if(unavailable){
-        const {error:markError}=await admin.from("fiscal_sales_documents").update({source_reference:{...(row.source_reference||{}),xml_pending:false,xml_unavailable:true,xml_unavailable_reason:msg},updated_at:now}).eq("company_id",c.id).eq("access_key",key);
+        const {error:markError}=await admin.from("fiscal_sales_documents").update({source_reference:{...(row.source_reference||{}),xml_pending:true,xml_unavailable:true,xml_unavailable_reason:msg},updated_at:now}).eq("company_id",c.id).eq("access_key",key);
         if(markError)throw markError;
+        const parseError=msg.includes(":641:")?"official_xml_unavailable_for_issuer":"official_xml_unavailable_cancelled";
+        const {error:dfeError}=await admin.from("fiscal_dfe_documents").update({parse_error:parseError,updated_at:now}).eq("company_id",c.id).eq("access_key",key).eq("direction","saida");
+        if(dfeError)throw dfeError;
       }else{
         await admin.from("fiscal_sales_documents").update({updated_at:now}).eq("company_id",c.id).eq("access_key",key);
       }
