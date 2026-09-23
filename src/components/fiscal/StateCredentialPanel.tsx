@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Loader2, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -112,24 +112,6 @@ export function StateCredentialPanel({
     }
   };
 
-  const verifyAgain = async () => {
-    setBusy(true);
-    setError('');
-    setMessage('');
-    try {
-      const result = await callCredential({ action: 'request_verify', ...base });
-      setStatus(result.status || null);
-      setMessage(result.status?.verification_status === 'pending_verification'
-        ? 'Validação recolocada na fila interna. Nenhuma consulta foi feita diretamente por esta tela.'
-        : result.status?.verification_label || 'Validação enfileirada.');
-      onChanged?.(result.status || null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const remove = async () => {
     if (!allowDelete || !window.confirm('Remover o acesso estadual desta empresa? A busca completa de vendas ficará bloqueada até um novo cadastro.')) return;
     setBusy(true);
@@ -217,11 +199,6 @@ export function StateCredentialPanel({
           {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Salvar acesso
         </Button>
-        {status?.configured && (
-          <Button variant="outline" disabled={busy} onClick={() => void verifyAgain()}>
-            <RefreshCw className="mr-2 h-4 w-4" />Validar novamente
-          </Button>
-        )}
         {status?.configured && allowDelete && (
           <Button variant="ghost" className="text-destructive hover:text-destructive" disabled={busy} onClick={() => void remove()}>
             Remover
