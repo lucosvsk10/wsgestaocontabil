@@ -166,8 +166,17 @@ Deno.serve(async req=>{try{
   const nfe55=await syncSpNfe55FromIssuerEvents(admin,c,gatewayToken,gatewayCertificate,historyStart);
   const now=new Date(),maxStart=new Date(now.getTime()-99*86400000),configured=/^\d{4}-\d{2}-\d{2}$/.test(String(minHistory||""))?new Date(String(minHistory)+"T00:00:00-03:00"):maxStart;
   const initialStart=configured>maxStart?configured:maxStart;
-  const lastDone=state?.last_completed_at?new Date(new Date(state.last_completed_at).getTime()-24*3600000):initialStart;
-  const start=b.start?new Date(String(b.start)):lastDone,end=b.end?new Date(String(b.end)):now;
+  const priorSourceStart=state?.nfce_source_period_start?new Date(String(state.nfce_source_period_start)):null;
+  const priorSourceEnd=state?.nfce_source_period_end?new Date(String(state.nfce_source_period_end)):null;
+  const priorCoverageStartsAtHistory=Boolean(
+    state?.nfce_source_status==="ok" &&
+    priorSourceStart && Number.isFinite(priorSourceStart.getTime()) &&
+    priorSourceStart.getTime()<=initialStart.getTime()
+  );
+  const incrementalStart=priorCoverageStartsAtHistory&&priorSourceEnd&&Number.isFinite(priorSourceEnd.getTime())
+    ? new Date(Math.max(initialStart.getTime(),priorSourceEnd.getTime()-24*3600000))
+    : initialStart;
+  const start=b.start?new Date(String(b.start)):incrementalStart,end=b.end?new Date(String(b.end)):now;
   if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||start>end)throw Error("invalid_period");
   const keys=new Set<string>(),segments:any[]=[];let cursor=new Date(start);
   while(cursor<end){
@@ -193,11 +202,14 @@ Deno.serve(async req=>{try{
   const nfceSourceOk=segments.length>0&&segments.every((s:any)=>["100","107"].includes(String(s.cStat||"")))&&failed===0&&pending===0;
   const nfceSourceError=nfceSourceOk?null:(failed?String(failed)+" XML(s) NFC-e falharam":pending?String(pending)+" NFC-e pendente(s)":("Retorno SAE não confirmado: "+segments.map((s:any)=>String(s.cStat||"?")).join(",")));
   const {data:maxRow}=await admin.from("fiscal_sales_documents").select("document_number").eq("company_id",companyId).eq("model","65").order("document_number",{ascending:false}).limit(1).maybeSingle();
+  const preservedSourceStart=nfceSourceOk&&priorCoverageStartsAtHistory&&priorSourceStart
+    ? new Date(Math.min(priorSourceStart.getTime(),start.getTime())).toISOString()
+    : start.toISOString();
   await admin.from("fiscal_sales_sync_state").upsert({
     company_id:companyId,
     nfce_source_status:nfceSourceOk?"ok":"error",
     nfce_source_confirmed_at:nfceSourceOk?completedAt:null,
-    nfce_source_period_start:start.toISOString(),
+    nfce_source_period_start:preservedSourceStart,
     nfce_source_period_end:end.toISOString(),
     nfce_source_count:all.length,
     nfce_source_error:nfceSourceError,
