@@ -261,17 +261,18 @@ Deno.serve(async req => {
           if (accessKey && !current.eventKeys.includes(accessKey)) current.eventKeys.push(accessKey);
           seriesScores.set(key, current);
         };
-        for (const row of knownSalesModels || []) addSeries(String(row.model || ""), String(row.series || "1"), 8);
+        for (const row of knownSalesModels || []) {
+          if (String(row.model || "") === "65") addSeries("65", String(row.series || "1"), 8);
+        }
         for (const row of issuerEventRows || []) {
           const accessKey = digits(row.access_key);
-          if (accessKey.length !== 44 || accessKey.slice(6,20) !== companyCnpj) continue;
-          const model = accessKey.slice(20,22);
+          if (accessKey.length !== 44 || accessKey.slice(6,20) !== companyCnpj || accessKey.slice(20,22) !== "65") continue;
           const series = String(Number(accessKey.slice(22,25)));
           const noteNumber = Number(accessKey.slice(25,34));
-          addSeries(model, series, 3, noteNumber, accessKey);
+          addSeries("65", series, 3, noteNumber, accessKey);
         }
         const chosen = [...seriesScores.values()].sort((a,b) => b.score - a.score || Number(a.series) - Number(b.series))[0] || null;
-        const targetModel = chosen?.model || "65";
+        const targetModel = "65";
         const targetSeries = chosen?.series || "1";
         const issuerSeedNumbers = chosen?.eventNumbers || [];
         const maxIssuerEvent = Math.max(0, ...issuerSeedNumbers);
@@ -316,8 +317,8 @@ Deno.serve(async req => {
             .from("fiscal_sales_documents")
             .select("document_number,issue_date")
             .eq("company_id", company.id)
-            .eq("model", "65")
-            .eq("series", "1")
+            .eq("model", targetModel)
+            .eq("series", targetSeries)
             .lt("issue_date", `${companyHistoryStart}T00:00:00-03:00`)
             .order("issue_date", { ascending: false })
             .limit(1);
@@ -327,8 +328,8 @@ Deno.serve(async req => {
             .eq("company_id", company.id)
             .eq("direction", "saida")
             .neq("document_kind", "evento")
-            .eq("model", "65")
-            .eq("series", "1")
+            .eq("model", targetModel)
+            .eq("series", targetSeries)
             .lt("issue_date", `${companyHistoryStart}T00:00:00-03:00`)
             .order("issue_date", { ascending: false })
             .limit(1);
@@ -365,7 +366,7 @@ Deno.serve(async req => {
         const priorLatest = Math.max(0, ...priorNumbers);
         const oldLatest = Number(state?.latest_number || 0);
         const persistedFloor = Number(state?.initial_floor_number || 0);
-        const legacyStateCompatible = targetModel === "65" && targetSeries === "1";
+        const legacyStateCompatible = targetModel === "65";
         const trustedStateLatest =
           legacyStateCompatible && (persistedFloor > 0 || maxSaved > 0 || maxKnownDfe > 0 || priorLatest > 0)
             ? oldLatest
@@ -411,7 +412,10 @@ Deno.serve(async req => {
               signal: AbortSignal.timeout(110000),
             });
             bootstrap = await anchorResponse.json().catch(() => ({}));
-            if (anchorResponse.ok && bootstrap?.anchor_found && Number(bootstrap?.anchor_number || 0) > 0) {
+            const anchorIssueDate = String(bootstrap?.anchor_issue_date || "").slice(0,10);
+            const historyFloorMs = new Date((companyHistoryStart || historyStart) + "T00:00:00-03:00").getTime() - 45 * 86400000;
+            const anchorFresh = !anchorIssueDate || new Date(anchorIssueDate + "T00:00:00-03:00").getTime() >= historyFloorMs;
+            if (anchorResponse.ok && bootstrap?.anchor_found && Number(bootstrap?.anchor_number || 0) > 0 && anchorFresh) {
               baseLatest = Number(bootstrap.anchor_number);
               scopeStartNumber = baseLatest + 1;
               await admin.from("fiscal_sales_sync_state").upsert({
@@ -469,7 +473,7 @@ Deno.serve(async req => {
             .upsert({
               company_id: company.id,
               status: "waiting_sales_reference",
-              last_error: bootstrap?.error || "Procurando automaticamente uma NFC-e anterior ao período para iniciar a sequência.",
+              last_error: bootstrap?.error || "Procurando automaticamente uma referência NFC-e 65 próxima ao período. NF-e 55 é conferida pela fonte estadual separada.",
               next_scheduled_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
               updated_at: new Date().toISOString(),
             });
