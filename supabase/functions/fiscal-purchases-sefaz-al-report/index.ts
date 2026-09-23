@@ -379,6 +379,8 @@ Deno.serve(async (req) => {
       sales_report_rows: officialSalesRows.length,
       embedded_sales_rows: embeddedSalesRows.length,
       combined_sales_rows: combinedSalesRows.length,
+      sales_source_confirmed: salesReportError === null,
+      sales_source_mode: salesReportError === null ? "dedicated_sales_report" : "embedded_positive_fallback_only",
       sales_report_error: salesReportError,
       existing_keys: existing.size,
       inserted,
