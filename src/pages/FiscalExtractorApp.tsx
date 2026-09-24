@@ -1005,6 +1005,7 @@ export default function FiscalExtractorApp({ preview = false }: { preview?: bool
         {active === 'Histórico' && (
           <HistorySection
             companies={companies}
+            selectedCompanyId={selectedCompanyId}
             preview={preview}
             setNotice={setNotice}
           />
@@ -2076,6 +2077,7 @@ function Documents({
   const sales = fiscal.filter(d => d.direction === 'saida');
   const purchases = fiscal.filter(d => d.direction === 'entrada');
   const events = docs.filter(d => d.documentKind === 'evento' || d.direction === 'relacionada');
+  const pendingValues = fiscal.filter(d => d.value == null).length;
   const cancelledDocs = fiscal.filter(cancelled);
   const manifestationDocs = fiscal.filter(
     d => d.parseError === 'xml_requires_manifestation' || d.parseError === 'xml_retry:manifestation_sent'
@@ -2276,9 +2278,11 @@ function Documents({
         <Metric label="Vendas" value={String(sales.length)} detail="Saídas" icon="upload" />
         <Metric label="Compras" value={String(purchases.length)} detail="Entradas" icon="download" />
         <Metric
-          label="Faturamento"
+          label="Movimentação conhecida"
           value={currency.format(sales.reduce((sum, document) => sum + Number(document.value || 0), 0))}
-          detail={`Entradas: ${currency.format(purchases.reduce((sum, document) => sum + Number(document.value || 0), 0))}`}
+          detail={pendingValues > 0
+            ? `${pendingValues} valor${pendingValues === 1 ? '' : 'es'} aguardando XML`
+            : `Entradas: ${currency.format(purchases.reduce((sum, document) => sum + Number(document.value || 0), 0))}`}
           icon="report"
         />
       </section>
@@ -2369,7 +2373,11 @@ function Documents({
                         <strong>{document.direction === 'saida' ? 'Venda de mercadoria' : document.direction === 'entrada' ? 'Entrada fiscal' : 'Evento fiscal'}</strong>
                         <span>{documentType} · {situation}</span>
                       </td>
-                      <td className="extractor-doc-value"><strong>{currency.format(Number(document.value || 0))}</strong></td>
+                      <td className="extractor-doc-value">
+                        {document.value == null
+                          ? <span className="extractor-value-pending">Aguardando XML</span>
+                          : <strong>{currency.format(Number(document.value))}</strong>}
+                      </td>
                       <td className="extractor-doc-actions">
                         <button className="extractor-view" onClick={() => void open(document)} disabled={busy === `doc:${document.accessKey || document.nsu}`}>
                           <AnimatedExtractorIcon name="eye" /> {busy === `doc:${document.accessKey || document.nsu}` ? 'Abrindo...' : 'Visualizar'}
@@ -2566,28 +2574,15 @@ function HealthState({ label, state }: { label: string; state: 'ok' | 'attention
   return <span className={`extractor-health-state ${state}`}><i />{label}</span>;
 }
 
-function HistorySection({ companies, preview, setNotice }: any) {
-  const [healthCompanyId, setHealthCompanyId] = useState('');
-  const [scope, setScope] = useState<'last_30_days' | 'full'>('full');
+function HistorySection({ companies, selectedCompanyId, preview, setNotice }: any) {
+  const [scope, setScope] = useState<'last_30_days' | 'full'>('last_30_days');
   const [health, setHealth] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
   const [repairing, setRepairing] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
-  const [healthSearch, setHealthSearch] = useState('');
   const company =
-    companies.find((item: Company) => item.id === healthCompanyId) || companies[0] || null;
-
-  useEffect(() => {
-    if (!companies.length) {
-      setHealthCompanyId('');
-      setHealth(null);
-      return;
-    }
-    if (!companies.some((item: Company) => item.id === healthCompanyId)) {
-      setHealthCompanyId(companies[0].id);
-    }
-  }, [companies, healthCompanyId]);
+    companies.find((item: Company) => item.id === selectedCompanyId) || companies[0] || null;
 
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
@@ -2741,16 +2736,18 @@ function HistorySection({ companies, preview, setNotice }: any) {
   const salesExpected = expected(health?.sales?.expected);
   const salesPresent = present(health?.sales?.stored ?? company.exits);
 
-  const compare = (exp: number | null, got: number) => {
+  const compare = (exp: number | null, got: number, sourceComplete = true) => {
     if (exp == null) return { state: 'attention' as const, label: 'Sem referência', delta: null as number | null };
     const delta = got - exp;
-    if (delta === 0) return { state: 'ok' as const, label: 'Conferido', delta: 0 };
+    if (delta === 0) return sourceComplete
+      ? { state: 'ok' as const, label: 'Conferido', delta: 0 }
+      : { state: 'attention' as const, label: 'Fonte em verificação', delta: 0 };
     return delta < 0
       ? { state: 'error' as const, label: `Faltam ${integer.format(Math.abs(delta))}`, delta }
       : { state: 'attention' as const, label: `${integer.format(delta)} a mais`, delta };
   };
-  const purchaseCompare = compare(purchaseExpected, purchasePresent);
-  const salesCompare = compare(salesExpected, salesPresent);
+  const purchaseCompare = compare(purchaseExpected, purchasePresent, health?.purchases?.source_checked === true);
+  const salesCompare = compare(salesExpected, salesPresent, health?.sales?.source_complete === true);
   const missingDocuments =
     (purchaseCompare.delta != null && purchaseCompare.delta < 0) ||
     (salesCompare.delta != null && salesCompare.delta < 0);
@@ -2781,28 +2778,11 @@ function HistorySection({ companies, preview, setNotice }: any) {
         description="Cada conferência fica registrada para você comparar o que a fonte fiscal esperava com o que chegou ao Extrator."
       />
 
-      <div className="extractor-health-toolbar">
-        <label className="extractor-health-company-search">
-          <AnimatedExtractorIcon name="search" />
-          <input
-            value={healthSearch}
-            onChange={event => setHealthSearch(event.target.value)}
-            placeholder="Buscar empresa ou CNPJ"
-          />
-        </label>
-        <select value={company.id} onChange={event => setHealthCompanyId(event.target.value)}>
-          {companies
-            .filter((item: Company) => {
-              const q = healthSearch.trim().toLowerCase();
-              if (!q || item.id === company.id) return true;
-              return `${item.tradeName} ${item.name} ${item.cnpj}`.toLowerCase().includes(q);
-            })
-            .map((item: Company) => (
-              <option key={item.id} value={item.id}>
-                {item.name} · {item.tradeName} · {formatCnpj(item.cnpj)}
-              </option>
-            ))}
-        </select>
+      <div className="extractor-history-periodbar">
+        <div>
+          <CalendarDays />
+          <span><small>Período analisado</small><strong>{periodText}</strong></span>
+        </div>
         <div className="extractor-history-scope" role="group" aria-label="Período da conferência">
           <button
             type="button"
@@ -2825,16 +2805,27 @@ function HistorySection({ companies, preview, setNotice }: any) {
         <div>
           <small>Empresa conferida</small>
           <strong>{company.tradeName}</strong>
-          <span>{company.name} · {formatCnpj(company.cnpj)} · {periodText}</span>
+          <span>{company.name} · {formatCnpj(company.cnpj)}</span>
         </div>
         <div className="extractor-history-current-status">
           <span>Entradas</span>
           <b>{purchaseExpected == null ? '—' : integer.format(purchaseExpected)} / {integer.format(purchasePresent)}</b>
+          <small className="extractor-history-count-caption">Fonte fiscal / Extrator</small>
+          <div className="extractor-history-breakdown">
+            <i>NF-e {integer.format(Number(health?.purchases?.models?.nfe55 || 0))}</i>
+            {Number(health?.purchases?.models?.other || 0) > 0 && <i>Outras {integer.format(Number(health.purchases.models.other))}</i>}
+          </div>
           <HealthState label={purchaseCompare.label} state={purchaseCompare.state} />
         </div>
         <div className="extractor-history-current-status">
           <span>Saídas</span>
           <b>{salesExpected == null ? '—' : integer.format(salesExpected)} / {integer.format(salesPresent)}</b>
+          <small className="extractor-history-count-caption">Fonte fiscal / Extrator</small>
+          <div className="extractor-history-breakdown">
+            <i>NF-e {integer.format(Number(health?.sales?.models?.nfe55 || 0))}</i>
+            <i>NFC-e {integer.format(Number(health?.sales?.models?.nfce65 || 0))}</i>
+            {Number(health?.sales?.models?.other || 0) > 0 && <i>Outras {integer.format(Number(health.sales.models.other))}</i>}
+          </div>
           <HealthState label={salesCompare.label} state={salesCompare.state} />
         </div>
         <div className="extractor-history-actions">
@@ -2873,10 +2864,10 @@ function HistorySection({ companies, preview, setNotice }: any) {
                 <th>Data / hora</th>
                 <th>Tipo</th>
                 <th>Período</th>
-                <th>Entradas esperadas</th>
-                <th>Entradas presentes</th>
-                <th>Saídas esperadas</th>
-                <th>Saídas presentes</th>
+                <th>Entradas na fonte</th>
+                <th>Entradas no Extrator</th>
+                <th>Saídas na fonte</th>
+                <th>Saídas no Extrator</th>
                 <th>Resultado</th>
               </tr>
             </thead>

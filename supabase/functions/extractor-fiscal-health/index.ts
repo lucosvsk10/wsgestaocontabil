@@ -254,7 +254,7 @@ Deno.serve(async req => {
         .limit(1)
         .maybeSingle(),
       paged((from, to) => admin.from('fiscal_sales_reconciliation')
-        .select('access_key,note_number,status,issue_date,xml_status,resolved_at')
+        .select('access_key,note_number,status,issue_date,xml_status,resolved_at,model')
         .eq('company_id', companyId)
         .gte('issue_date', `${start}T00:00:00-03:00`)
         .lte('issue_date', `${end}T23:59:59.999-03:00`)
@@ -347,7 +347,15 @@ Deno.serve(async req => {
         .map((row: any) => String(row.access_key || `note:${row.note_number || ''}`))
         .filter(Boolean)
     );
-    const expectedNfce = reconExpectedIdentities.size;
+    const expectedNfce = new Set(
+      reconciliation
+        .filter((row: any) =>
+          String(row.model || '') === '65' &&
+          ['found', 'cancelled'].includes(String(row.status || '').toLowerCase())
+        )
+        .map((row: any) => String(row.access_key || `note:${row.note_number || ''}`))
+        .filter(Boolean)
+    ).size;
     const hasNfceContext =
       salesNfceStored > 0 ||
       reconciliation.length > 0 ||
@@ -366,9 +374,12 @@ Deno.serve(async req => {
       : hasNfceContext
         ? expectedNfce > 0 || Boolean(salesState.reconciliation_complete)
         : String(company.uf || '').toUpperCase() === 'SP' && Boolean(salesState.last_completed_at);
-    const salesExpected = salesSourceChecked
-      ? (String(company.uf || '').toUpperCase() === 'SP' ? salesStored : expectedNfce + salesOtherStored)
-      : null;
+    const salesExpectedIdentities = new Set(reconExpectedIdentities);
+    for (const row of sales) {
+      const identity = String(row.access_key || row.source_id || row.id || '');
+      if (identity) salesExpectedIdentities.add(identity);
+    }
+    const salesExpected = salesSourceChecked ? salesExpectedIdentities.size : null;
 
     const purchaseMismatch = purchaseExpected != null && purchaseStored !== purchaseExpected;
     const salesMismatch = salesExpected != null && salesStored !== salesExpected;
@@ -385,6 +396,14 @@ Deno.serve(async req => {
     );
     const coverageRequiredBlocking = coverageBlocking.filter((row: any) =>
       row.applicability === 'required' || row.applicability === 'observed'
+    );
+    const salesCoverageRows = coverageRows.filter((row: any) =>
+      row.direction === 'saida' &&
+      (row.applicability === 'required' || row.applicability === 'observed') &&
+      ['nfe55', 'nfce65', 'nfse'].includes(String(row.document_type || ''))
+    );
+    const salesSourceComplete = salesCoverageRows.length > 0 && salesCoverageRows.every((row: any) =>
+      row.coverage_status === 'covered' && row.source_confirmed === true
     );
 
     const purchaseStatus = String(purchaseState.status || '').toLowerCase();
@@ -420,6 +439,10 @@ Deno.serve(async req => {
         present_nfe: purchaseNfeStored,
         present_other_models: purchaseOtherStored,
         xml_ready: purchaseXml,
+        models: {
+          nfe55: purchaseNfeStored,
+          other: purchaseOtherStored,
+        },
       },
       sales: {
         source_checked: salesSourceChecked,
@@ -430,6 +453,12 @@ Deno.serve(async req => {
         present_nfce: salesNfceStored,
         present_other_models: salesOtherStored,
         xml_ready: salesXml,
+        source_complete: salesSourceComplete,
+        models: {
+          nfe55: sales.filter(isNfe55).length,
+          nfce65: salesNfceStored,
+          other: sales.filter((row: any) => !isNfe55(row) && !isNfce65(row)).length,
+        },
       },
       pending_xml: pendingXml,
       coverage: {
@@ -509,6 +538,7 @@ Deno.serve(async req => {
         stored_other_models: purchaseOtherStored,
         xml_ready: purchaseXml,
         xml_pending: Math.max(0, purchaseStored - purchaseXml),
+        models: details.purchases.models,
         manifestation_required: manifestationRequired,
         manifestation_sent: manifestationSent,
         status: purchaseState.status || null,
@@ -526,6 +556,7 @@ Deno.serve(async req => {
       },
       sales: {
         source_checked: salesSourceChecked,
+        source_complete: salesSourceComplete,
         expected: salesExpected,
         stored: salesStored,
         expected_nfce: expectedNfce,
@@ -533,6 +564,7 @@ Deno.serve(async req => {
         stored_other_models: salesOtherStored,
         xml_ready: salesXml,
         xml_pending: Math.max(0, salesStored - salesXml),
+        models: details.sales.models,
         sequence_total: Number(salesState.reconciliation_total || 0),
         sequence_resolved: Number(salesState.reconciliation_resolved || 0),
         reconciliation_complete: Boolean(salesState.reconciliation_complete),
