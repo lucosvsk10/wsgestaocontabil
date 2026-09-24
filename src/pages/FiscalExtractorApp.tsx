@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { extractorRequest, extractorErrorMessage } from '@/lib/extractor/request';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ArrowLeft, CalendarDays, Info, Loader2, Menu, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CalendarDays, ExternalLink, Info, Loader2, Menu, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import ExtractorFiscalDocumentPreviewModal from '@/components/extractor/ExtractorFiscalDocumentPreviewModal';
@@ -178,6 +178,17 @@ type CompanyOverview = {
   };
   models?: { nfe?: number; nfce?: number; nfse?: number; other?: number };
   daily?: Array<{ day?: string; documents?: number }>;
+};
+type CoverageRow = {
+  document_type: string;
+  direction: 'entrada' | 'saida' | 'eventos';
+  applicability: 'required' | 'observed' | 'unknown' | 'not_applicable';
+  coverage_status: 'covered' | 'partial' | 'blocked' | 'error' | 'unknown' | 'not_applicable';
+  source_confirmed: boolean;
+  source_name?: string | null;
+  last_error?: string | null;
+  last_verified_at?: string | null;
+  details?: Record<string, unknown> | null;
 };
 
 const nav: Array<{ label: Section; icon: ExtractorIconName; group: string }> = [
@@ -1939,6 +1950,7 @@ function Documents({
   const [customEnd, setCustomEnd] = useState('');
   const [monthlyStats, setMonthlyStats] = useState<Record<string, { sales: number; purchases: number }>>({});
   const [availableFrom, setAvailableFrom] = useState<string>('');
+  const [coverage, setCoverage] = useState<CoverageRow[]>([]);
   const requestSequence = useRef(0);
   const company = companies.find((c: Company) => c.id === selectedCompanyId) || companies[0] || null;
 
@@ -2001,11 +2013,34 @@ function Documents({
     }
   }, [preview, company?.id, year]);
 
+  const loadCoverage = useCallback(async () => {
+    if (preview || !company) {
+      setCoverage([]);
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('extractor-fiscal-health', {
+        body: { action: 'coverage_status', company_id: company.id },
+      });
+      if (error) throw error;
+      setCoverage(Array.isArray(data?.coverage) ? data.coverage : []);
+    } catch {
+      // Preserve the last known coverage state during transient refresh failures.
+    }
+  }, [preview, company?.id]);
+
   useEffect(() => {
     void loadDocs();
     return () => { requestSequence.current++; };
   }, [loadDocs]);
   useEffect(() => { void loadMonthlyStats(); }, [loadMonthlyStats]);
+  useEffect(() => {
+    setCoverage([]);
+    void loadCoverage();
+    if (preview || !company?.id) return;
+    const timer = window.setInterval(() => void loadCoverage(), 60000);
+    return () => window.clearInterval(timer);
+  }, [preview, company?.id, loadCoverage]);
   useEffect(() => {
     if (!availableFrom) return;
     const minimumYear = Number(availableFrom.slice(0, 4));
@@ -2039,6 +2074,13 @@ function Documents({
   const nfe = fiscal.filter(d => type(d) === 'NF-e').length;
   const nfce = fiscal.filter(d => type(d) === 'NFC-e').length;
   const nfse = fiscal.filter(d => type(d) === 'NFS-e').length;
+  const permissionBlocker = coverage.find(row =>
+    row.document_type === 'nfe55' &&
+    row.direction === 'saida' &&
+    row.applicability === 'required' &&
+    ['partial', 'blocked', 'error'].includes(row.coverage_status) &&
+    /permiss[aã]o|n[aã]o foi liberado|n[aã]o possui acesso/i.test(String(row.last_error || ''))
+  );
 
   const filtered = docs.filter(d => {
     if (
@@ -2142,6 +2184,12 @@ function Documents({
         </div>
       </section>
 
+      <div className={`extractor-documents-coverage-shell ${permissionBlocker ? 'is-locked' : ''}`}>
+      <div
+        className="extractor-documents-coverage-content"
+        aria-hidden={permissionBlocker ? 'true' : undefined}
+        inert={permissionBlocker ? true : undefined}
+      >
       <section className="extractor-period-v2">
         <div className="extractor-period-year">
           <small>Ano</small>
@@ -2335,6 +2383,9 @@ function Documents({
           </div>
         </div>
       </section>
+      </div>
+      {permissionBlocker && <FiscalCoveragePermissionGate company={company} blocker={permissionBlocker} />}
+      </div>
 
       <FiscalDownloadCenter
         open={downloadOpen}
@@ -2349,6 +2400,40 @@ function Documents({
         appearance="extractor"
       />
     </div>
+  );
+}
+
+export function FiscalCoveragePermissionGate({ company, blocker }: { company: Company; blocker: CoverageRow }) {
+  return (
+    <section className="extractor-coverage-gate" role="alert" aria-live="polite">
+      <span className="extractor-coverage-gate-icon"><AlertTriangle /></span>
+      <small>Ação necessária para esta empresa</small>
+      <h2>Documentos temporariamente bloqueados</h2>
+      <p>
+        O login estadual de <strong>{company.tradeName || company.name}</strong> funciona, mas não tem
+        permissão para consultar o relatório oficial de NF-e emitidas. Sem essa fonte, não é possível
+        garantir que todas as saídas estejam no Extrator.
+      </p>
+      <a
+        className="extractor-coverage-gate-primary"
+        href="https://nfeas.sefaz.al.gov.br/sca_default_login_page"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Abrir Portal SEFAZ/AL <ExternalLink />
+      </a>
+      <details className="extractor-coverage-guide">
+        <summary>Ver passo a passo para liberar o acesso</summary>
+        <ol>
+          <li>Entre no portal com o usuário responsável pela empresa.</li>
+          <li>Confirme que o usuário está vinculado ao CNPJ e à inscrição estadual corretos.</li>
+          <li>Libere o serviço “Sistema de Consultas e Relatórios” e o relatório de NF-e “Entradas e Saídas”.</li>
+          <li>Se a opção não aparecer, peça ao usuário principal da empresa ou à SEFAZ/AL para conceder a permissão.</li>
+          <li>Depois da liberação, o Extrator revalida o acesso automaticamente e remove este bloqueio.</li>
+        </ol>
+      </details>
+      {blocker.last_verified_at && <span>Última verificação: {formatDate(blocker.last_verified_at, true)}</span>}
+    </section>
   );
 }
 

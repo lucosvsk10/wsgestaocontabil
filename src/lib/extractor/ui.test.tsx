@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AddCompanyModal } from '@/pages/FiscalExtractorApp';
+import { AddCompanyModal, FiscalCoveragePermissionGate } from '@/pages/FiscalExtractorApp';
 import { ExtractorAccountName } from '@/components/extractor/ExtractorAccountName';
 import { extractorRequest } from './request';
 vi.mock('./request', () => ({ extractorRequest: vi.fn(), extractorErrorMessage: vi.fn() }));
@@ -82,5 +82,24 @@ describe('extrator: importação e conta', () => {
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('salvo'));
     expect(request).toHaveBeenCalledWith({ action: 'save_account', name: 'Conta de teste' });
     expect(saved).toHaveBeenCalledOnce();
+  });
+});
+
+describe('extrator: bloqueio por cobertura fiscal', () => {
+  it('mostra a empresa afetada, o portal oficial e o passo a passo', () => {
+    render(
+      <FiscalCoveragePermissionGate
+        company={{ tradeName: 'A D MELLO', name: 'A DE MELLO DEFENSOR' } as any}
+        blocker={{ last_verified_at: '2026-09-24T10:00:00Z' } as any}
+      />
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('A D MELLO');
+    expect(screen.getByRole('link', { name: /Abrir Portal SEFAZ\/AL/i })).toHaveAttribute(
+      'href',
+      'https://nfeas.sefaz.al.gov.br/sca_default_login_page'
+    );
+    expect(screen.getByText('Ver passo a passo para liberar o acesso')).toBeInTheDocument();
+    expect(screen.getByText(/Sistema de Consultas e Relatórios/i)).toBeInTheDocument();
   });
 });

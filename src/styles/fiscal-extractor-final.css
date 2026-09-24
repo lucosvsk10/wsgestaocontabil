@@ -66,3 +66,25 @@
 
 @media(max-width:1120px){.extractor-health-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.extractor-settings-sections{grid-template-columns:1fr}}
 @media(max-width:760px){.extractor-health-hero,.extractor-settings-overview{align-items:flex-start;flex-direction:column}.extractor-settings-overview>div:last-child{text-align:left}.extractor-health-grid{grid-template-columns:1fr}.extractor-health-title{flex-direction:column}.extractor-health-title>span{white-space:normal}.extractor-health-rows>div{grid-template-columns:1fr;gap:5px}.extractor-history-compact{grid-template-columns:1fr!important}.extractor-settings-sections dd{max-width:56%}}
+
+/* Company-scoped fiscal coverage gate. */
+.extractor-documents-coverage-shell{position:relative;min-height:440px}
+.extractor-documents-coverage-shell.is-locked{overflow:hidden;border-radius:5px}
+.extractor-documents-coverage-shell.is-locked .extractor-documents-coverage-content{pointer-events:none;user-select:none;filter:blur(7px);opacity:.32;transform:scale(.995)}
+.extractor-documents-coverage-content{transition:filter .2s ease,opacity .2s ease,transform .2s ease}
+.extractor-coverage-gate{position:absolute;z-index:5;top:50%;left:50%;width:min(540px,calc(100% - 32px));padding:30px 32px;transform:translate(-50%,-50%);border:1px solid rgba(226,180,90,.26);border-radius:8px;background:rgba(8,15,25,.97);box-shadow:0 24px 80px rgba(0,0,0,.48);text-align:center;backdrop-filter:blur(16px)}
+.extractor-coverage-gate-icon{display:grid;place-items:center;width:46px;height:46px;margin:0 auto 14px;border:1px solid rgba(226,180,90,.28);border-radius:50%;background:rgba(226,180,90,.09);color:#e2b45a}
+.extractor-coverage-gate-icon svg{width:22px;height:22px}
+.extractor-coverage-gate>small{display:block;color:#d7b65a;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+.extractor-coverage-gate h2{margin:7px 0 0;color:#f2f5f8;font-size:20px;font-weight:650}
+.extractor-coverage-gate>p{max-width:450px;margin:11px auto 20px;color:#9dabb9;font-size:11px;line-height:1.65}
+.extractor-coverage-gate>p strong{color:#dce5ed;font-weight:600}
+.extractor-coverage-gate-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 17px;border:1px solid #d7b65a;border-radius:5px;background:#d7b65a;color:#10151d!important;font-size:11px;font-weight:700;text-decoration:none!important;transition:background .15s ease,border-color .15s ease}
+.extractor-coverage-gate-primary:hover{border-color:#e2c772;background:#e2c772}
+.extractor-coverage-gate-primary svg{width:14px;height:14px}
+.extractor-coverage-guide{max-width:450px;margin:16px auto 0;text-align:left}
+.extractor-coverage-guide summary{cursor:pointer;color:#c8d2dc;font-size:10px;font-weight:600;text-align:center;text-decoration:underline;text-underline-offset:3px}
+.extractor-coverage-guide ol{margin:13px 0 0;padding:14px 14px 14px 31px;border:1px solid #1d2c3d;border-radius:5px;background:#0b1420;color:#90a0b0;font-size:10px;line-height:1.6}
+.extractor-coverage-guide li+li{margin-top:6px}
+.extractor-coverage-gate>span:last-child{display:block;margin-top:14px;color:#607286;font-size:8px}
+@media(max-width:620px){.extractor-coverage-gate{top:28px;transform:translateX(-50%);padding:24px 18px}.extractor-coverage-gate h2{font-size:17px}.extractor-documents-coverage-shell{min-height:620px}}

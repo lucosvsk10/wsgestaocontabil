@@ -135,6 +135,17 @@ Deno.serve(async req => {
     if (companyError) throw companyError;
     if (!company) return J({ error: 'Empresa não encontrada' }, 404);
 
+    if (action === 'coverage_status') {
+      const { data: coverage, error: coverageError } = await admin
+        .from('fiscal_extractor_coverage')
+        .select('document_type,direction,applicability,coverage_status,source_confirmed,source_name,last_error,last_verified_at,details')
+        .eq('company_id', companyId)
+        .order('direction', { ascending: true })
+        .order('document_type', { ascending: true });
+      if (coverageError) throw coverageError;
+      return J({ ok: true, company_id: companyId, coverage: coverage || [] });
+    }
+
     if (action === 'history') {
       return J({
         ok: true,
