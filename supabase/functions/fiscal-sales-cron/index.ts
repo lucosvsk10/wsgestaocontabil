@@ -355,6 +355,7 @@ Deno.serve(async req => {
           .filter((value: number) => value > 0);
         const maxSaved = Math.max(0, ...savedNumbers);
         const maxKnownDfe = Math.max(0, ...dfeNumbers);
+        const hasOfficialNfceAnchor = maxSaved > 0 || maxKnownDfe > 0 || maxIssuerEvent > 0;
         const minKnownWindow = Math.min(
           ...[...savedNumbers, ...dfeNumbers].filter((value: number) => value > 0),
           Number.POSITIVE_INFINITY
@@ -487,14 +488,23 @@ Deno.serve(async req => {
         }
 
         let discovered = baseLatest;
+        let discoveryCursor = baseLatest;
         let discovery: any = bootstrap;
         try {
+          const previousDiscoveryCursor = Math.max(baseLatest, Number(state?.cursor_number || 0));
+          const sweepLimit = baseLatest + 5000;
+          const scanStart = !hasOfficialNfceAnchor
+            ? previousDiscoveryCursor >= sweepLimit
+              ? baseLatest + 1
+              : previousDiscoveryCursor + 1
+            : baseLatest + 1;
           const response = await fetch(`${base}/functions/v1/fiscal-sales-discover-latest`, {
             method: "POST",
             headers,
             body: JSON.stringify({
               company_id: company.id,
               base_number: baseLatest,
+              scan_start: scanStart,
               model: targetModel,
               series: Number(targetSeries),
               lookahead: 72,
@@ -506,6 +516,7 @@ Deno.serve(async req => {
           discovery = await response.json().catch(() => ({}));
           if (response.ok && !discovery?.cooldown) {
             discovered = Math.max(discovered, Number(discovery?.latest || 0));
+            discoveryCursor = Math.max(discoveryCursor, Number(discovery?.scanned_through || baseLatest));
           }
         } catch (err) {
           discovery = { error: err instanceof Error ? err.message : String(err) };
@@ -523,6 +534,7 @@ Deno.serve(async req => {
           const completedAt = new Date().toISOString();
           await admin.from("fiscal_sales_sync_state").update({
             status: "idle",
+            cursor_number: hasOfficialNfceAnchor ? baseLatest : discoveryCursor,
             last_error: null,
             last_completed_at: completedAt,
             next_scheduled_at: next.toISOString(),

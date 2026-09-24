@@ -128,10 +128,13 @@ Deno.serve(async req => {
     let probes = 0;
     let preferredMonth = String(body.preferred_month || months[0] || "");
     let missStreak = 0;
-    const firstNumber = bootstrap ? bootstrapStart : baseNumber + 1;
+    const requestedScanStart = Math.max(baseNumber + 1, Number(body.scan_start || 0));
+    const firstNumber = bootstrap ? bootstrapStart : requestedScanStart;
     const lastNumber = firstNumber + lookahead - 1;
+    let scannedThrough = firstNumber - 1;
 
     for (let noteNumber = firstNumber; noteNumber <= lastNumber && !cooldown; noteNumber += 1) {
+      scannedThrough = noteNumber;
       const orderedMonths = [preferredMonth, ...months].filter((value, index, array) => value && array.indexOf(value) === index);
       let hit = false;
       for (const month of orderedMonths) {
@@ -164,7 +167,7 @@ Deno.serve(async req => {
       await sleep(180);
     }
 
-    return json({ ok: true, company_id: companyId, model, series, base_number: baseNumber, bootstrap, bootstrap_start: bootstrapStart, latest, advanced: bootstrap ? latest > 0 : latest > baseNumber, hits, probes, months, preferred_month: preferredMonth, miss_streak: missStreak, cooldown });
+    return json({ ok: true, company_id: companyId, model, series, base_number: baseNumber, bootstrap, bootstrap_start: bootstrapStart, scan_start: firstNumber, scanned_through: scannedThrough, latest, advanced: bootstrap ? latest > 0 : latest > baseNumber, hits, probes, months, preferred_month: preferredMonth, miss_streak: missStreak, cooldown });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
