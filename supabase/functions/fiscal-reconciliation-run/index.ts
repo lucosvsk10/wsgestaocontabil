@@ -212,18 +212,31 @@ Deno.serve(async req=>{
             },
           });
         }else if(uf==="SP"){
-          const official55=await paged<any>((from,to)=>admin.from("fiscal_sales_documents")
+          const official55Raw=await paged<any>((from,to)=>admin.from("fiscal_sales_documents")
             .select("access_key,issue_date,xml,source,source_reference,status")
             .eq("company_id",companyId).eq("model","55")
-            .in("source",["sefaz_sp_nfe55_issuer_event","sefaz_sp_nfe55_539_recovery","national_dfe_issuer_event"])
-            .gte("issue_date",startTs(start)).lte("issue_date",endTs(end)).range(from,to));
-          const confirmed=Boolean(sState?.reconciliation_complete&&Number(sState?.reconciliation_pending||0)===0);
+            .range(from,to));
+          const startMonth=start.slice(0,7).replace("-","");
+          const endMonth=end.slice(0,7).replace("-","");
+          const official55=official55Raw.filter((row:any)=>{
+            const safeSource=["sefaz_sp_nfe55_issuer_event","sefaz_sp_nfe55_direct_consult","sefaz_sp_nfe55_distribution_xml","national_dfe_issuer_event"].includes(String(row.source||""));
+            const directlyConfirmed=row.source_reference?.direct_consult_confirmed===true;
+            if(!safeSource&&!directlyConfirmed)return false;
+            if(row.issue_date){const issued=Date.parse(String(row.issue_date));return issued>=Date.parse(startTs(start))&&issued<=Date.parse(endTs(end));}
+            const key=String(row.access_key||"").replace(/\D/g,"");
+            const keyMonth=key.length===44?`20${key.slice(2,6)}`:"";
+            return keyMonth>=startMonth&&keyMonth<=endMonth;
+          });
+          // Event/status discovery is authoritative for each captured key, but it is
+          // not an exhaustive issuer listing for the period. Never promote SP NF-e
+          // 55 coverage to complete from a contiguous-number probe.
+          const confirmed=false;
           await upsert(admin,companyId,start,end,"sale_nfe55",{
             sourceName:"SEFAZ/SP NF-e 55 — eventos oficiais + reconciliação de numeração",
             sourceConfirmed:confirmed,sourceKeys:keySet(official55),siteKeys:keySet(nfe55Out),blocked:!confirmed,
             xmlPending:nfe55Out.filter(r=>!r.full_xml||!r.xml).length,
             duplicateCount:nfe55Out.length-keySet(nfe55Out).size,
-            reason:confirmed?null:(sState?.last_error||"Reconciliação integral da numeração NF-e 55/SP ainda está em andamento."),
+            reason:"As chaves capturadas foram validadas individualmente, mas a SEFAZ/SP ainda não forneceu enumeração exaustiva por período.",
             details:{uf,official_keys_captured:keySet(official55).size,official_rows:official55.length,reconciliation_total:sState?.reconciliation_total||0,reconciliation_resolved:sState?.reconciliation_resolved||0,reconciliation_pending:sState?.reconciliation_pending||0,exhaustive_enumeration:confirmed},
           });
         }else{

@@ -47,9 +47,13 @@ Deno.serve(async req=>{
         admin.from("fiscal_transport_sync_state").select("*").eq("company_id",companyId).eq("document_family","mdfe58").eq("environment",company.ambiente_padrao==="homologacao"?"homologacao":"producao").maybeSingle(),
         admin.from("fiscal_dfe_documents").select("model,direction,document_kind").eq("company_id",companyId).limit(1000),
         admin.from("fiscal_source_reconciliation").select("status,source_confirmed,source_count,site_count,xml_pending_count,checked_at,reason,details").eq("company_id",companyId).eq("document_type","sale_nfe55").order("checked_at",{ascending:false}).limit(1).maybeSingle(),
-        uf==="SP"?admin.from("fiscal_sales_documents").select("access_key,xml,source,updated_at").eq("company_id",companyId).eq("model","55").limit(5000):Promise.resolve({data:[],error:null}),
+        uf==="SP"?admin.from("fiscal_sales_documents").select("access_key,xml,source,source_reference,updated_at").eq("company_id",companyId).eq("model","55").limit(5000):Promise.resolve({data:[],error:null}),
       ]);
-      const ps=purchaseState.data||null,ss=salesState.data||null,ns=nfseState.data||null,cred=stateCred.data||null,ds=dfeState.data||null,cts=cteState.data||null,mds=mdfeState.data||null,s55=sale55Rec.data||null,sp55=sp55Rows.data||[];
+      const ps=purchaseState.data||null,ss=salesState.data||null,ns=nfseState.data||null,cred=stateCred.data||null,ds=dfeState.data||null,cts=cteState.data||null,mds=mdfeState.data||null,s55=sale55Rec.data||null;
+      const sp55=(sp55Rows.data||[]).filter((row:any)=>
+        ["sefaz_sp_nfe55_issuer_event","sefaz_sp_nfe55_direct_consult","sefaz_sp_nfe55_distribution_xml","national_dfe_issuer_event"].includes(String(row.source||"")) ||
+        row.source_reference?.direct_consult_confirmed===true
+      );
       const obs=observed.data||[];
       const seen=(model:string,direction:string)=>obs.some((r:any)=>String(r.model||"")===model&&String(r.direction||"")===direction);
       const now=new Date().toISOString();

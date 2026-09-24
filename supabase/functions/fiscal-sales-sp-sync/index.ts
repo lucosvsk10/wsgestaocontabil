@@ -37,7 +37,10 @@ async function backfillSpNfe55Xml(admin:any,c:any,gatewayToken:string,gatewayCer
   const {data:rows,error}=await admin.from("fiscal_sales_documents")
     .select("access_key,document_number,series,issue_date,status,xml,source,source_reference")
     .eq("company_id",c.id).eq("model","55").is("xml",null)
-    .order("updated_at",{ascending:true}).limit(Math.max(20,Math.min(100,batch*4)));
+    // Read the complete bounded history before skipping keys already marked as
+    // unavailable. A small pre-limit could contain only skipped rows and starve
+    // newer, still-attemptable keys forever.
+    .order("updated_at",{ascending:true}).limit(5000);
   if(error)throw error;
   let saved=0,summaryOnly=0,failed=0,cooldown=false;const failures:any[]=[];
   for(const row of rows||[]){
