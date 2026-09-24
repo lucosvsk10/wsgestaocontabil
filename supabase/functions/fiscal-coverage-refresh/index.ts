@@ -37,7 +37,7 @@ Deno.serve(async req=>{
 
     for(const company of companies||[]){
       const companyId=String(company.id),uf=String(company.uf||"").toUpperCase(),cnpj=dg(company.cnpj);
-      const [purchaseState,salesState,nfseState,stateCred,dfeState,cteState,mdfeState,observed,sale55Rec,sp55Rows]=await Promise.all([
+      const [purchaseState,salesState,nfseState,stateCred,dfeState,cteState,mdfeState,observed,sale55Rec,sale65Rec,sp55Rows]=await Promise.all([
         admin.from("fiscal_purchase_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
         admin.from("fiscal_sales_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
         admin.from("fiscal_nfse_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
@@ -47,9 +47,10 @@ Deno.serve(async req=>{
         admin.from("fiscal_transport_sync_state").select("*").eq("company_id",companyId).eq("document_family","mdfe58").eq("environment",company.ambiente_padrao==="homologacao"?"homologacao":"producao").maybeSingle(),
         admin.from("fiscal_dfe_documents").select("model,direction,document_kind").eq("company_id",companyId).limit(1000),
         admin.from("fiscal_source_reconciliation").select("status,source_confirmed,source_count,site_count,xml_pending_count,checked_at,reason,details").eq("company_id",companyId).eq("document_type","sale_nfe55").order("checked_at",{ascending:false}).limit(1).maybeSingle(),
+        admin.from("fiscal_source_reconciliation").select("status,source_confirmed,source_count,site_count,xml_pending_count,checked_at,reason,details").eq("company_id",companyId).eq("document_type","sale_nfce65").order("checked_at",{ascending:false}).limit(1).maybeSingle(),
         uf==="SP"?admin.from("fiscal_sales_documents").select("access_key,xml,source,source_reference,updated_at").eq("company_id",companyId).eq("model","55").limit(5000):Promise.resolve({data:[],error:null}),
       ]);
-      const ps=purchaseState.data||null,ss=salesState.data||null,ns=nfseState.data||null,cred=stateCred.data||null,ds=dfeState.data||null,cts=cteState.data||null,mds=mdfeState.data||null,s55=sale55Rec.data||null;
+      const ps=purchaseState.data||null,ss=salesState.data||null,ns=nfseState.data||null,cred=stateCred.data||null,ds=dfeState.data||null,cts=cteState.data||null,mds=mdfeState.data||null,s55=sale55Rec.data||null,s65=sale65Rec.data||null;
       const sp55=(sp55Rows.data||[]).filter((row:any)=>
         ["sefaz_sp_nfe55_issuer_event","sefaz_sp_nfe55_direct_consult","sefaz_sp_nfe55_distribution_xml","national_dfe_issuer_event"].includes(String(row.source||"")) ||
         row.source_reference?.direct_consult_confirmed===true
@@ -87,16 +88,16 @@ Deno.serve(async req=>{
               :"Credencial SEFAZ/AL ausente ou inválida.",
           details:{credential_status:credStatus,report_permission:reportPermission,reconciliation_status:s55?.status||null,source_count:s55?.source_count??null,site_count:s55?.site_count??null,xml_pending_count:s55?.xml_pending_count??null},
         });
-        const nfceComplete=Boolean(ss?.reconciliation_complete&&Number(ss?.reconciliation_pending||0)===0&&!ss?.last_error);
+        const nfceComplete=Boolean(s65?.status==="ok"&&s65?.source_confirmed===true);
         rows.push({
           document_type:"nfce65",direction:"saida",applicability:"required",
           source_name:"SVRS/SEFAZ NFC-e reconciliation",source_mode:"a1_sequence",
           coverage_status:nfceComplete?"covered":ss?.last_error?"partial":"partial",
           source_confirmed:nfceComplete,
-          last_verified_at:ss?.last_completed_at||null,
-          last_success_at:nfceComplete?(ss?.last_completed_at||null):null,
-          last_error:nfceComplete?null:(ss?.last_error||"Reconciliação NFC-e ainda não concluída."),
-          details:{credential_status:credStatus,portal_required:false,reconciliation_complete:Boolean(ss?.reconciliation_complete),reconciliation_pending:Number(ss?.reconciliation_pending||0)},
+          last_verified_at:s65?.checked_at||ss?.last_completed_at||null,
+          last_success_at:nfceComplete?(s65?.checked_at||ss?.last_completed_at||null):null,
+          last_error:nfceComplete?null:(s65?.reason||ss?.last_error||"Reconciliação NFC-e ainda não concluída."),
+          details:{credential_status:credStatus,portal_required:false,reconciliation_status:s65?.status||null,source_confirmed:Boolean(s65?.source_confirmed),source_count:s65?.source_count??null,site_count:s65?.site_count??null,reconciliation_pending:Number(ss?.reconciliation_pending||0)},
         });
       }else if(uf==="SP"){
         const sp55Known=sp55.length,sp55Xml=sp55.filter((r:any)=>Boolean(r.xml)).length;
