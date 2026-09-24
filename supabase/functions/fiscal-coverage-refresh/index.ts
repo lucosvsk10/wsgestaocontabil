@@ -73,20 +73,28 @@ Deno.serve(async req=>{
 
       const credStatus=String(cred?.last_verification_status||"not_configured");
       if(uf==="AL"){
-        const loginUsable=["valid","valid_without_report_permission"].includes(credStatus);
-        const reportPermission=credStatus==="valid";
+        const nfe55SeriesStates=Object.values((ss?.nfe55_series_states||{}) as Record<string,any>);
+        const nfe55LastCompleted=nfe55SeriesStates
+          .map((state:any)=>String(state?.last_completed_at||""))
+          .filter(Boolean)
+          .sort()
+          .at(-1)||null;
+        const nfe55LastVerified=[String(s55?.checked_at||""),String(nfe55LastCompleted||"")]
+          .filter(Boolean)
+          .sort()
+          .at(-1)||null;
+        const nfe55StateError=nfe55SeriesStates.find((state:any)=>Boolean(state?.last_error)) as any;
         const sale55Ok=Boolean(s55?.status==="ok"&&s55?.source_confirmed);
         rows.push({
           document_type:"nfe55",direction:"saida",applicability:"required",
-          source_name:"SEFAZ/AL relatório de emitidas + reconciliação A1/SVRS",source_mode:"state_portal_or_a1_recovery",
-          coverage_status:sale55Ok?"covered":loginUsable?"partial":"blocked",source_confirmed:sale55Ok,
-          last_verified_at:s55?.checked_at||cred?.last_verified_at||null,last_success_at:sale55Ok?(s55?.checked_at||null):null,
-          last_error:sale55Ok?null:reportPermission
-            ?(s55?.reason||"Credencial validada; reconciliação por período ainda precisa concluir.")
-            :loginUsable
-              ?"Login estadual válido, mas o relatório de NF-e emitidas não foi liberado para este usuário. A recuperação por A1 continua como fallback."
-              :"Credencial SEFAZ/AL ausente ou inválida.",
-          details:{credential_status:credStatus,report_permission:reportPermission,reconciliation_status:s55?.status||null,source_count:s55?.source_count??null,site_count:s55?.site_count??null,xml_pending_count:s55?.xml_pending_count??null},
+          source_name:"SEFAZ/SVRS Consulta Protocolo + eventos do emitente",source_mode:"a1_sequence",
+          coverage_status:sale55Ok?"covered":nfe55StateError?"error":"partial",source_confirmed:sale55Ok,
+          last_verified_at:nfe55LastVerified,last_success_at:sale55Ok?nfe55LastVerified:nfe55LastCompleted,
+          last_error:sale55Ok?null:nfe55StateError?.last_error
+            ||(nfe55SeriesStates.length
+              ?"Enumeração automática por série em andamento; nenhuma ação é necessária do usuário."
+              :"Varredura automática das NF-e emitidas está agendada; nenhuma ação é necessária do usuário."),
+          details:{credential_status:credStatus,portal_required:false,reconciliation_status:s55?.status||null,source_count:s55?.source_count??null,site_count:s55?.site_count??null,xml_pending_count:s55?.xml_pending_count??null,series_states:ss?.nfe55_series_states||{}},
         });
         const nfceComplete=Boolean(s65?.status==="ok"&&s65?.source_confirmed===true);
         rows.push({

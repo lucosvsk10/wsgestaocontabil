@@ -1988,7 +1988,16 @@ function Documents({
         const current = map.get(key);
         if (!current || (doc.fullXml && doc.xml && !(current.fullXml && current.xml))) map.set(key, doc);
       });
-      setDocs([...map.values()]);
+      const ordered = [...map.values()].sort((left, right) => {
+        const leftTime = left.issueDate ? Date.parse(left.issueDate) : 0;
+        const rightTime = right.issueDate ? Date.parse(right.issueDate) : 0;
+        if (leftTime !== rightTime) return rightTime - leftTime;
+
+        const leftNumber = Number(left.number || 0);
+        const rightNumber = Number(right.number || 0);
+        return rightNumber - leftNumber;
+      });
+      setDocs(ordered);
     } catch {
       if (sequence === requestSequence.current)
         setNotice({ tone: 'error', text: 'Não foi possível carregar os documentos. Tente novamente.' });
@@ -2075,6 +2084,7 @@ function Documents({
   const nfce = fiscal.filter(d => type(d) === 'NFC-e').length;
   const nfse = fiscal.filter(d => type(d) === 'NFS-e').length;
   const permissionBlocker = coverage.find(row =>
+    String(company?.uf || '').toUpperCase() !== 'AL' &&
     row.document_type === 'nfe55' &&
     row.direction === 'saida' &&
     row.applicability === 'required' &&
