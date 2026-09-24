@@ -2416,20 +2416,20 @@ export function FiscalCoveragePermissionGate({ company, blocker }: { company: Co
       </p>
       <a
         className="extractor-coverage-gate-primary"
-        href="https://nfeas.sefaz.al.gov.br/sca_default_login_page"
+        href="https://www.sefaz.al.gov.br/nise/nise-processos-sei"
         target="_blank"
         rel="noopener noreferrer"
       >
-        Abrir Portal SEFAZ/AL <ExternalLink />
+        Solicitar liberação à SEFAZ/AL <ExternalLink />
       </a>
       <details className="extractor-coverage-guide">
-        <summary>Ver passo a passo para liberar o acesso</summary>
+        <summary>Ver passo a passo para solicitar o acesso</summary>
         <ol>
-          <li>Entre no portal com o usuário responsável pela empresa.</li>
-          <li>Confirme que o usuário está vinculado ao CNPJ e à inscrição estadual corretos.</li>
-          <li>Libere o serviço “Sistema de Consultas e Relatórios” e o relatório de NF-e “Entradas e Saídas”.</li>
-          <li>Se a opção não aparecer, peça ao usuário principal da empresa ou à SEFAZ/AL para conceder a permissão.</li>
-          <li>Depois da liberação, o Extrator revalida o acesso automaticamente e remove este bloqueio.</li>
+          <li>Abra o atendimento Nise da SEFAZ/AL pelo botão acima.</li>
+          <li>Escolha “Documento Fiscal Eletrônico (NF-e, NFC-e, CT-e)”.</li>
+          <li>Solicite o relatório completo de NF-e modelo 55 emitidas/saídas, por período e com as chaves de acesso.</li>
+          <li>Informe o CNPJ, o CACEAL e que o SCA atual exibe somente a consulta individual por chave.</li>
+          <li>Após a SEFAZ liberar o relatório, o Extrator revalida a fonte e remove este bloqueio.</li>
         </ol>
       </details>
       {blocker.last_verified_at && <span>Última verificação: {formatDate(blocker.last_verified_at, true)}</span>}

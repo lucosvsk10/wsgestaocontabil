@@ -95,11 +95,11 @@ describe('extrator: bloqueio por cobertura fiscal', () => {
     );
 
     expect(screen.getByRole('alert')).toHaveTextContent('A D MELLO');
-    expect(screen.getByRole('link', { name: /Abrir Portal SEFAZ\/AL/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Solicitar liberação à SEFAZ\/AL/i })).toHaveAttribute(
       'href',
-      'https://nfeas.sefaz.al.gov.br/sca_default_login_page'
+      'https://www.sefaz.al.gov.br/nise/nise-processos-sei'
     );
-    expect(screen.getByText('Ver passo a passo para liberar o acesso')).toBeInTheDocument();
-    expect(screen.getByText(/Sistema de Consultas e Relatórios/i)).toBeInTheDocument();
+    expect(screen.getByText('Ver passo a passo para solicitar o acesso')).toBeInTheDocument();
+    expect(screen.getByText(/consulta individual por chave/i)).toBeInTheDocument();
   });
 });
