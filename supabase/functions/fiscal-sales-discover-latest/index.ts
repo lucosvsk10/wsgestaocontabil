@@ -79,6 +79,7 @@ Deno.serve(async req => {
     const companyId = String(body.company_id || "");
     if (!companyId) return json({ error: "company_id_required" }, 400);
     const lookahead = Math.min(72, Math.max(1, Number(body.lookahead || 24)));
+    const missLimit = Math.min(24, Math.max(12, Number(body.miss_limit || 12)));
     const model = String(body.model || "65").replace(/\D/g, "");
     const series = Math.max(1, Math.min(999, Number(body.series || 1)));
     if (!["55","65"].includes(model)) return json({ error: "unsupported_model" }, 422);
@@ -163,11 +164,11 @@ Deno.serve(async req => {
         await sleep(120);
       }
       missStreak = hit ? 0 : missStreak + 1;
-      if (missStreak >= 12 && latest >= baseNumber) break;
+      if (missStreak >= missLimit && latest >= baseNumber) break;
       await sleep(180);
     }
 
-    return json({ ok: true, company_id: companyId, model, series, base_number: baseNumber, bootstrap, bootstrap_start: bootstrapStart, scan_start: firstNumber, scanned_through: scannedThrough, latest, advanced: bootstrap ? latest > 0 : latest > baseNumber, hits, probes, months, preferred_month: preferredMonth, miss_streak: missStreak, cooldown });
+    return json({ ok: true, company_id: companyId, model, series, base_number: baseNumber, bootstrap, bootstrap_start: bootstrapStart, scan_start: firstNumber, scanned_through: scannedThrough, latest, advanced: bootstrap ? latest > 0 : latest > baseNumber, hits, probes, months, preferred_month: preferredMonth, miss_streak: missStreak, miss_limit: missLimit, cooldown });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }

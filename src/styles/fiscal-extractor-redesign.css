@@ -97,6 +97,20 @@
   color:#718397;font-size:8px;line-height:1.45;text-align:center;
 }
 .extractor-history-window-note strong{color:#aebdca;font-weight:600}
+.extractor-sales-value-warning{
+  display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:13px 14px;border:1px solid rgba(245,158,11,.22);
+  border-radius:5px;background:rgba(245,158,11,.075);color:#d9e1e8;
+}
+.extractor-sales-value-warning>svg{width:18px;height:18px;flex:0 0 auto;color:#fbbf24}
+.extractor-sales-value-warning>div{min-width:0;flex:1}
+.extractor-sales-value-warning strong{display:block;font-size:11px;font-weight:650;color:#f7d78b}
+.extractor-sales-value-warning span{display:block;margin-top:3px;color:#aeb9c5;font-size:9px;line-height:1.45}
+.extractor-sales-value-warning button{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:0 11px;border:1px solid rgba(245,158,11,.28);
+  border-radius:4px;background:rgba(245,158,11,.1);color:#f7d78b;font-size:9px;white-space:nowrap;
+}
+.extractor-sales-value-warning button:disabled{cursor:wait;opacity:.65}
+.extractor-sales-value-warning button svg{width:14px;height:14px}
 .extractor-doc-kpis{gap:8px!important;margin-bottom:12px!important}
 .extractor-doc-kpis .extractor-metric{min-height:102px!important;padding:15px 18px!important;border-radius:5px!important}
 .extractor-doc-kpis .extractor-metric>div svg{display:none}
@@ -114,6 +128,11 @@
 .extractor-documents-v2 .extractor-search-row{border:0!important;background:var(--ex-surface)!important;padding:10px 14px!important}
 .extractor-documents-v2 .extractor-search-row label{border:0!important;background:#111724!important}
 .extractor-documents-v2 .extractor-primary{background:#f5f5f4!important;color:#111827!important}
+@media(max-width:720px){
+  .extractor-sales-value-warning{align-items:flex-start;flex-wrap:wrap}
+  .extractor-sales-value-warning>div{min-width:calc(100% - 34px)}
+  .extractor-sales-value-warning button{width:100%}
+}
 
 /* Company center */
 .extractor-company-detail{border-radius:5px!important;overflow:hidden}

@@ -174,7 +174,7 @@ Deno.serve(async req => {
         });
       }
 
-      const [documentRows, undatedRows, reconciliationRows] = await Promise.all([
+      const [documentRows, undatedRows, salesRows, undatedSalesRows, reconciliationRows] = await Promise.all([
         paged((from, to) => admin.from('fiscal_dfe_documents')
           .select('id,access_key,source_id,nsu,document_kind,direction,issue_date')
           .eq('company_id', companyId)
@@ -191,6 +191,20 @@ Deno.serve(async req => {
           .not('access_key', 'is', null)
           .order('access_key', { ascending: true })
           .range(from, to)),
+        paged((from, to) => admin.from('fiscal_sales_documents')
+          .select('id,access_key,document_number,source,issue_date')
+          .eq('company_id', companyId)
+          .gte('issue_date', `${start}T00:00:00-03:00`)
+          .lte('issue_date', `${end}T23:59:59.999-03:00`)
+          .order('issue_date', { ascending: true })
+          .range(from, to)),
+        paged((from, to) => admin.from('fiscal_sales_documents')
+          .select('id,access_key,document_number,source,issue_date')
+          .eq('company_id', companyId)
+          .is('issue_date', null)
+          .not('access_key', 'is', null)
+          .order('access_key', { ascending: true })
+          .range(from, to)),
         paged((from, to) => admin.from('fiscal_sales_reconciliation')
           .select('access_key,note_number,status,issue_date')
           .eq('company_id', companyId)
@@ -203,7 +217,13 @@ Deno.serve(async req => {
 
       const seen = new Set<string>();
       const months: Record<string, { sales: number; purchases: number }> = {};
-      for (const row of [...documentRows, ...undatedRows, ...reconciliationRows.map((item: any) => ({ ...item, direction: 'saida' }))]) {
+      const canonicalSales = [...salesRows, ...undatedSalesRows].map((item: any) => ({
+        ...item,
+        source_id: `sale:${item.id}`,
+        note_number: item.document_number,
+        direction: 'saida',
+      }));
+      for (const row of [...documentRows, ...undatedRows, ...canonicalSales, ...reconciliationRows.map((item: any) => ({ ...item, direction: 'saida' }))]) {
         const date = row.issue_date ? new Date(row.issue_date) : null;
         const accessKey = String(row.access_key || '');
         const keyYearMonth = !date && /^\d{44}$/.test(accessKey) ? accessKey.slice(2, 6) : null;
@@ -235,14 +255,46 @@ Deno.serve(async req => {
       : fullStart;
 
     const [docs, purchaseStateRes, salesStateRes, healthRes, certRes, reconciliation, syncHistoryRes, coverageRes] = await Promise.all([
-      paged((from, to) => admin.from('fiscal_dfe_documents')
-        .select('id,access_key,source_id,document_kind,direction,full_xml,xml,parse_error,issue_date,model,status_code,status_text')
-        .eq('company_id', companyId)
-        .neq('document_kind', 'evento')
-        .gte('issue_date', `${start}T00:00:00-03:00`)
-        .lte('issue_date', `${end}T23:59:59.999-03:00`)
-        .order('issue_date', { ascending: true })
-        .range(from, to), 20000),
+      Promise.all([
+        paged((from, to) => admin.from('fiscal_dfe_documents')
+          .select('id,access_key,source_id,document_kind,direction,full_xml,xml,parse_error,issue_date,model,status_code,status_text')
+          .eq('company_id', companyId)
+          .neq('document_kind', 'evento')
+          .gte('issue_date', `${start}T00:00:00-03:00`)
+          .lte('issue_date', `${end}T23:59:59.999-03:00`)
+          .order('issue_date', { ascending: true })
+          .range(from, to), 20000),
+        paged((from, to) => admin.from('fiscal_sales_documents')
+          .select('id,access_key,document_number,source,issue_date,model,status,total_value,xml,source_reference')
+          .eq('company_id', companyId)
+          .gte('issue_date', `${start}T00:00:00-03:00`)
+          .lte('issue_date', `${end}T23:59:59.999-03:00`)
+          .order('issue_date', { ascending: true })
+          .range(from, to), 20000),
+        paged((from, to) => admin.from('fiscal_sales_documents')
+          .select('id,access_key,document_number,source,issue_date,model,status,total_value,xml,source_reference')
+          .eq('company_id', companyId)
+          .is('issue_date', null)
+          .not('access_key', 'is', null)
+          .order('access_key', { ascending: true })
+          .range(from, to), 20000),
+      ]).then(([dfeRows, saleRows, undatedSaleRows]) => [
+        ...dfeRows,
+        ...[...saleRows, ...undatedSaleRows.filter((row: any) => {
+          const key = String(row.access_key || '');
+          if (!/^\d{44}$/.test(key)) return false;
+          const keyMonth = key.slice(2, 6);
+          return keyMonth >= start.slice(2, 4) + start.slice(5, 7) && keyMonth <= end.slice(2, 4) + end.slice(5, 7);
+        })].map((row: any) => ({
+          ...row,
+          source_id: `sale:${row.id}`,
+          document_kind: 'nfe',
+          direction: 'saida',
+          full_xml: Boolean(row.xml),
+          parse_error: row.source_reference?.xml_last_error || null,
+          status_text: row.status,
+        })),
+      ]),
       admin.from('fiscal_purchase_sync_state').select('*').eq('company_id', companyId).maybeSingle(),
       admin.from('fiscal_sales_sync_state').select('*').eq('company_id', companyId).maybeSingle(),
       admin.from('fiscal_sync_health').select('*').eq('company_id', companyId).maybeSingle(),

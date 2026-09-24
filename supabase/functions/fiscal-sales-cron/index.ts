@@ -508,6 +508,7 @@ Deno.serve(async req => {
               model: targetModel,
               series: Number(targetSeries),
               lookahead: 72,
+              miss_limit: hasOfficialNfceAnchor ? 12 : 24,
               months: discoveryMonths,
               preferred_month: bootstrap?.anchor_key_month || historyStartMonth,
             }),
@@ -523,10 +524,40 @@ Deno.serve(async req => {
         }
 
         const latest = Math.max(baseLatest, discovered);
+        const hasVerifiedAnchor = hasOfficialNfceAnchor || (Array.isArray(discovery?.hits) && discovery.hits.length > 0);
+
+        // A synthetic linear sweep is only discovery. Until an official NFC-e is
+        // actually found, reconciling the old base would falsely mark the sequence
+        // complete and waste most of the cron execution time on note #1 again.
+        if (!hasVerifiedAnchor) {
+          const checkedAt = new Date().toISOString();
+          await admin.from("fiscal_sales_sync_state").update({
+            status: "discovering",
+            cursor_number: discoveryCursor,
+            reconciliation_complete: false,
+            last_error: "Busca automática em andamento: procurando uma referência NFC-e oficial para confirmar toda a sequência de saídas.",
+            last_completed_at: checkedAt,
+            next_scheduled_at: next.toISOString(),
+            updated_at: checkedAt,
+          }).eq("company_id", company.id);
+          out.push({
+            company_id: company.id,
+            status: "discovering",
+            latest,
+            previous_latest: oldLatest,
+            discovery,
+            reconciliation: { skipped: true, reason: "official_anchor_not_found_yet" },
+            state_credential_status: stateCredentialStatus,
+            target_model: targetModel,
+            target_series: targetSeries,
+          });
+          continue;
+        }
 
         // Do not reopen a fully reconciled interval when discovery found no newer NFC-e.
         // This also protects previously verified history from being rewritten by an older worker.
         if (
+          hasVerifiedAnchor &&
           Boolean(state?.reconciliation_complete) &&
           Number(state?.reconciliation_pending || 0) === 0 &&
           latest <= baseLatest
@@ -534,7 +565,7 @@ Deno.serve(async req => {
           const completedAt = new Date().toISOString();
           await admin.from("fiscal_sales_sync_state").update({
             status: "idle",
-            cursor_number: hasOfficialNfceAnchor ? baseLatest : discoveryCursor,
+            cursor_number: hasVerifiedAnchor ? baseLatest : discoveryCursor,
             last_error: null,
             last_completed_at: completedAt,
             next_scheduled_at: next.toISOString(),
@@ -559,7 +590,7 @@ Deno.serve(async req => {
           company_id: company.id,
           status: "reconciling",
           latest_number: latest,
-          cursor_number: latest,
+          cursor_number: hasVerifiedAnchor ? latest : discoveryCursor,
           initial_floor_number: isExtractor ? scopeStartNumber : 1,
           reconciliation_total: Math.max(0, latest - (isExtractor ? scopeStartNumber : 1) + 1),
           reconciliation_started_at: state?.reconciliation_started_at || now.toISOString(),
@@ -612,14 +643,21 @@ Deno.serve(async req => {
         }
 
         const completedAt = new Date().toISOString();
+        const completionPatch: Record<string, unknown> = {
+          last_completed_at: completedAt,
+          last_error: null,
+          next_scheduled_at: next.toISOString(),
+          updated_at: completedAt,
+        };
+        if (!hasVerifiedAnchor) {
+          completionPatch.status = "discovering";
+          completionPatch.reconciliation_complete = false;
+          completionPatch.cursor_number = discoveryCursor;
+          completionPatch.last_error = "Busca automática em andamento: procurando uma referência NFC-e oficial para confirmar toda a sequência de saídas.";
+        }
         await admin
           .from("fiscal_sales_sync_state")
-          .update({
-            last_completed_at: completedAt,
-            last_error: null,
-            next_scheduled_at: next.toISOString(),
-            updated_at: completedAt,
-          })
+          .update(completionPatch)
           .eq("company_id", company.id);
 
         await admin

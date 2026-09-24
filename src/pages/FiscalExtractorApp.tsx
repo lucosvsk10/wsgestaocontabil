@@ -1928,7 +1928,6 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
 function Documents({
   companies,
   selectedCompanyId,
-  setSelectedCompanyId,
   preview,
   setNotice,
   onPreview,
@@ -1945,6 +1944,7 @@ function Documents({
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [busy, setBusy] = useState('');
+  const [xmlRetrying, setXmlRetrying] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [customStart, setCustomStart] = useState('');
@@ -2077,7 +2077,7 @@ function Documents({
   const sales = fiscal.filter(d => d.direction === 'saida');
   const purchases = fiscal.filter(d => d.direction === 'entrada');
   const events = docs.filter(d => d.documentKind === 'evento' || d.direction === 'relacionada');
-  const pendingValues = fiscal.filter(d => d.value == null).length;
+  const pendingSalesValues = sales.filter(d => d.value == null).length;
   const cancelledDocs = fiscal.filter(cancelled);
   const manifestationDocs = fiscal.filter(
     d => d.parseError === 'xml_requires_manifestation' || d.parseError === 'xml_retry:manifestation_sent'
@@ -2146,6 +2146,27 @@ function Documents({
     }
   };
 
+  const retrySalesXml = async () => {
+    if (preview) return setNotice({ tone: 'warning', text: 'A nova busca fica disponível no ambiente autenticado.' });
+    if (!company || xmlRetrying) return;
+    setXmlRetrying(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('extractor_queue_sync', { _company_id: company.id });
+      if (error) throw error;
+      if (data?.ok === false) throw new Error(String(data?.error || 'sync_not_queued'));
+      setNotice({ tone: 'success', text: 'Nova busca iniciada. Os valores serão atualizados assim que a SEFAZ liberar os XMLs.' });
+      window.setTimeout(() => {
+        void loadDocs();
+        void loadMonthlyStats();
+        void loadCoverage();
+      }, 10000);
+    } catch {
+      setNotice({ tone: 'error', text: 'Não foi possível iniciar uma nova busca agora. Tente novamente em alguns minutos.' });
+    } finally {
+      setXmlRetrying(false);
+    }
+  };
+
   if (!company) {
     return (
       <div className="extractor-page">
@@ -2177,11 +2198,6 @@ function Documents({
         title="Documentos"
         icon="document"
         description="Compras e vendas com a mesma leitura fiscal do painel administrativo."
-        actions={
-          <select className="extractor-company-select" value={company.id} onChange={event => setSelectedCompanyId(event.target.value)}>
-            {companies.map((item: Company) => <option key={item.id} value={item.id}>{item.tradeName}</option>)}
-          </select>
-        }
       />
 
       <section className="extractor-active-company">
@@ -2273,15 +2289,31 @@ function Documents({
         </section>
       )}
 
+      {pendingSalesValues > 0 && (
+        <section className="extractor-sales-value-warning" role="status">
+          <Info aria-hidden="true" />
+          <div>
+            <strong>Faturamento ainda pode mudar</strong>
+            <span>
+              {pendingSalesValues} {pendingSalesValues === 1 ? 'saída aguarda' : 'saídas aguardam'} o XML completo da SEFAZ e ainda {pendingSalesValues === 1 ? 'não possui' : 'não possuem'} valor.
+            </span>
+          </div>
+          <button onClick={() => void retrySalesXml()} disabled={xmlRetrying}>
+            {xmlRetrying ? <Loader2 className="animate-spin" /> : <AnimatedExtractorIcon name="refresh" />}
+            {xmlRetrying ? 'Iniciando busca...' : 'Tentar buscar XMLs novamente'}
+          </button>
+        </section>
+      )}
+
       <section className="extractor-doc-kpis">
         <Metric label="Total notas" value={String(fiscal.length)} detail="Documentos fiscais" icon="document" />
         <Metric label="Vendas" value={String(sales.length)} detail="Saídas" icon="upload" />
         <Metric label="Compras" value={String(purchases.length)} detail="Entradas" icon="download" />
         <Metric
-          label="Movimentação conhecida"
+          label="Faturamento conhecido"
           value={currency.format(sales.reduce((sum, document) => sum + Number(document.value || 0), 0))}
-          detail={pendingValues > 0
-            ? `${pendingValues} valor${pendingValues === 1 ? '' : 'es'} aguardando XML`
+          detail={pendingSalesValues > 0
+            ? `${pendingSalesValues} saída${pendingSalesValues === 1 ? '' : 's'} aguardando XML`
             : `Entradas: ${currency.format(purchases.reduce((sum, document) => sum + Number(document.value || 0), 0))}`}
           icon="report"
         />
