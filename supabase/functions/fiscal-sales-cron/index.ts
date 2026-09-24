@@ -243,7 +243,7 @@ Deno.serve(async req => {
         if (
           isExtractor &&
           !portalZipAttempted &&
-          ["valid", "valid_without_report_permission"].includes(stateCredentialStatus)
+          stateCredentialStatus === "valid"
         ) {
           const { data: existingNfceAnchor } = await admin
             .from("fiscal_sales_documents")
@@ -275,6 +275,18 @@ Deno.serve(async req => {
                 };
               } else {
                 portalZipSync.usable = Number(portalZipSync?.documents || 0) > 0;
+              }
+              if (/n.o possui permiss.o de acesso/i.test(JSON.stringify(portalZipSync))) {
+                stateCredentialStatus = "valid_without_report_permission";
+                await admin
+                  .from("fiscal_state_credentials")
+                  .update({
+                    last_verification_status: stateCredentialStatus,
+                    last_verified_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("company_id", company.id)
+                  .eq("uf", "AL");
               }
             } catch (error) {
               portalZipSync = {
@@ -312,17 +324,19 @@ Deno.serve(async req => {
           seriesScores.set(key, current);
         };
         for (const row of knownSalesModels || []) {
-          if (String(row.model || "") === "65") addSeries("65", String(row.series || "1"), 8);
+          const model = String(row.model || "");
+          if (["55", "65"].includes(model)) addSeries(model, String(row.series || "1"), 8);
         }
         for (const row of issuerEventRows || []) {
           const accessKey = digits(row.access_key);
-          if (accessKey.length !== 44 || accessKey.slice(6,20) !== companyCnpj || accessKey.slice(20,22) !== "65") continue;
+          const model = accessKey.slice(20,22);
+          if (accessKey.length !== 44 || accessKey.slice(6,20) !== companyCnpj || !["55", "65"].includes(model)) continue;
           const series = String(Number(accessKey.slice(22,25)));
           const noteNumber = Number(accessKey.slice(25,34));
-          addSeries("65", series, 3, noteNumber, accessKey);
+          addSeries(model, series, 3, noteNumber, accessKey);
         }
         const chosen = [...seriesScores.values()].sort((a,b) => b.score - a.score || Number(a.series) - Number(b.series))[0] || null;
-        const targetModel = "65";
+        const targetModel = chosen?.model || "65";
         const targetSeries = chosen?.series || "1";
         const issuerSeedNumbers = chosen?.eventNumbers || [];
         const maxIssuerEvent = Math.max(0, ...issuerSeedNumbers);
