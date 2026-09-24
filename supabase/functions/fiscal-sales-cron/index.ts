@@ -84,6 +84,7 @@ Deno.serve(async req => {
 
     const out: any[] = [];
     let bootstrapAttempted = false;
+    let portalZipAttempted = false;
 
     for (const company of companies || []) {
       try {
@@ -235,6 +236,55 @@ Deno.serve(async req => {
             .eq("company_id", company.id);
         }
 
+        // The official AL "Entradas e Saídas" ZIP is the strongest source: it
+        // enumerates the real keys and includes the XML/value. Use it before any
+        // synthetic number discovery when the company still has no NFC-e anchor.
+        let portalZipSync: any = null;
+        if (
+          isExtractor &&
+          !portalZipAttempted &&
+          ["valid", "valid_without_report_permission"].includes(stateCredentialStatus)
+        ) {
+          const { data: existingNfceAnchor } = await admin
+            .from("fiscal_sales_documents")
+            .select("id")
+            .eq("company_id", company.id)
+            .eq("model", "65")
+            .limit(1)
+            .maybeSingle();
+          if (!existingNfceAnchor) {
+            portalZipAttempted = true;
+            try {
+              const portalResponse = await fetch(`${base}/functions/v1/fiscal-sales-al-portal-zip`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                  company_id: company.id,
+                  action: "sync",
+                  start: companyHistoryStart || historyStart,
+                  end: companyHistoryEnd || historyEnd,
+                }),
+                signal: AbortSignal.timeout(115000),
+              });
+              portalZipSync = await portalResponse.json().catch(() => ({}));
+              if (!portalResponse.ok) {
+                portalZipSync = {
+                  ...portalZipSync,
+                  http_status: portalResponse.status,
+                  usable: false,
+                };
+              } else {
+                portalZipSync.usable = Number(portalZipSync?.documents || 0) > 0;
+              }
+            } catch (error) {
+              portalZipSync = {
+                usable: false,
+                error: error instanceof Error ? error.message : String(error),
+              };
+            }
+          }
+        }
+
         const companyCnpj = digits(company.cnpj);
         const [{ data: knownSalesModels }, { data: issuerEventRows }] = await Promise.all([
           admin.from("fiscal_sales_documents")
@@ -369,12 +419,12 @@ Deno.serve(async req => {
         const persistedFloor = Number(state?.initial_floor_number || 0);
         const legacyStateCompatible = targetModel === "65";
         const trustedStateLatest =
-          legacyStateCompatible && (persistedFloor > 0 || maxSaved > 0 || maxKnownDfe > 0 || priorLatest > 0)
+          legacyStateCompatible && hasOfficialNfceAnchor && (persistedFloor > 0 || maxSaved > 0 || maxKnownDfe > 0 || priorLatest > 0)
             ? oldLatest
             : 0;
         let baseLatest = Math.max(trustedStateLatest, maxSaved, maxKnownDfe, priorLatest, maxIssuerEvent);
         let scopeStartNumber = isExtractor
-          ? legacyStateCompatible && persistedFloor > 0
+          ? legacyStateCompatible && hasOfficialNfceAnchor && persistedFloor > 0
             ? persistedFloor
             : priorLatest > 0
               ? priorLatest + 1
@@ -483,6 +533,7 @@ Deno.serve(async req => {
             status: "waiting_sales_reference",
             reason: isExtractor ? "automatic_bootstrap_pending" : "no_known_sale_reference",
             bootstrap,
+            portal_zip: portalZipSync,
           });
           continue;
         }
@@ -550,6 +601,7 @@ Deno.serve(async req => {
             state_credential_status: stateCredentialStatus,
             target_model: targetModel,
             target_series: targetSeries,
+            portal_zip: portalZipSync,
           });
           continue;
         }
@@ -681,6 +733,7 @@ Deno.serve(async req => {
           target_model: targetModel,
           target_series: targetSeries,
           issuer_event_seed: maxIssuerEvent || null,
+          portal_zip: portalZipSync,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
