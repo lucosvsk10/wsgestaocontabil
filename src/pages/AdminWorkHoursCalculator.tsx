@@ -24,11 +24,13 @@ import { Input } from '@/components/ui/input';
 import { useCompanySelection } from '@/contexts/CompanySelectionContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import DailyTimeCalculator from '@/components/admin/hr/DailyTimeCalculator';
 import {
   calculateWorkHours,
   emptyWorkHoursForm,
   formatCurrency,
   formatMinutes,
+  parseHoursToMinutes,
   type EmploymentType,
   type MoneyAdjustment,
   type WorkHoursForm,
@@ -636,6 +638,15 @@ export default function AdminWorkHoursCalculator() {
     setMessage(`Dados de ${formatCompetence(previous.competence)} copiados para ${formatCompetence(target)}.`);
   };
 
+  const addMinutesToField = (
+    key: 'overtime50' | 'overtime100' | 'lateHours',
+    minutes: number,
+  ) => {
+    const current = parseHoursToMinutes(form[key]);
+    updateForm(key, formatMinutes(current + Math.max(0, minutes)));
+    setMessage('Diferença adicionada ao cálculo mensal.');
+  };
+
   const addAdjustment = (kind: 'otherAdditions' | 'otherDeductions') => {
     updateForm(kind, [
       ...form[kind],
@@ -921,6 +932,14 @@ export default function AdminWorkHoursCalculator() {
                         <NumberInput label="Jornada diária" value={form.dailyHours} onChange={value => updateForm('dailyHours', value)} suffix="h" />
                       </div>
                     </AdminSection>
+
+                    <DailyTimeCalculator
+                      dailyHours={form.dailyHours}
+                      onAddOvertime={(minutes, kind) =>
+                        addMinutesToField(kind === '50' ? 'overtime50' : 'overtime100', minutes)
+                      }
+                      onAddDeficit={minutes => addMinutesToField('lateHours', minutes)}
+                    />
 
                     <div className="grid gap-5 lg:grid-cols-2">
                       <AdminSection>
