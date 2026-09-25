@@ -550,7 +550,8 @@ export default function AdminWorkHoursCalculator() {
       finalized_at: status === 'finalized' ? now : null,
     };
 
-    if (storageMode === 'local') {
+    let savedLocally = storageMode === 'local';
+    const persistLocalCalculation = () => {
       const rows = readLocal<CalculationRow[]>(localKey('calculations', companyId), []);
       const existingIndex = rows.findIndex(
         row => row.employee_id === employeeId && row.competence.slice(0, 7) === competence,
@@ -561,6 +562,10 @@ export default function AdminWorkHoursCalculator() {
       writeLocal(localKey('calculations', companyId), rows);
       setHistory(rows);
       setCurrentRecordId(persisted.id);
+    };
+
+    if (storageMode === 'local') {
+      persistLocalCalculation();
     } else {
       const dbPayload = {
         company_id: companyId,
@@ -583,23 +588,30 @@ export default function AdminWorkHoursCalculator() {
       if (error) {
         if (isMissingHrStorage(error)) {
           setStorageMode('local');
+          savedLocally = true;
+          persistLocalCalculation();
+        } else {
+          setMessage(error.message || 'Não foi possível salvar o cálculo.');
           setSaving(false);
-          setMessage('O banco da área de DP ainda não está ativo. O cálculo continua salvo neste navegador.');
-          return saveCalculation(status);
+          return;
         }
-        setMessage(error.message || 'Não foi possível salvar o cálculo.');
-        setSaving(false);
-        return;
+      } else {
+        setCurrentRecordId(data.id);
+        await loadHistory('database');
       }
-      setCurrentRecordId(data.id);
-      await loadHistory('database');
     }
 
     localStorage.removeItem(draftKey(user.id, companyId, employeeId, competence));
     setRecordStatus(status);
     setDirty(false);
     setSaving(false);
-    setMessage(status === 'finalized' ? 'Cálculo finalizado e salvo.' : 'Rascunho salvo.');
+    setMessage(
+      savedLocally
+        ? 'Cálculo salvo neste navegador. A estrutura do banco do Departamento Pessoal ainda precisa ser ativada.'
+        : status === 'finalized'
+          ? 'Cálculo finalizado e salvo.'
+          : 'Rascunho salvo.',
+    );
   };
 
   const duplicatePrevious = () => {
