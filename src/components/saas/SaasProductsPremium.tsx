@@ -4,6 +4,8 @@ import { AlertTriangle, Archive, ArrowLeft, Box, Package2, PackagePlus, Search }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { clearRegisterDraft, readRegisterDraft, writeRegisterDraft } from '@/lib/saas/registerDraft';
 import SaasRegisterAppearance, { readableText } from '@/components/saas/SaasRegisterAppearance';
 
 const blank: any = {
@@ -143,6 +145,7 @@ function StockPill({ item, dark = false }: { item: any; dark?: boolean }) {
 }
 
 export default function SaasProductsPremium({ organizationId }: { organizationId: string | null }) {
+  const { user } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
   const [form, setForm] = useState<any>({ ...blank });
@@ -209,6 +212,54 @@ export default function SaasProductsPremium({ organizationId }: { organizationId
     setImageRemoved(false);
   };
 
+  useEffect(() => {
+    if (!user?.id || !organizationId) {
+      setSelected(null);
+      return;
+    }
+
+    const draft = readRegisterDraft(user.id, organizationId, 'Produtos');
+    setPendingImage(null);
+    setImagePreview(null);
+    setMsg('');
+
+    if (!draft) {
+      setSelected(null);
+      setForm({ ...blank, metadata: { card_color: '#ffffff' } });
+      setImageRemoved(false);
+      setEditorTab('basic');
+      return;
+    }
+
+    const restoredForm: any = {
+      ...blank,
+      ...draft.form,
+      metadata: {
+        ...blank.metadata,
+        ...((draft.form as any)?.metadata || {}),
+      },
+    };
+    setSelected({ id: restoredForm.id || null });
+    setForm(restoredForm);
+    setImageRemoved(draft.imageRemoved === true);
+    setEditorTab(
+      draft.editorTab === 'stock' || draft.editorTab === 'fiscal'
+        ? draft.editorTab
+        : 'basic',
+    );
+  }, [user?.id, organizationId]);
+
+  useEffect(() => {
+    if (!selected || !user?.id || !organizationId) return;
+    writeRegisterDraft(user.id, organizationId, 'Produtos', form, imageRemoved, editorTab);
+  }, [user?.id, organizationId, selected, form, imageRemoved, editorTab]);
+
+  useEffect(() => {
+    if (!selected?.id || imagePreview) return;
+    const current = items.find(item => item.id === selected.id);
+    if (current?.__imageUrl) setImagePreview(current.__imageUrl);
+  }, [items, selected?.id, imagePreview]);
+
   const open = (item: any) => {
     clearImageState();
     setSelected(item);
@@ -227,6 +278,9 @@ export default function SaasProductsPremium({ organizationId }: { organizationId
   };
 
   const close = () => {
+    if (user?.id && organizationId) {
+      clearRegisterDraft(user.id, organizationId, 'Produtos');
+    }
     clearImageState();
     setSelected(null);
     setForm({ ...blank, metadata: { card_color: '#ffffff' } });
