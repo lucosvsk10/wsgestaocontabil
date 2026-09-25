@@ -315,6 +315,7 @@ Deno.serve(async req => {
       );
       const salesReady = coverage.some((row: any) =>
         row.direction === 'saida' &&
+        ['required', 'observed'].includes(String(row.applicability || '')) &&
         ['nfe55', 'nfce65', 'nfse'].includes(String(row.document_type || '')) &&
         row.coverage_status === 'covered' &&
         row.source_confirmed === true
