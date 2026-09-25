@@ -102,7 +102,7 @@ const numberValue = (value: unknown) => {
   return Number.isFinite(next) ? next : 0;
 };
 
-const localKey = (kind: string, companyId: string) => `ws:hr:${kind}:${companyId}`;
+const localKey = (kind: string, companyId: string, userId: string) => `ws:hr:${kind}:${userId}:${companyId}`;
 const draftKey = (userId: string, companyId: string, employeeId: string, competence: string) =>
   `ws:hr:hours:draft:${userId}:${companyId}:${employeeId}:${competence}`;
 const lastKey = (userId: string, companyId: string) => `ws:hr:hours:last:${userId}:${companyId}`;
@@ -297,7 +297,7 @@ export default function AdminWorkHoursCalculator() {
       return;
     }
     if (mode === 'local') {
-      setHistory(readLocal<CalculationRow[]>(localKey('calculations', companyId), []));
+      setHistory(readLocal<CalculationRow[]>(localKey('calculations', companyId, user?.id || 'unknown'), []));
       return;
     }
     const { data, error } = await (supabase as any)
@@ -310,7 +310,7 @@ export default function AdminWorkHoursCalculator() {
     if (error) {
       if (isMissingHrStorage(error)) {
         setStorageMode('local');
-        setHistory(readLocal<CalculationRow[]>(localKey('calculations', companyId), []));
+        setHistory(readLocal<CalculationRow[]>(localKey('calculations', companyId, user?.id || 'unknown'), []));
         return;
       }
       setMessage(error.message || 'Não foi possível carregar o histórico.');
@@ -336,7 +336,7 @@ export default function AdminWorkHoursCalculator() {
     if (error) {
       if (isMissingHrStorage(error)) {
         setStorageMode('local');
-        setEmployees(readLocal<EmployeeRow[]>(localKey('employees', companyId), []));
+        setEmployees(readLocal<EmployeeRow[]>(localKey('employees', companyId, user?.id || 'unknown'), []));
         await loadHistory('local');
       } else {
         setMessage(error.message || 'Não foi possível carregar os funcionários.');
@@ -393,7 +393,7 @@ export default function AdminWorkHoursCalculator() {
 
       if (storageMode === 'local') {
         saved =
-          readLocal<CalculationRow[]>(localKey('calculations', companyId), []).find(
+          readLocal<CalculationRow[]>(localKey('calculations', companyId, user?.id || 'unknown'), []).find(
             row => row.employee_id === employeeId && row.competence.slice(0, 7) === competence,
           ) || null;
       } else {
@@ -408,7 +408,7 @@ export default function AdminWorkHoursCalculator() {
         if (error && isMissingHrStorage(error)) {
           setStorageMode('local');
           saved =
-            readLocal<CalculationRow[]>(localKey('calculations', companyId), []).find(
+            readLocal<CalculationRow[]>(localKey('calculations', companyId, user?.id || 'unknown'), []).find(
               row => row.employee_id === employeeId && row.competence.slice(0, 7) === competence,
             ) || null;
         } else if (error) {
@@ -484,7 +484,7 @@ export default function AdminWorkHoursCalculator() {
     if (storageMode === 'local') {
       const next = [...employees, row].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
       setEmployees(next);
-      writeLocal(localKey('employees', companyId), next);
+      writeLocal(localKey('employees', companyId, user?.id || 'unknown'), next);
       setEmployeeId(row.id);
     } else {
       const { data, error } = await (supabase as any)
@@ -503,7 +503,7 @@ export default function AdminWorkHoursCalculator() {
           setStorageMode('local');
           const next = [...employees, row].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
           setEmployees(next);
-          writeLocal(localKey('employees', companyId), next);
+          writeLocal(localKey('employees', companyId, user?.id || 'unknown'), next);
           setEmployeeId(row.id);
         } else {
           setMessage(error.message || 'Não foi possível cadastrar o funcionário.');
@@ -554,14 +554,14 @@ export default function AdminWorkHoursCalculator() {
 
     let savedLocally = storageMode === 'local';
     const persistLocalCalculation = () => {
-      const rows = readLocal<CalculationRow[]>(localKey('calculations', companyId), []);
+      const rows = readLocal<CalculationRow[]>(localKey('calculations', companyId, user?.id || 'unknown'), []);
       const existingIndex = rows.findIndex(
         row => row.employee_id === employeeId && row.competence.slice(0, 7) === competence,
       );
       const persisted = { ...payload, created_at: existingIndex >= 0 ? rows[existingIndex].created_at : now };
       if (existingIndex >= 0) rows[existingIndex] = persisted;
       else rows.unshift(persisted);
-      writeLocal(localKey('calculations', companyId), rows);
+      writeLocal(localKey('calculations', companyId, user?.id || 'unknown'), rows);
       setHistory(rows);
       setCurrentRecordId(persisted.id);
     };
