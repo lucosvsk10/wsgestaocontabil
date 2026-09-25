@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { extractorRequest, extractorErrorMessage } from '@/lib/extractor/request';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { AlertTriangle, ArrowLeft, CalendarDays, ExternalLink, Info, Loader2, Menu, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CalendarDays, Camera, CheckCircle2, FileText, Info, KeyRound, Loader2, Menu, Upload, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import ExtractorFiscalDocumentPreviewModal from '@/components/extractor/ExtractorFiscalDocumentPreviewModal';
@@ -28,6 +28,11 @@ import ExtractorCompanySelector from '@/components/extractor/ExtractorCompanySel
 import ExtractorReports from '@/components/extractor/ExtractorReports';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import { StateCredentialPanel } from '@/components/fiscal/StateCredentialPanel';
+import {
+  accessKeyFromText,
+  salesReferenceFromFile,
+  type SalesReferenceMethod,
+} from '@/lib/extractor/salesReference';
 import '@/styles/fiscal-extractor.css';
 import '@/styles/fiscal-extractor-polish.css';
 import '@/styles/fiscal-extractor-final.css';
@@ -189,6 +194,15 @@ type CoverageRow = {
   last_error?: string | null;
   last_verified_at?: string | null;
   details?: Record<string, unknown> | null;
+};
+type CoverageGate = {
+  ready: boolean;
+  status: 'checking' | 'needs_certificate' | 'discovering' | 'needs_reference' | 'syncing' | 'ready' | 'error';
+  title: string;
+  message: string;
+  automatic_discovery: boolean;
+  accepts_reference: boolean;
+  last_checked_at?: string | null;
 };
 
 const nav: Array<{ label: Section; icon: ExtractorIconName; group: string }> = [
@@ -1952,6 +1966,9 @@ function Documents({
   const [monthlyStats, setMonthlyStats] = useState<Record<string, { sales: number; purchases: number }>>({});
   const [availableFrom, setAvailableFrom] = useState<string>('');
   const [coverage, setCoverage] = useState<CoverageRow[]>([]);
+  const [coverageGate, setCoverageGate] = useState<CoverageGate | null>(null);
+  const [coverageLoading, setCoverageLoading] = useState(true);
+  const [referenceBusy, setReferenceBusy] = useState(false);
   const requestSequence = useRef(0);
   const company = companies.find((c: Company) => c.id === selectedCompanyId) || companies[0] || null;
 
@@ -2026,16 +2043,36 @@ function Documents({
   const loadCoverage = useCallback(async () => {
     if (preview || !company) {
       setCoverage([]);
+      setCoverageGate(preview ? {
+        ready: true,
+        status: 'ready',
+        title: 'Ambiente de demonstração',
+        message: '',
+        automatic_discovery: false,
+        accepts_reference: false,
+      } : null);
+      setCoverageLoading(false);
       return;
     }
+    setCoverageLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('extractor-fiscal-health', {
         body: { action: 'coverage_status', company_id: company.id },
       });
       if (error) throw error;
       setCoverage(Array.isArray(data?.coverage) ? data.coverage : []);
+      setCoverageGate(data?.gate || null);
     } catch {
-      // Preserve the last known coverage state during transient refresh failures.
+      setCoverageGate(current => current || {
+        ready: false,
+        status: 'checking',
+        title: 'Verificando as fontes fiscais',
+        message: 'Aguarde enquanto confirmamos se compras e vendas estão sendo capturadas corretamente.',
+        automatic_discovery: true,
+        accepts_reference: false,
+      });
+    } finally {
+      setCoverageLoading(false);
     }
   }, [preview, company?.id]);
 
@@ -2046,6 +2083,8 @@ function Documents({
   useEffect(() => { void loadMonthlyStats(); }, [loadMonthlyStats]);
   useEffect(() => {
     setCoverage([]);
+    setCoverageGate(null);
+    setCoverageLoading(true);
     void loadCoverage();
     if (preview || !company?.id) return;
     const timer = window.setInterval(() => void loadCoverage(), 60000);
@@ -2085,14 +2124,12 @@ function Documents({
   const nfe = fiscal.filter(d => type(d) === 'NF-e').length;
   const nfce = fiscal.filter(d => type(d) === 'NFC-e').length;
   const nfse = fiscal.filter(d => type(d) === 'NFS-e').length;
-  const permissionBlocker = coverage.find(row =>
-    String(company?.uf || '').toUpperCase() !== 'AL' &&
-    row.document_type === 'nfe55' &&
-    row.direction === 'saida' &&
-    row.applicability === 'required' &&
-    ['partial', 'blocked', 'error'].includes(row.coverage_status) &&
-    /permiss[aã]o|n[aã]o foi liberado|n[aã]o possui acesso/i.test(String(row.last_error || ''))
+  const coverageBlocker = coverage.find(row =>
+    ['required', 'observed'].includes(row.applicability) &&
+    ['nfe55', 'nfce65', 'nfse'].includes(row.document_type) &&
+    (row.coverage_status !== 'covered' || row.source_confirmed !== true)
   );
+  const documentsLocked = !preview && !coverageGate?.ready;
 
   const filtered = docs.filter(d => {
     if (
@@ -2167,6 +2204,54 @@ function Documents({
     }
   };
 
+  const submitSalesReference = async (candidate: {
+    accessKey: string;
+    method: SalesReferenceMethod;
+    xml?: string;
+  }) => {
+    if (!company || referenceBusy) return;
+    setReferenceBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extractor-fiscal-health', {
+        body: {
+          action: 'sales_reference',
+          company_id: company.id,
+          access_key: candidate.accessKey,
+          method: candidate.method,
+          xml: candidate.xml || null,
+        },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(String(data?.error || 'reference_not_accepted'));
+      setNotice({
+        tone: 'success',
+        text: `Referência confirmada: modelo ${data.model}, série ${data.series}, nota ${data.note_number}. A busca completa já foi iniciada.`,
+      });
+      setCoverageGate(data.gate || {
+        ready: false,
+        status: 'syncing',
+        title: 'Referência recebida',
+        message: 'Estamos localizando as demais notas e validando o período completo.',
+        automatic_discovery: true,
+        accepts_reference: false,
+      });
+      window.setTimeout(() => {
+        void loadCoverage();
+        void loadDocs();
+        void loadMonthlyStats();
+      }, 4000);
+    } catch (caught) {
+      setNotice({
+        tone: 'error',
+        text: caught instanceof Error && caught.message && !/FunctionsHttpError|non-2xx/i.test(caught.message)
+          ? caught.message
+          : 'Não foi possível validar essa referência. Confira se a nota pertence à empresa selecionada.',
+      });
+    } finally {
+      setReferenceBusy(false);
+    }
+  };
+
   if (!company) {
     return (
       <div className="extractor-page">
@@ -2212,11 +2297,11 @@ function Documents({
         </div>
       </section>
 
-      <div className={`extractor-documents-coverage-shell ${permissionBlocker ? 'is-locked' : ''}`}>
+      <div className={`extractor-documents-coverage-shell ${documentsLocked ? 'is-locked' : ''}`}>
       <div
         className="extractor-documents-coverage-content"
-        aria-hidden={permissionBlocker ? 'true' : undefined}
-        inert={permissionBlocker ? true : undefined}
+        aria-hidden={documentsLocked ? 'true' : undefined}
+        inert={documentsLocked ? true : undefined}
       >
       <section className="extractor-period-v2">
         <div className="extractor-period-year">
@@ -2434,7 +2519,17 @@ function Documents({
         </div>
       </section>
       </div>
-      {permissionBlocker && <FiscalCoveragePermissionGate company={company} blocker={permissionBlocker} />}
+      {documentsLocked && (
+        <FiscalCoverageGate
+          company={company}
+          gate={coverageGate}
+          blocker={coverageBlocker}
+          loading={coverageLoading}
+          busy={referenceBusy || xmlRetrying}
+          onRetry={() => void retrySalesXml()}
+          onSubmit={candidate => void submitSalesReference(candidate)}
+        />
+      )}
       </div>
 
       <FiscalDownloadCenter
@@ -2453,36 +2548,112 @@ function Documents({
   );
 }
 
-export function FiscalCoveragePermissionGate({ company, blocker }: { company: Company; blocker: CoverageRow }) {
+export function FiscalCoverageGate({
+  company,
+  gate,
+  blocker,
+  loading,
+  busy,
+  onRetry,
+  onSubmit,
+}: {
+  company: Company;
+  gate: CoverageGate | null;
+  blocker?: CoverageRow;
+  loading: boolean;
+  busy: boolean;
+  onRetry: () => void;
+  onSubmit: (candidate: { accessKey: string; method: SalesReferenceMethod; xml?: string }) => void;
+}) {
+  const [manualKey, setManualKey] = useState('');
+  const [localError, setLocalError] = useState('');
+  const xmlInput = useRef<HTMLInputElement>(null);
+  const danfeInput = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+
+  const submitKey = () => {
+    const accessKey = accessKeyFromText(manualKey);
+    if (!accessKey) {
+      setLocalError('Cole a chave de acesso completa, com 44 dígitos.');
+      return;
+    }
+    setLocalError('');
+    onSubmit({ accessKey, method: 'key' });
+  };
+
+  const readFile = async (file?: File) => {
+    if (!file) return;
+    setLocalError('');
+    try {
+      onSubmit(await salesReferenceFromFile(file));
+    } catch (caught) {
+      setLocalError(caught instanceof Error ? caught.message : 'Não foi possível ler esse arquivo.');
+    }
+  };
+
+  const current = gate || {
+    ready: false,
+    status: 'checking' as const,
+    title: 'Verificando as fontes fiscais',
+    message: 'Aguarde enquanto confirmamos se compras e vendas estão sendo capturadas corretamente.',
+    automatic_discovery: true,
+    accepts_reference: false,
+  };
+  const showReference = current.accepts_reference || current.status === 'needs_reference';
+
   return (
-    <section className="extractor-coverage-gate" role="alert" aria-live="polite">
-      <span className="extractor-coverage-gate-icon"><AlertTriangle /></span>
-      <small>Ação necessária para esta empresa</small>
-      <h2>Documentos temporariamente bloqueados</h2>
-      <p>
-        O login estadual de <strong>{company.tradeName || company.name}</strong> funciona, mas não tem
-        permissão para consultar o relatório oficial de NF-e emitidas. Sem essa fonte, não é possível
-        garantir que todas as saídas estejam no Extrator.
-      </p>
-      <a
-        className="extractor-coverage-gate-primary"
-        href="https://www.sefaz.al.gov.br/nise/nise-processos-sei"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Solicitar liberação à SEFAZ/AL <ExternalLink />
-      </a>
-      <details className="extractor-coverage-guide">
-        <summary>Ver passo a passo para solicitar o acesso</summary>
-        <ol>
-          <li>Abra o atendimento Nise da SEFAZ/AL pelo botão acima.</li>
-          <li>Escolha “Documento Fiscal Eletrônico (NF-e, NFC-e, CT-e)”.</li>
-          <li>Solicite o relatório completo de NF-e modelo 55 emitidas/saídas, por período e com as chaves de acesso.</li>
-          <li>Informe o CNPJ, o CACEAL e que o SCA atual exibe somente a consulta individual por chave.</li>
-          <li>Após a SEFAZ liberar o relatório, o Extrator revalida a fonte e remove este bloqueio.</li>
-        </ol>
-      </details>
-      {blocker.last_verified_at && <span>Última verificação: {formatDate(blocker.last_verified_at, true)}</span>}
+    <section className="extractor-coverage-gate" role="region" aria-live="polite" aria-label="Situação da cobertura fiscal">
+      <span className={`extractor-coverage-gate-icon ${loading || current.automatic_discovery ? 'is-loading' : ''}`}>
+        {loading || current.automatic_discovery ? <Loader2 /> : <AlertTriangle />}
+      </span>
+      <small>{current.status === 'needs_reference' ? 'Só falta uma referência' : 'Proteção de cobertura fiscal'}</small>
+      <h2>{current.title}</h2>
+      <p>{current.message}</p>
+
+      {showReference ? (
+        <div className="extractor-reference-box">
+          <label>
+            <span>Chave ou link do QR Code</span>
+            <div>
+              <KeyRound />
+              <input
+                value={manualKey}
+                onChange={event => setManualKey(event.target.value)}
+                onKeyDown={event => { if (event.key === 'Enter') submitKey(); }}
+                placeholder="Cole os 44 dígitos"
+                inputMode="numeric"
+                autoComplete="off"
+              />
+              <button type="button" onClick={submitKey} disabled={busy}>Usar nota</button>
+            </div>
+          </label>
+
+          <div className="extractor-reference-methods">
+            <button type="button" onClick={() => xmlInput.current?.click()} disabled={busy}>
+              <FileText /><span><b>XML</b><small>Enviar arquivo</small></span>
+            </button>
+            <button type="button" onClick={() => danfeInput.current?.click()} disabled={busy}>
+              <Upload /><span><b>DANFE</b><small>PDF ou imagem</small></span>
+            </button>
+            <button type="button" onClick={() => cameraInput.current?.click()} disabled={busy}>
+              <Camera /><span><b>QR Code</b><small>Fotografar agora</small></span>
+            </button>
+          </div>
+          <input ref={xmlInput} className="sr-only" type="file" accept=".xml,text/xml,application/xml" onChange={event => void readFile(event.target.files?.[0])} />
+          <input ref={danfeInput} className="sr-only" type="file" accept=".pdf,application/pdf,image/*" onChange={event => void readFile(event.target.files?.[0])} />
+          <input ref={cameraInput} className="sr-only" type="file" accept="image/*" capture="environment" onChange={event => void readFile(event.target.files?.[0])} />
+          {localError && <p className="extractor-reference-error">{localError}</p>}
+          <small className="extractor-reference-privacy">A referência serve apenas para identificar modelo, série e numeração. Depois disso, a busca continua sozinha.</small>
+        </div>
+      ) : (
+        <button className="extractor-coverage-gate-primary" type="button" onClick={onRetry} disabled={busy || loading}>
+          {busy || loading ? <Loader2 className="is-spinning" /> : <CheckCircle2 />}
+          {current.status === 'needs_certificate' ? 'Verificar certificado novamente' : 'Tentar busca automática novamente'}
+        </button>
+      )}
+
+      {busy && <span className="extractor-reference-progress"><Loader2 /> Validando a referência e iniciando a busca…</span>}
+      {!busy && blocker?.last_verified_at && <span>Última verificação: {formatDate(blocker.last_verified_at, true)}</span>}
     </section>
   );
 }

@@ -300,7 +300,7 @@ Deno.serve(async req => {
         const companyCnpj = digits(company.cnpj);
         const [{ data: knownSalesModels }, { data: issuerEventRows }] = await Promise.all([
           admin.from("fiscal_sales_documents")
-            .select("model,series,document_number,issue_date")
+            .select("model,series,document_number,issue_date,access_key,source,source_reference")
             .eq("company_id", company.id)
             .in("model", ["55","65"])
             .order("issue_date", { ascending: false })
@@ -335,6 +335,16 @@ Deno.serve(async req => {
           const noteNumber = Number(accessKey.slice(25,34));
           addSeries(model, series, 3, noteNumber, accessKey);
         }
+        const referenceKey = digits(state?.reference_access_key);
+        const referenceModel = String(state?.reference_model || referenceKey.slice(20,22));
+        const referenceSeries = String(Number(state?.reference_series || referenceKey.slice(22,25) || 0));
+        const referenceNumber = Number(state?.reference_number || referenceKey.slice(25,34) || 0);
+        const referenceValid =
+          referenceKey.length === 44 &&
+          referenceKey.slice(6,20) === companyCnpj &&
+          ["55","65"].includes(referenceModel) &&
+          referenceNumber > 0;
+        if (referenceValid) addSeries(referenceModel, referenceSeries, 1000, referenceNumber, referenceKey);
         const chosen = [...seriesScores.values()].sort((a,b) => b.score - a.score || Number(a.series) - Number(b.series))[0] || null;
         const targetModel = chosen?.model || "65";
         const targetSeries = chosen?.series || "1";
@@ -436,7 +446,7 @@ Deno.serve(async req => {
           legacyStateCompatible && hasOfficialNfceAnchor && (persistedFloor > 0 || maxSaved > 0 || maxKnownDfe > 0 || priorLatest > 0)
             ? oldLatest
             : 0;
-        let baseLatest = Math.max(trustedStateLatest, maxSaved, maxKnownDfe, priorLatest, maxIssuerEvent);
+        let baseLatest = Math.max(trustedStateLatest, maxSaved, maxKnownDfe, priorLatest, maxIssuerEvent, referenceValid ? referenceNumber : 0);
         let scopeStartNumber = isExtractor
           ? legacyStateCompatible && hasOfficialNfceAnchor && persistedFloor > 0
             ? persistedFloor
@@ -448,9 +458,10 @@ Deno.serve(async req => {
                   ? Math.max(1, minIssuerEvent)
                   : 0
           : 1;
+        const referenceNeedsHistoryFloor = isExtractor && referenceValid && persistedFloor <= 0 && priorLatest <= 0;
 
         let bootstrap: any = null;
-        if (!baseLatest || (isExtractor && !scopeStartNumber)) {
+        if (!baseLatest || (isExtractor && !scopeStartNumber) || referenceNeedsHistoryFloor) {
           if (bootstrapAttempted) {
             await admin.from("fiscal_sales_sync_state").upsert({
               company_id: company.id,
@@ -481,8 +492,9 @@ Deno.serve(async req => {
             const historyFloorMs = new Date((companyHistoryStart || historyStart) + "T00:00:00-03:00").getTime() - 45 * 86400000;
             const anchorFresh = !anchorIssueDate || new Date(anchorIssueDate + "T00:00:00-03:00").getTime() >= historyFloorMs;
             if (anchorResponse.ok && bootstrap?.anchor_found && Number(bootstrap?.anchor_number || 0) > 0 && anchorFresh) {
-              baseLatest = Number(bootstrap.anchor_number);
+              baseLatest = Math.max(baseLatest, Number(bootstrap.anchor_number));
               scopeStartNumber = baseLatest + 1;
+              if (referenceValid) scopeStartNumber = Number(bootstrap.anchor_number) + 1;
               await admin.from("fiscal_sales_sync_state").upsert({
                 company_id: company.id,
                 latest_number: baseLatest,
@@ -512,7 +524,7 @@ Deno.serve(async req => {
               const fallback = await fallbackResponse.json().catch(() => ({}));
               bootstrap = { anchor: bootstrap, fallback };
               if (fallbackResponse.ok && !fallback?.cooldown && Number(fallback?.latest || 0) > 0) {
-                baseLatest = Number(fallback.latest);
+                baseLatest = Math.max(baseLatest, Number(fallback.latest));
                 scopeStartNumber = 1;
                 await admin.from("fiscal_sales_sync_state").upsert({
                   company_id: company.id,
@@ -526,6 +538,22 @@ Deno.serve(async req => {
                   updated_at: new Date().toISOString(),
                 }, { onConflict: "company_id" });
               }
+            }
+            const bootstrapAnchorFound = Boolean(bootstrap?.anchor_found || bootstrap?.anchor?.anchor_found);
+            const bootstrapCoolingDown = Boolean(bootstrap?.cooldown || bootstrap?.anchor?.cooldown || bootstrap?.fallback?.cooldown);
+            if (referenceValid && referenceNeedsHistoryFloor && !bootstrapAnchorFound && !bootstrapCoolingDown) {
+              scopeStartNumber = 1;
+              await admin.from("fiscal_sales_sync_state").upsert({
+                company_id: company.id,
+                latest_number: baseLatest,
+                cursor_number: baseLatest,
+                initial_floor_number: 1,
+                history_start_month: historyStartMonth,
+                status: "running",
+                last_error: null,
+                next_scheduled_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }, { onConflict: "company_id" });
             }
           } catch (err) {
             bootstrap = { error: err instanceof Error ? err.message : String(err) };

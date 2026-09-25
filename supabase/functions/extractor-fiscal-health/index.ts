@@ -87,6 +87,29 @@ const modelOf = (row: any) => {
 };
 const isNfe55 = (row: any) => modelOf(row) === '55';
 const isNfce65 = (row: any) => modelOf(row) === '65';
+const digits = (value: unknown) => String(value ?? '').replace(/\D/g, '');
+const xmlTag = (xml: string, name: string) => {
+  const match = xml.match(new RegExp(`<(?:\\w+:)?${name}(?:\\s[^>]*)?>([^<]+)</(?:\\w+:)?${name}>`, 'i'));
+  return match?.[1]?.trim() || '';
+};
+const accessKeyFrom = (value: unknown) => {
+  const raw = String(value ?? '');
+  const direct = digits(raw);
+  if (direct.length === 44) return direct;
+  return raw.match(/(?:^|\D)(\d{44})(?:\D|$)/)?.[1] || '';
+};
+const validAccessKey = (key: string) => {
+  if (!/^\d{44}$/.test(key)) return false;
+  let weight = 2;
+  let sum = 0;
+  for (let index = 42; index >= 0; index -= 1) {
+    sum += Number(key[index]) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  const remainder = sum % 11;
+  const expected = remainder === 0 || remainder === 1 ? 0 : 11 - remainder;
+  return expected === Number(key[43]);
+};
 
 async function checkHistory(admin: any, accountId: string, companyId: string, scope?: string) {
   let query = admin
@@ -135,15 +158,219 @@ Deno.serve(async req => {
     if (companyError) throw companyError;
     if (!company) return J({ error: 'Empresa não encontrada' }, 404);
 
-    if (action === 'coverage_status') {
-      const { data: coverage, error: coverageError } = await admin
-        .from('fiscal_extractor_coverage')
-        .select('document_type,direction,applicability,coverage_status,source_confirmed,source_name,last_error,last_verified_at,details')
+    if (action === 'sales_reference') {
+      const method = String(body.method || 'key').toLowerCase();
+      if (!['key', 'xml', 'danfe', 'qr'].includes(method)) return J({ error: 'Método de referência inválido.' }, 400);
+
+      const xml = typeof body.xml === 'string' ? body.xml.trim() : '';
+      const accessKey = accessKeyFrom(body.access_key) || accessKeyFrom(xml);
+      if (!validAccessKey(accessKey)) return J({ error: 'A chave de acesso não é válida.' }, 400);
+
+      const companyCnpj = digits(company.cnpj);
+      if (accessKey.slice(6, 20) !== companyCnpj) {
+        return J({ error: 'Esta nota não foi emitida pela empresa selecionada.' }, 400);
+      }
+
+      const model = accessKey.slice(20, 22);
+      if (!['55', '65'].includes(model)) return J({ error: 'Use uma NF-e modelo 55 ou NFC-e modelo 65 emitida pela empresa.' }, 400);
+      const series = String(Number(accessKey.slice(22, 25)));
+      const noteNumber = Number(accessKey.slice(25, 34));
+      const submittedAt = new Date().toISOString();
+      const xmlContainsKey = !xml || digits(xml).includes(accessKey);
+      if (!xmlContainsKey) return J({ error: 'O XML enviado não corresponde à chave informada.' }, 400);
+
+      const authorizedXml = Boolean(
+        xml &&
+        /<(?:\w+:)?(?:nfeProc|procNFe)\b/i.test(xml) &&
+        /<(?:\w+:)?cStat(?:\s[^>]*)?>(?:100|150)<\/(?:\w+:)?cStat>/i.test(xml)
+      );
+      const issueDate = xmlTag(xml, 'dhEmi') || xmlTag(xml, 'dEmi') || null;
+      const totalRaw = xmlTag(xml, 'vNF');
+      const totalValue = totalRaw && Number.isFinite(Number(totalRaw)) ? Number(totalRaw) : null;
+
+      if (authorizedXml) {
+        const { error: saleError } = await admin.from('fiscal_sales_documents').upsert({
+          company_id: companyId,
+          uf: String(company.uf || '').toUpperCase(),
+          model,
+          access_key: accessKey,
+          document_number: String(noteNumber),
+          series,
+          issue_date: issueDate,
+          status: 'Autorizada',
+          total_value: totalValue,
+          xml,
+          source: 'user_sales_reference_xml',
+          source_reference: {
+            user_reference: true,
+            method,
+            submitted_by: auth.user.id,
+            submitted_at: submittedAt,
+            xml_pending: false,
+          },
+          updated_at: submittedAt,
+        }, { onConflict: 'company_id,access_key' });
+        if (saleError) throw saleError;
+      }
+
+      const { data: currentState, error: stateReadError } = await admin
+        .from('fiscal_sales_sync_state')
+        .select('latest_number,cursor_number,initial_floor_number,status,paused')
         .eq('company_id', companyId)
-        .order('direction', { ascending: true })
-        .order('document_type', { ascending: true });
+        .maybeSingle();
+      if (stateReadError) throw stateReadError;
+
+      const { error: stateError } = await admin.from('fiscal_sales_sync_state').upsert({
+        company_id: companyId,
+        latest_number: Math.max(Number(currentState?.latest_number || 0), noteNumber),
+        cursor_number: Math.max(Number(currentState?.cursor_number || 0), noteNumber),
+        initial_floor_number: Number(currentState?.initial_floor_number || 0) || null,
+        reference_access_key: accessKey,
+        reference_model: model,
+        reference_series: series,
+        reference_number: noteNumber,
+        reference_method: method,
+        reference_submitted_at: submittedAt,
+        reference_submitted_by: auth.user.id,
+        status: currentState?.paused ? String(currentState.status || 'paused') : 'queued',
+        paused: Boolean(currentState?.paused),
+        reconciliation_complete: false,
+        last_error: null,
+        next_scheduled_at: submittedAt,
+        updated_at: submittedAt,
+      }, { onConflict: 'company_id' });
+      if (stateError) throw stateError;
+
+      const documentType = model === '65' ? 'nfce65' : 'nfe55';
+      const { error: coverageError } = await admin.from('fiscal_extractor_coverage').upsert({
+        company_id: companyId,
+        document_type: documentType,
+        direction: 'saida',
+        applicability: 'required',
+        coverage_status: 'partial',
+        source_confirmed: false,
+        source_name: 'Referência fiscal fornecida pelo usuário',
+        source_mode: 'user_reference_bootstrap',
+        last_verified_at: submittedAt,
+        last_error: 'Referência recebida. O sistema está buscando e conferindo o histórico completo.',
+        details: { model, series, note_number: noteNumber, method, submitted_at: submittedAt },
+        updated_at: submittedAt,
+      }, { onConflict: 'company_id,document_type,direction' });
       if (coverageError) throw coverageError;
-      return J({ ok: true, company_id: companyId, coverage: coverage || [] });
+
+      return J({
+        ok: true,
+        model,
+        series,
+        note_number: noteNumber,
+        xml_saved: authorizedXml,
+        gate: {
+          ready: false,
+          status: 'syncing',
+          title: 'Referência recebida',
+          message: 'Estamos buscando as demais notas e validando o período completo. A página será liberada automaticamente quando a cobertura estiver confirmada.',
+          automatic_discovery: true,
+          accepts_reference: false,
+          last_checked_at: submittedAt,
+        },
+      });
+    }
+
+    if (action === 'coverage_status') {
+      const [coverageResult, salesStateResult, certificateResult] = await Promise.all([
+        admin.from('fiscal_extractor_coverage')
+          .select('document_type,direction,applicability,coverage_status,source_confirmed,source_name,last_error,last_verified_at,details')
+          .eq('company_id', companyId)
+          .order('direction', { ascending: true })
+          .order('document_type', { ascending: true }),
+        admin.from('fiscal_sales_sync_state')
+          .select('status,last_error,last_started_at,last_completed_at,next_scheduled_at,reference_access_key,reference_submitted_at,paused')
+          .eq('company_id', companyId)
+          .maybeSingle(),
+        admin.from('fiscal_certificates')
+          .select('valid_until,is_active')
+          .eq('company_id', companyId)
+          .eq('is_active', true)
+          .order('valid_until', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      if (coverageResult.error) throw coverageResult.error;
+      if (salesStateResult.error) throw salesStateResult.error;
+      if (certificateResult.error) throw certificateResult.error;
+
+      const coverage = coverageResult.data || [];
+      const salesState = salesStateResult.data || null;
+      const certificate = certificateResult.data || null;
+      const certificateUntil = String(certificate?.valid_until || '');
+      const certificateUntilMs = certificateUntil
+        ? new Date(certificateUntil.includes('T') ? certificateUntil : `${certificateUntil}T23:59:59-03:00`).getTime()
+        : 0;
+      const certReady = Boolean(certificate?.is_active && certificateUntilMs >= Date.now());
+      const purchaseReady = coverage.some((row: any) =>
+        row.direction === 'entrada' &&
+        row.document_type === 'nfe55' &&
+        row.coverage_status === 'covered' &&
+        row.source_confirmed === true
+      );
+      const salesReady = coverage.some((row: any) =>
+        row.direction === 'saida' &&
+        ['nfe55', 'nfce65', 'nfse'].includes(String(row.document_type || '')) &&
+        row.coverage_status === 'covered' &&
+        row.source_confirmed === true
+      );
+      const ready = certReady && purchaseReady && salesReady;
+      const salesStatus = String(salesState?.status || '').toLowerCase();
+      const activeSync = ['queued', 'running', 'discovering', 'bootstrap_window', 'reconciling'].some(value => salesStatus.includes(value));
+      const needsReference = !activeSync && (
+        !salesState ||
+        ['waiting_sales_reference', 'unsupported_source', 'error', 'failed'].some(value => salesStatus.includes(value)) ||
+        (!salesReady && ['idle', 'completed', 'success'].includes(salesStatus))
+      );
+      const checkedAt = new Date().toISOString();
+      const gate = ready
+        ? {
+            ready: true,
+            status: 'ready',
+            title: 'Fontes fiscais confirmadas',
+            message: 'Compras e vendas estão sendo capturadas e conferidas.',
+            automatic_discovery: false,
+            accepts_reference: false,
+            last_checked_at: checkedAt,
+          }
+        : !certReady
+          ? {
+              ready: false,
+              status: 'needs_certificate',
+              title: 'Certificado A1 necessário',
+              message: 'Adicione ou renove o certificado A1 desta empresa para iniciar a busca fiscal.',
+              automatic_discovery: false,
+              accepts_reference: false,
+              last_checked_at: checkedAt,
+            }
+          : activeSync
+            ? {
+                ready: false,
+                status: 'syncing',
+                title: 'Validando a cobertura fiscal',
+                message: 'A busca automática está percorrendo e conferindo o histórico. A página será liberada assim que entradas e saídas forem confirmadas.',
+                automatic_discovery: true,
+                accepts_reference: false,
+                last_checked_at: checkedAt,
+              }
+            : {
+                ready: false,
+                status: needsReference ? 'needs_reference' : 'checking',
+                title: needsReference ? 'Ajude-nos com uma nota de referência' : 'Verificando as fontes fiscais',
+                message: needsReference
+                  ? 'Envie uma única nota de venda desta empresa. A chave, XML, DANFE ou QR Code é suficiente para localizarmos as demais automaticamente.'
+                  : 'Estamos tentando localizar automaticamente a primeira referência fiscal desta empresa.',
+                automatic_discovery: !needsReference,
+                accepts_reference: needsReference,
+                last_checked_at: checkedAt,
+              };
+
+      return J({ ok: true, company_id: companyId, coverage, gate });
     }
 
     if (action === 'history') {
