@@ -402,34 +402,10 @@ Deno.serve(async req => {
           const eventIssue = exactEventKeys.get(Number(row.note_number))?.event_at || null;
           const issue = xml
               ? tag(xml, 'dhEmi') || tag(xml, 'dEmi')
-              : model === '55'
-              ? protocolIssue || eventIssue
-              : null,
+              : protocolIssue || eventIssue,
             total = xml ? tag(xml, 'vNF') : null,
             serie = xml ? tag(xml, 'serie') : series,
             nnf = xml ? tag(xml, 'nNF') : String(row.note_number);
-          if (!xml && model !== '55') {
-            await admin
-              .from('fiscal_sales_reconciliation')
-              .update({
-                status: 'pending',
-                access_key: real,
-                issue_date: null,
-                month_code: used,
-                cstat: statusQ.cstat || lastStat,
-                xmotivo: 'Documento confirmado na SEFAZ; XML oficial ainda não recuperado.',
-                tried_months: newTried,
-                attempts: Number(row.attempts || 0) + (newTried.length - tried.length) + 1,
-                last_checked_at: new Date().toISOString(),
-                resolved_at: null,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('company_id', companyId)
-              .eq('model', model)
-              .eq('series', series)
-              .eq('note_number', row.note_number);
-            continue;
-          }
           const nowIso = new Date().toISOString();
           await admin
             .from('fiscal_sales_reconciliation')
@@ -446,6 +422,9 @@ Deno.serve(async req => {
               attempts: Number(row.attempts || 0) + (newTried.length - tried.length) + 1,
               last_checked_at: nowIso,
               resolved_at: nowIso,
+              xml_status: xml ? 'saved' : 'pending',
+              xml_last_error: xml ? null : 'official_xml_pending',
+              xml_last_checked_at: nowIso,
               updated_at: nowIso,
             })
             .eq('company_id', companyId)
