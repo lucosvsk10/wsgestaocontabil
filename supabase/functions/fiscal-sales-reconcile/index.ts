@@ -360,7 +360,13 @@ Deno.serve(async req => {
             lastMotivo = q.xmotivo;
             if (!newTried.includes(month)) newTried.push(month);
             const k = (q.xmotivo?.match(/\[(\d{44})\]/) || [])[1] || null;
-            if (k) {
+            if (
+              k &&
+              k.slice(6, 20) === companyCnpj &&
+              k.slice(20, 22) === model &&
+              String(Number(k.slice(22, 25))) === series &&
+              Number(k.slice(25, 34)) === Number(row.note_number)
+            ) {
               real = k;
               used = month;
               break;
