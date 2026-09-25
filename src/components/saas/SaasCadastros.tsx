@@ -15,6 +15,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { clearRegisterDraft, readRegisterDraft, writeRegisterDraft } from '@/lib/saas/registerDraft';
 import SaasRegistryImport from '@/components/saas/SaasRegistryImport';
 import SaasCustomerEditor from '@/components/saas/SaasCustomerEditor';
 import SaasRegisterAppearance, { readableText } from '@/components/saas/SaasRegisterAppearance';
@@ -268,6 +270,7 @@ export default function SaasCadastros({
   autoCreate = false,
   onAutoCreateConsumed,
 }: Props) {
+  const { user } = useAuth();
   const isCatalog = section === 'Produtos' || section === 'Serviços';
   const [rows, setRows] = useState<any[]>([]);
   const [form, setForm] = useState<any>(null);
@@ -312,14 +315,29 @@ export default function SaasCadastros({
   };
 
   useEffect(() => {
-    setForm(null);
     setSearch('');
     setMessage('');
     setPendingImage(null);
     setImagePreview(null);
-    setImageRemoved(false);
+    const draft =
+      user?.id && organizationId
+        ? readRegisterDraft(user.id, organizationId, section)
+        : null;
+    setForm(draft?.form || null);
+    setImageRemoved(draft?.imageRemoved === true);
     void load();
-  }, [organizationId, section]);
+  }, [user?.id, organizationId, section]);
+
+  useEffect(() => {
+    if (!user?.id || !organizationId || !form) return;
+    writeRegisterDraft(user.id, organizationId, section, form, imageRemoved);
+  }, [user?.id, organizationId, section, form, imageRemoved]);
+
+  useEffect(() => {
+    if (!form?.id || imagePreview) return;
+    const current = rows.find(row => row.id === form.id);
+    if (current?.__imageUrl) setImagePreview(current.__imageUrl);
+  }, [rows, form?.id, imagePreview]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -471,6 +489,9 @@ export default function SaasCadastros({
   }, [autoCreate, organizationId, section]);
 
   const close = () => {
+    if (user?.id && organizationId) {
+      clearRegisterDraft(user.id, organizationId, section);
+    }
     resetImageState();
     setForm(null);
     setMessage('');
