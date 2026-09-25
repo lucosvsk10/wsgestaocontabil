@@ -28,6 +28,7 @@ import SaasProductsPremium from '@/components/saas/SaasProductsPremium';
 import SaasDfeManager from '@/components/saas/SaasDfeManager';
 import SaasMyNotes, { DraftResumeBanner } from '@/components/saas/SaasDrafts';
 import { useEmissionDrafts } from '@/hooks/useEmissionDrafts';
+import { readRegisterActiveSection } from '@/lib/saas/registerDraft';
 import SaasSetupGuide from '@/components/saas/SaasSetupGuide';
 import AccountDrawer from '@/components/account/AccountDrawer';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
@@ -146,6 +147,7 @@ export default function SaasApp() {
   const [reusableEmission, setReusableEmission] = useState<any>(null);
   const [pendingCadastroCreate, setPendingCadastroCreate] = useState<CadastroSection | null>(null);
   const organizationRequest = useRef(0);
+  const registerDraftRestoreScope = useRef('');
   const drafts = useEmissionDrafts(organization?.id || null);
   const [notesView, setNotesView] = useState<'issued' | 'drafts'>('issued');
   const adminIssuerCompanies = fromAdmin
@@ -176,6 +178,19 @@ export default function SaasApp() {
   const hydrateOrganization = async (org: any, requestId: number) => {
     if (!org?.id) return;
     setOrganization(org);
+
+    const draftScope = user?.id ? `${user.id}:${org.id}` : '';
+    if (draftScope && registerDraftRestoreScope.current !== draftScope) {
+      registerDraftRestoreScope.current = draftScope;
+      const draftSection = readRegisterActiveSection(user!.id, org.id);
+      if (draftSection) {
+        setSelectedDocument(null);
+        setReusableEmission(null);
+        setPendingCadastroCreate(null);
+        setActive(draftSection);
+      }
+    }
+
     const storageKey = fromAdmin ? 'ws_admin_issuer_organization_id' : 'ws_saas_selected_organization';
     localStorage.setItem(storageKey, org.id);
 
