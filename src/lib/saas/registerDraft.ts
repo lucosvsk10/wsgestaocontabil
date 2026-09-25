@@ -96,7 +96,12 @@ export function readRegisterActiveSection(userId: string, organizationId: string
   if (!store || !userId || !organizationId) return null;
   try {
     const section = store.getItem(activeKey(userId, organizationId));
-    return section && REGISTER_SECTIONS.has(section) ? section : null;
+    if (!section || !REGISTER_SECTIONS.has(section)) return null;
+    if (!readRegisterDraft(userId, organizationId, section)) {
+      store.removeItem(activeKey(userId, organizationId));
+      return null;
+    }
+    return section;
   } catch {
     return null;
   }
