@@ -53,7 +53,13 @@ Deno.serve(async req0=>{try{
  const today=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Maceio",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());const{data:minStart}=await a.rpc("extractor_minimum_history_start");const start=/^\d{4}-\d{2}-\d{2}$/.test(String(b.start||""))?String(b.start):String(minStart||today.slice(0,8)+"01"),end=/^\d{4}-\d{2}-\d{2}$/.test(String(b.end||""))?String(b.end):today;
  const issuer=dg(c.cnpj),ie=dg(c.inscricao_estadual),action=String(b.action||"probe");
  const manualBase64=String(b.zip_base64||"").replace(/^data:application\/zip;base64,/i,"").replace(/\s+/g,"");
+ const storageBucket=String(b.storage_bucket||""),storagePath=String(b.storage_path||"");
  let zip:Uint8Array|null=manualBase64?B(manualBase64):null,chosen:any=manualBase64?{source:"manual_official_portal_export"}:null;
+ if(!zip&&(storageBucket||storagePath)){
+  if(storageBucket!=="xml-nfe"||!/^imports\/[a-z0-9/_-]+\.zip$/i.test(storagePath))return J({error:"invalid_storage_zip_path"},400);
+  const{data:file,error:fileError}=await a.storage.from(storageBucket).download(storagePath);if(fileError||!file)return J({error:"storage_zip_download_failed",detail:fileError?.message||null},422);
+  zip=new Uint8Array(await file.arrayBuffer());chosen={source:"manual_official_portal_export",storage_bucket:storageBucket,storage_path:storagePath};
+ }
  let rpcCount:any=null,attempts:any[]=[],session:any=null,landing:any=null,landingText="",diagnosticLinks:string[]=[],diagnosticFrames:string[]=[],diagnosticScripts:string[]=[],inlineRoutes:string[]=[];
  if(zip&&!zipSig(zip))return J({error:"invalid_zip_payload"},400);
  if(!zip){
@@ -73,7 +79,7 @@ Deno.serve(async req0=>{try{
  const files=unzipSync(zip);const docs:any[]=[];const entries=Object.keys(files);for(const name of entries){if(!/\.xml$/i.test(name))continue;let xml="";try{xml=strFromU8(files[name])}catch{xml=new TextDecoder("windows-1252").decode(files[name])}const d=parseXml(xml,issuer);if(d)docs.push(d)}
  const unique=[...new Map(docs.map(d=>[d.key,d])).values()];let saved=0;
  if(action==="sync"){
-   const now=new Date().toISOString(),sourceReference={official:true,portal_zip:true,manual_upload:Boolean(manualBase64),period_start:start,period_end:end};
+   const now=new Date().toISOString(),sourceReference={official:true,portal_zip:true,manual_upload:Boolean(manualBase64||storagePath),period_start:start,period_end:end};
    const salesRows=unique.map(d=>{const total=d.total?Number(d.total):null;return{company_id:cid,uf:"AL",model:d.model,access_key:d.key,document_number:d.number,series:d.series,issue_date:d.issue,status:d.status,total_value:total,xml:d.xml,source:"sefaz_al_portal_zip",source_reference:sourceReference,updated_at:now}});
    const dfeRows=unique.map(d=>{const total=d.total?Number(d.total):null;return{user_id:c.created_by,company_id:cid,cnpj:c.cnpj,environment:"producao",uf_code:"27",nsu:`PORTAL-${d.key}`,schema_name:"procNFe_v4.00",document_kind:"nfe",direction:"saida",access_key:d.key,issue_date:d.issue,value:total,issuer_cnpj:c.cnpj,issuer_name:c.razao_social,note_number:d.number,series:d.series,status_code:d.cstat,full_xml:true,xml:d.xml,source:"sefaz_al_portal_zip",source_id:d.key,model:d.model,status_text:d.status,parse_error:null,updated_at:now}});
    const reconciliationRows=unique.map(d=>({company_id:cid,model:d.model,series:d.series,note_number:Number(d.number),status:/cancel/i.test(d.status)?"cancelled":"found",access_key:d.key,issue_date:d.issue,month_code:d.key.slice(2,6),cstat:d.cstat,xmotivo:d.status,last_checked_at:now,resolved_at:now,xml_status:"saved",updated_at:now}));
