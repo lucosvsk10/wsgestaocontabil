@@ -40,7 +40,7 @@ export function RegisterDraftResumeBanner({ section, savedAt, form, onResume }: 
   const subject = String(form?.name || form?.legal_name || form?.trade_name || '').trim();
   return <aside className="ws-draft-banner" aria-label="Cadastro em andamento">
     <div className="ws-draft-banner-icon"><FilePenLine size={21} /></div>
-    <div className="ws-draft-banner-copy"><strong>Seu ${label} está onde você parou.</strong>
+    <div className="ws-draft-banner-copy"><strong>Seu {label} está onde você parou.</strong>
       <span>{subject || 'Cadastro salvo automaticamente'} · {date(savedAt)}</span></div>
     <Button className="ws-primary" onClick={onResume}>Continuar cadastro<ArrowRight size={15} /></Button>
   </aside>;
