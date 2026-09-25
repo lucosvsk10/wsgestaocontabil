@@ -56,7 +56,7 @@ Deno.serve(async req0=>{try{
  const storageBucket=String(b.storage_bucket||""),storagePath=String(b.storage_path||"");
  let zip:Uint8Array|null=manualBase64?B(manualBase64):null,chosen:any=manualBase64?{source:"manual_official_portal_export"}:null;
  if(!zip&&(storageBucket||storagePath)){
-  if(storageBucket!=="xml-nfe"||!/^imports\/[a-z0-9/_-]+\.zip$/i.test(storagePath))return J({error:"invalid_storage_zip_path"},400);
+  if(storageBucket!=="saas-private"||!/^imports\/[a-z0-9/_-]+\.zip$/i.test(storagePath))return J({error:"invalid_storage_zip_path"},400);
   const{data:file,error:fileError}=await a.storage.from(storageBucket).download(storagePath);if(fileError||!file)return J({error:"storage_zip_download_failed",detail:fileError?.message||null},422);
   zip=new Uint8Array(await file.arrayBuffer());chosen={source:"manual_official_portal_export",storage_bucket:storageBucket,storage_path:storagePath};
  }
