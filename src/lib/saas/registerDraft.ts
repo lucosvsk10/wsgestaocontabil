@@ -6,10 +6,15 @@ const REGISTER_SECTIONS = new Set([
   'Transportadoras',
 ]);
 
-type RegisterDraft = {
+export type RegisterDraft = {
   form: Record<string, unknown>;
   imageRemoved: boolean;
   savedAt: string;
+  editorTab?: string;
+};
+
+export type ActiveRegisterDraft = RegisterDraft & {
+  section: string;
 };
 
 const scoped = (value: string) => encodeURIComponent(value);
@@ -45,6 +50,7 @@ export function readRegisterDraft(
         typeof parsed.savedAt === 'string' && Number.isFinite(Date.parse(parsed.savedAt))
           ? parsed.savedAt
           : new Date().toISOString(),
+      editorTab: typeof parsed.editorTab === 'string' ? parsed.editorTab : undefined,
     };
   } catch {
     return null;
@@ -57,6 +63,7 @@ export function writeRegisterDraft(
   section: string,
   form: Record<string, unknown>,
   imageRemoved = false,
+  editorTab?: string,
 ) {
   const store = storage();
   if (!store || !userId || !organizationId || !REGISTER_SECTIONS.has(section)) return;
@@ -68,6 +75,7 @@ export function writeRegisterDraft(
     form: serializableForm,
     imageRemoved,
     savedAt: new Date().toISOString(),
+    editorTab,
   };
 
   try {
@@ -105,4 +113,15 @@ export function readRegisterActiveSection(userId: string, organizationId: string
   } catch {
     return null;
   }
+}
+
+
+export function readRegisterActiveDraft(
+  userId: string,
+  organizationId: string,
+): ActiveRegisterDraft | null {
+  const section = readRegisterActiveSection(userId, organizationId);
+  if (!section) return null;
+  const draft = readRegisterDraft(userId, organizationId, section);
+  return draft ? { ...draft, section } : null;
 }

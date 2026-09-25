@@ -26,9 +26,9 @@ import SaasReports from '@/components/saas/SaasReports';
 import SaasDashboard from '@/components/saas/SaasDashboard';
 import SaasProductsPremium from '@/components/saas/SaasProductsPremium';
 import SaasDfeManager from '@/components/saas/SaasDfeManager';
-import SaasMyNotes, { DraftResumeBanner } from '@/components/saas/SaasDrafts';
+import SaasMyNotes, { DraftResumeBanner, RegisterDraftResumeBanner } from '@/components/saas/SaasDrafts';
 import { useEmissionDrafts } from '@/hooks/useEmissionDrafts';
-import { readRegisterActiveSection } from '@/lib/saas/registerDraft';
+import { readRegisterActiveDraft, readRegisterActiveSection } from '@/lib/saas/registerDraft';
 import SaasSetupGuide from '@/components/saas/SaasSetupGuide';
 import AccountDrawer from '@/components/account/AccountDrawer';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
@@ -149,6 +149,10 @@ export default function SaasApp() {
   const organizationRequest = useRef(0);
   const registerDraftRestoreScope = useRef('');
   const drafts = useEmissionDrafts(organization?.id || null);
+  const registerDraft =
+    user?.id && organization?.id
+      ? readRegisterActiveDraft(user.id, organization.id)
+      : null;
   const [notesView, setNotesView] = useState<'issued' | 'drafts'>('issued');
   const adminIssuerCompanies = fromAdmin
     ? officeCompanies
@@ -172,6 +176,13 @@ export default function SaasApp() {
     setReusableEmission(null);
     setSelectedDocument(document);
     setActive('Emissão');
+  };
+  const resumeRegisterDraft = () => {
+    if (!registerDraft?.section) return;
+    setSelectedDocument(null);
+    setReusableEmission(null);
+    setPendingCadastroCreate(null);
+    setActive(registerDraft.section);
   };
   const openDrafts = () => { setNotesView('drafts'); setActive('Minhas notas'); setSelectedDocument(null); };
 
@@ -780,7 +791,16 @@ export default function SaasApp() {
 
       <main className="saas-main-content min-h-screen pl-72 pt-[72px]">
         <div className="mx-auto w-full max-w-[1680px] px-5 py-6 lg:px-8 xl:px-10">
-          {active !== 'Emissão' && active !== 'Minhas notas' && <DraftResumeBanner drafts={drafts} onResume={resumeDraft} onAll={openDrafts} />}
+          {active !== 'Emissão' && active !== 'Minhas notas' && registerDraft && active !== registerDraft.section ? (
+            <RegisterDraftResumeBanner
+              section={registerDraft.section}
+              savedAt={registerDraft.savedAt}
+              form={registerDraft.form}
+              onResume={resumeRegisterDraft}
+            />
+          ) : active !== 'Emissão' && active !== 'Minhas notas' ? (
+            <DraftResumeBanner drafts={drafts} onResume={resumeDraft} onAll={openDrafts} />
+          ) : null}
           {content}
         </div>
       </main>
