@@ -201,12 +201,39 @@ export async function purchaseVerification(admin: any, base: string, token: stri
 }
 
 export async function salesVerification(admin: any, companyId: string, start: string, next: string, state: any) {
-  const latest = Number(state?.latest_number || 0);
+  const { data: streamCandidates, error: streamError } = await admin.from("fiscal_sales_documents")
+    .select("model,series,document_number")
+    .eq("company_id", companyId)
+    .in("model", ["55", "65"])
+    .limit(5000);
+  if (streamError) throw streamError;
+  const streams = new Map<string, { model: string; series: string; count: number; min: number; max: number }>();
+  for (const row of streamCandidates || []) {
+    const model = String(row.model || "");
+    const series = String(Math.max(1, Number(row.series || 1)));
+    if (!["55", "65"].includes(model)) continue;
+    const number = Number(String(row.document_number || "").replace(/\D/g, ""));
+    const key = `${model}:${series}`;
+    const current = streams.get(key) || { model, series, count: 0, min: Number.POSITIVE_INFINITY, max: 0 };
+    current.count += 1;
+    if (number > 0) {
+      current.min = Math.min(current.min, number);
+      current.max = Math.max(current.max, number);
+    }
+    streams.set(key, current);
+  }
+  const primary = [...streams.values()].sort((a, b) => b.count - a.count || b.max - a.max)[0] || {
+    model: "65", series: "1", count: 0, min: 1, max: 0,
+  };
+  const latest = Math.max(Number(state?.latest_number || 0), primary.max);
+  const floor = Math.max(1, Number(state?.initial_floor_number || 0) || (Number.isFinite(primary.min) ? primary.min : 1));
+  const scopeTotal = latest > 0 ? Math.max(0, latest - floor + 1) : 0;
   const rows = await fetchPaged(() => admin.from("fiscal_sales_reconciliation")
     .select("status,access_key,issue_date,note_number")
     .eq("company_id", companyId)
-    .eq("model", "65")
-    .eq("series", "1")
+    .eq("model", primary.model)
+    .eq("series", primary.series)
+    .gte("note_number", floor)
     .lte("note_number", latest || 999999999)
     .order("note_number", { ascending: true }));
 
@@ -214,12 +241,12 @@ export async function salesVerification(admin: any, companyId: string, start: st
   for (const row of rows) counts[row.status] = (counts[row.status] || 0) + 1;
   const pendingSequence = Number(counts.pending || 0) + Number(counts.error || 0);
   const resolved = rows.length - pendingSequence;
-  const sequenceComplete = latest > 0 && rows.length === latest && pendingSequence === 0;
-  const staleState = Boolean(state && sequenceComplete && (!state.reconciliation_complete || Number(state.reconciliation_resolved || 0) !== resolved || Number(state.reconciliation_total || 0) !== latest || state.status === "reconciling"));
+  const sequenceComplete = scopeTotal > 0 && rows.length === scopeTotal && pendingSequence === 0;
+  const staleState = Boolean(state && sequenceComplete && (!state.reconciliation_complete || Number(state.reconciliation_resolved || 0) !== resolved || Number(state.reconciliation_total || 0) !== scopeTotal || state.status === "reconciling"));
 
   if (staleState) {
     await admin.from("fiscal_sales_sync_state").update({
-      reconciliation_total: latest,
+      reconciliation_total: scopeTotal,
       reconciliation_resolved: resolved,
       reconciliation_found: counts.found || 0,
       reconciliation_cancelled: counts.cancelled || 0,
@@ -252,7 +279,7 @@ export async function salesVerification(admin: any, companyId: string, start: st
     xml_ready: keys.length ? keys.filter((key) => withXml.has(key)).length : documents.filter((row) => row.xml).length,
     pending_xml: keys.length ? keys.filter((key) => !withXml.has(key)).length : documents.filter((row) => !row.xml).length,
     cancelled: rows.filter((row) => row.status === "cancelled" && row.issue_date && row.issue_date >= start && row.issue_date < next).length,
-    sequence_total: latest || rows.length,
+    sequence_total: scopeTotal || rows.length,
     sequence_resolved: resolved,
     sequence_complete: sequenceComplete,
     repaired_state: staleState,

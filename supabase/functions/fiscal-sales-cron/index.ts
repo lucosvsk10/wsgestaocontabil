@@ -576,6 +576,7 @@ Deno.serve(async req => {
               miss_limit: hasOfficialNfceAnchor ? 12 : 24,
               months: discoveryMonths,
               preferred_month: bootstrap?.anchor_key_month || historyStartMonth,
+              persist: true,
             }),
             signal: AbortSignal.timeout(60000),
           });

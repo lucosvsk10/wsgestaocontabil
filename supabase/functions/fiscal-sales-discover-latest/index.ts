@@ -82,6 +82,7 @@ Deno.serve(async req => {
     const missLimit = Math.min(24, Math.max(12, Number(body.miss_limit || 12)));
     const model = String(body.model || "65").replace(/\D/g, "");
     const series = Math.max(1, Math.min(999, Number(body.series || 1)));
+    const persist = body.persist === true;
     if (!["55","65"].includes(model)) return json({ error: "unsupported_model" }, 422);
 
     const { data: company, error: companyError } = await admin
@@ -168,7 +169,48 @@ Deno.serve(async req => {
       await sleep(180);
     }
 
-    return json({ ok: true, company_id: companyId, model, series, base_number: baseNumber, bootstrap, bootstrap_start: bootstrapStart, scan_start: firstNumber, scanned_through: scannedThrough, latest, advanced: bootstrap ? latest > 0 : latest > baseNumber, hits, probes, months, preferred_month: preferredMonth, miss_streak: missStreak, miss_limit: missLimit, cooldown });
+    // Keep every officially confirmed key. The cron used to receive these hits only
+    // in memory, so a caller timeout could discard a whole successful sweep and the
+    // next run would start from the same number again.
+    if (persist && hits.length > 0) {
+      const checkedAt = new Date().toISOString();
+      const rows = hits.map(hit => ({
+        company_id: companyId,
+        model,
+        series: String(series),
+        note_number: hit.note_number,
+        status: "pending",
+        access_key: hit.access_key,
+        month_code: hit.month,
+        cstat: "100",
+        xmotivo: "Chave oficial confirmada pela consulta de protocolo.",
+        last_checked_at: checkedAt,
+        updated_at: checkedAt,
+      }));
+      const { error: reconciliationError } = await admin
+        .from("fiscal_sales_reconciliation")
+        .upsert(rows, {
+          onConflict: "company_id,model,series,note_number",
+          ignoreDuplicates: true,
+        });
+      if (reconciliationError) throw reconciliationError;
+
+      const persistedLatest = Math.max(Number(state?.latest_number || 0), latest);
+      const { error: stateError } = await admin
+        .from("fiscal_sales_sync_state")
+        .update({
+          latest_number: persistedLatest,
+          cursor_number: Math.max(persistedLatest, scannedThrough),
+          status: "queued",
+          next_scheduled_at: checkedAt,
+          last_error: null,
+          updated_at: checkedAt,
+        })
+        .eq("company_id", companyId);
+      if (stateError) throw stateError;
+    }
+
+    return json({ ok: true, company_id: companyId, model, series, base_number: baseNumber, bootstrap, bootstrap_start: bootstrapStart, scan_start: firstNumber, scanned_through: scannedThrough, latest, advanced: bootstrap ? latest > 0 : latest > baseNumber, persisted: persist && hits.length > 0, hits, probes, months, preferred_month: preferredMonth, miss_streak: missStreak, miss_limit: missLimit, cooldown });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
