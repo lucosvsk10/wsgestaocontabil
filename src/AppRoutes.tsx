@@ -25,6 +25,7 @@ import AdminLancamentos from './pages/AdminLancamentos';
 import AdminBalancete from './pages/AdminBalancete';
 import AdminPlanoContas from './pages/AdminPlanoContas';
 import AdminEngine from './pages/AdminEngine';
+import AdminWorkHoursCalculator from './pages/AdminWorkHoursCalculator';
 import AdminCompanies from './pages/AdminCompanies';
 import AdminClientProfile from './pages/AdminClientProfile';
 import AdminClientDocuments from './pages/AdminClientDocuments';
@@ -321,6 +322,14 @@ const AppRoutes = () => (
               <SimpleCarouselManager />
             </AdminPage>
           </AdminLayout>
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/admin/departamento-pessoal/horas"
+      element={
+        <PrivateRoute requiredRole="admin">
+          <AdminWorkHoursCalculator />
         </PrivateRoute>
       }
     />
