@@ -420,16 +420,21 @@ export default function AdminWorkHoursCalculator() {
 
       if (!active) return;
 
+      const browserDraft = readLocal<WorkHoursForm | null>(
+        draftKey(user.id, companyId, employeeId, competence),
+        null,
+      );
+
       if (saved) {
         setCurrentRecordId(saved.id);
         setRecordStatus(saved.status);
-        setForm({ ...emptyWorkHoursForm(), ...(saved.form_data || {}) });
-        setDirty(false);
-      } else {
-        const browserDraft = readLocal<WorkHoursForm | null>(
-          draftKey(user.id, companyId, employeeId, competence),
-          null,
+        setForm(
+          browserDraft
+            ? { ...emptyWorkHoursForm(), ...browserDraft }
+            : { ...emptyWorkHoursForm(), ...(saved.form_data || {}) },
         );
+        setDirty(Boolean(browserDraft));
+      } else {
         setCurrentRecordId(null);
         setRecordStatus('draft');
         setForm(browserDraft ? { ...emptyWorkHoursForm(), ...browserDraft } : employeeDefaults(currentEmployee));
