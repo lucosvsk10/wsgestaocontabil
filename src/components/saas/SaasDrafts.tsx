@@ -30,6 +30,21 @@ export function DraftResumeBanner({ drafts, onResume, onAll }: { drafts: ListedE
   </aside>;
 }
 
+export function RegisterDraftResumeBanner({ section, savedAt, form, onResume }: {
+  section: string; savedAt: string; form: Record<string, unknown>; onResume: () => void;
+}) {
+  const singular: Record<string, string> = {
+    Clientes: 'cliente', Fornecedores: 'fornecedor', Produtos: 'produto', Serviços: 'serviço', Transportadoras: 'transportadora',
+  };
+  const label = singular[section] || 'cadastro';
+  const subject = String(form?.name || form?.legal_name || form?.trade_name || '').trim();
+  return <aside className="ws-draft-banner" aria-label="Cadastro em andamento">
+    <div className="ws-draft-banner-icon"><FilePenLine size={21} /></div>
+    <div className="ws-draft-banner-copy"><strong>Seu ${label} está onde você parou.</strong>
+      <span>{subject || 'Cadastro salvo automaticamente'} · {date(savedAt)}</span></div>
+    <Button className="ws-primary" onClick={onResume}>Continuar cadastro<ArrowRight size={15} /></Button>
+  </aside>;
+}
 export default function SaasMyNotes({ emissions, drafts, onNew, onResume, onReuse, initialTab = 'issued' }: {
   emissions: Parameters<typeof SaasIssuedNotes>[0]['emissions']; drafts: ListedEmissionDraft[];
   onNew: () => void; onResume: (document: string) => void; onReuse: Parameters<typeof SaasIssuedNotes>[0]['onReuse']; initialTab?: 'issued' | 'drafts';
