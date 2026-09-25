@@ -108,6 +108,15 @@ export function formatCurrency(value: number) {
   });
 }
 
+function formatRate(value: number) {
+  return (Number.isFinite(value) ? value : 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  });
+}
+
 export function calculateWorkHours(form: WorkHoursForm): WorkHoursResult {
   const monthlyHours = Math.max(0.01, safeNumber(form.monthlyHours, 220));
   const dailyHours = Math.max(0, safeNumber(form.dailyHours, 8));
@@ -145,11 +154,11 @@ export function calculateWorkHours(form: WorkHoursForm): WorkHoursResult {
   const absenceDayDivisor = Math.max(1, safeNumber(form.absenceDayDivisor, 30));
 
   const basePay = money(form.employmentType === 'monthly' ? baseSalary : normalHours * hourlyRate);
-  const dailyRate = money(
+  const dailyRateRaw =
     form.employmentType === 'monthly'
       ? baseSalary / absenceDayDivisor
-      : dailyHours * hourlyRate,
-  );
+      : dailyHours * hourlyRate;
+  const dailyRate = money(dailyRateRaw);
 
   const additions = {
     overtime50: money(overtime50Hours * hourlyRate * (1 + overtime50Percent / 100)),
@@ -163,7 +172,7 @@ export function calculateWorkHours(form: WorkHoursForm): WorkHoursResult {
   };
 
   const deductions = {
-    absenceDays: money(Math.max(0, safeNumber(form.absenceDays)) * dailyRate),
+    absenceDays: money(Math.max(0, safeNumber(form.absenceDays)) * dailyRateRaw),
     absenceHours: money(absenceHours * hourlyRate),
     lateHours: money(lateHours * hourlyRate),
     bankNegative: money(form.settleBank ? bankNegativeHours * hourlyRate : 0),
@@ -179,73 +188,73 @@ export function calculateWorkHours(form: WorkHoursForm): WorkHoursResult {
   const memory: string[] = [];
   if (form.employmentType === 'monthly') {
     memory.push(
-      `Valor da hora: ${formatCurrency(baseSalary)} ÷ ${monthlyHours}h = ${formatCurrency(hourlyRate)}`,
+      `Valor da hora: ${formatCurrency(baseSalary)} ÷ ${monthlyHours}h = ${formatRate(hourlyRate)}`,
     );
   } else {
-    memory.push(`Valor da hora informado: ${formatCurrency(hourlyRate)}`);
+    memory.push(`Valor da hora informado: ${formatRate(hourlyRate)}`);
     memory.push(
-      `Horas normais: ${formatMinutes(normalMinutes)} × ${formatCurrency(hourlyRate)} = ${formatCurrency(basePay)}`,
+      `Horas normais: ${formatMinutes(normalMinutes)} × ${formatRate(hourlyRate)} = ${formatCurrency(basePay)}`,
     );
   }
   if (overtime50Minutes) {
     memory.push(
-      `HE ${overtime50Percent}%: ${formatMinutes(overtime50Minutes)} × ${formatCurrency(hourlyRate)} × ${(
+      `HE ${overtime50Percent}%: ${formatMinutes(overtime50Minutes)} × ${formatRate(hourlyRate)} × ${(
         1 + overtime50Percent / 100
       ).toFixed(2)} = ${formatCurrency(additions.overtime50)}`,
     );
   }
   if (overtime100Minutes) {
     memory.push(
-      `HE ${overtime100Percent}%: ${formatMinutes(overtime100Minutes)} × ${formatCurrency(hourlyRate)} × ${(
+      `HE ${overtime100Percent}%: ${formatMinutes(overtime100Minutes)} × ${formatRate(hourlyRate)} × ${(
         1 + overtime100Percent / 100
       ).toFixed(2)} = ${formatCurrency(additions.overtime100)}`,
     );
   }
   if (nightMinutes) {
     memory.push(
-      `Adicional noturno: ${formatMinutes(nightMinutes)} × ${formatCurrency(hourlyRate)} × ${nightPercent}% = ${formatCurrency(
+      `Adicional noturno: ${formatMinutes(nightMinutes)} × ${formatRate(hourlyRate)} × ${nightPercent}% = ${formatCurrency(
         additions.nightPremium,
       )}`,
     );
   }
   if (holidayMinutes) {
     memory.push(
-      `Adicional domingo/feriado: ${formatMinutes(holidayMinutes)} × ${formatCurrency(hourlyRate)} × ${holidayPercent}% = ${formatCurrency(
+      `Adicional domingo/feriado: ${formatMinutes(holidayMinutes)} × ${formatRate(hourlyRate)} × ${holidayPercent}% = ${formatCurrency(
         additions.holidayPremium,
       )}`,
     );
   }
   if (safeNumber(form.absenceDays) > 0) {
     memory.push(
-      `Faltas em dias: ${safeNumber(form.absenceDays)} × ${formatCurrency(dailyRate)} = -${formatCurrency(
+      `Faltas em dias: ${safeNumber(form.absenceDays)} × ${formatRate(dailyRateRaw)} = -${formatCurrency(
         deductions.absenceDays,
       )}`,
     );
   }
   if (absenceMinutes) {
     memory.push(
-      `Faltas em horas: ${formatMinutes(absenceMinutes)} × ${formatCurrency(hourlyRate)} = -${formatCurrency(
+      `Faltas em horas: ${formatMinutes(absenceMinutes)} × ${formatRate(hourlyRate)} = -${formatCurrency(
         deductions.absenceHours,
       )}`,
     );
   }
   if (lateMinutes) {
     memory.push(
-      `Atrasos/saídas: ${formatMinutes(lateMinutes)} × ${formatCurrency(hourlyRate)} = -${formatCurrency(
+      `Atrasos/saídas: ${formatMinutes(lateMinutes)} × ${formatRate(hourlyRate)} = -${formatCurrency(
         deductions.lateHours,
       )}`,
     );
   }
   if (form.settleBank && bankPositiveMinutes) {
     memory.push(
-      `Banco positivo liquidado: ${formatMinutes(bankPositiveMinutes)} × ${formatCurrency(hourlyRate)} = ${formatCurrency(
+      `Banco positivo liquidado: ${formatMinutes(bankPositiveMinutes)} × ${formatRate(hourlyRate)} = ${formatCurrency(
         additions.bankPositive,
       )}`,
     );
   }
   if (form.settleBank && bankNegativeMinutes) {
     memory.push(
-      `Banco negativo liquidado: ${formatMinutes(bankNegativeMinutes)} × ${formatCurrency(hourlyRate)} = -${formatCurrency(
+      `Banco negativo liquidado: ${formatMinutes(bankNegativeMinutes)} × ${formatRate(hourlyRate)} = -${formatCurrency(
         deductions.bankNegative,
       )}`,
     );
