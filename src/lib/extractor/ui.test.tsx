@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AddCompanyModal, FiscalCoveragePermissionGate } from '@/pages/FiscalExtractorApp';
+import { AddCompanyModal, FiscalCoverageGate } from '@/pages/FiscalExtractorApp';
 import { ExtractorAccountName } from '@/components/extractor/ExtractorAccountName';
 import { extractorRequest } from './request';
 vi.mock('./request', () => ({ extractorRequest: vi.fn(), extractorErrorMessage: vi.fn() }));
@@ -86,20 +86,30 @@ describe('extrator: importação e conta', () => {
 });
 
 describe('extrator: bloqueio por cobertura fiscal', () => {
-  it('mostra a empresa afetada, o portal oficial e o passo a passo', () => {
+  it('pede somente uma referência fiscal, sem exigir cadastro estadual', () => {
     render(
-      <FiscalCoveragePermissionGate
+      <FiscalCoverageGate
         company={{ tradeName: 'A D MELLO', name: 'A DE MELLO DEFENSOR' } as any}
+        gate={{
+          ready: false,
+          status: 'needs_reference',
+          title: 'Ajude-nos com uma nota de referência',
+          message: 'Envie uma única nota de venda desta empresa.',
+          automatic_discovery: false,
+          accepts_reference: true,
+        }}
         blocker={{ last_verified_at: '2026-09-24T10:00:00Z' } as any}
+        loading={false}
+        busy={false}
+        onRetry={vi.fn()}
+        onSubmit={vi.fn()}
       />
     );
 
-    expect(screen.getByRole('alert')).toHaveTextContent('A D MELLO');
-    expect(screen.getByRole('link', { name: /Solicitar liberação à SEFAZ\/AL/i })).toHaveAttribute(
-      'href',
-      'https://www.sefaz.al.gov.br/nise/nise-processos-sei'
-    );
-    expect(screen.getByText('Ver passo a passo para solicitar o acesso')).toBeInTheDocument();
-    expect(screen.getByText(/consulta individual por chave/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Situação da cobertura fiscal')).toHaveTextContent('Só falta uma referência');
+    expect(screen.getByPlaceholderText('Cole os 44 dígitos')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /XML/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /DANFE/i })).toBeInTheDocument();
+    expect(screen.queryByText(/senha estadual|cadastro estadual/i)).not.toBeInTheDocument();
   });
 });

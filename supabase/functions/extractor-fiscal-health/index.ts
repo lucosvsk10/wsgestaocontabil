@@ -277,14 +277,14 @@ Deno.serve(async req => {
     }
 
     if (action === 'coverage_status') {
-      const [coverageResult, salesStateResult, certificateResult] = await Promise.all([
+      const [coverageResult, salesStateResult, certificateResult, salesDocumentsResult] = await Promise.all([
         admin.from('fiscal_extractor_coverage')
           .select('document_type,direction,applicability,coverage_status,source_confirmed,source_name,last_error,last_verified_at,details')
           .eq('company_id', companyId)
           .order('direction', { ascending: true })
           .order('document_type', { ascending: true }),
         admin.from('fiscal_sales_sync_state')
-          .select('status,last_error,last_started_at,last_completed_at,next_scheduled_at,reference_access_key,reference_submitted_at,paused')
+          .select('status,last_error,last_started_at,last_completed_at,next_scheduled_at,reference_access_key,reference_submitted_at,paused,latest_number,cursor_number,initial_floor_number,reconciliation_total,reconciliation_resolved,reconciliation_pending,reconciliation_complete,found_documents,scanned_numbers,updated_at')
           .eq('company_id', companyId)
           .maybeSingle(),
         admin.from('fiscal_certificates')
@@ -294,14 +294,19 @@ Deno.serve(async req => {
           .order('valid_until', { ascending: false })
           .limit(1)
           .maybeSingle(),
+        admin.from('fiscal_sales_documents')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId),
       ]);
       if (coverageResult.error) throw coverageResult.error;
       if (salesStateResult.error) throw salesStateResult.error;
       if (certificateResult.error) throw certificateResult.error;
+      if (salesDocumentsResult.error) throw salesDocumentsResult.error;
 
       const coverage = coverageResult.data || [];
       const salesState = salesStateResult.data || null;
       const certificate = certificateResult.data || null;
+      const savedSalesCount = Number(salesDocumentsResult.count || 0);
       const certificateUntil = String(certificate?.valid_until || '');
       const certificateUntilMs = certificateUntil
         ? new Date(certificateUntil.includes('T') ? certificateUntil : `${certificateUntil}T23:59:59-03:00`).getTime()
@@ -320,9 +325,27 @@ Deno.serve(async req => {
         row.coverage_status === 'covered' &&
         row.source_confirmed === true
       );
-      const ready = certReady && purchaseReady && salesReady;
       const salesStatus = String(salesState?.status || '').toLowerCase();
       const activeSync = ['queued', 'running', 'discovering', 'bootstrap_window', 'reconciling'].some(value => salesStatus.includes(value));
+      const sequenceStatus = ['running', 'discovering', 'bootstrap_window', 'reconciling', 'idle', 'completed', 'success']
+        .some(value => salesStatus.includes(value));
+      const referenceReady = /^\d{44}$/.test(String(salesState?.reference_access_key || '').replace(/\D/g, ''));
+      const sequenceEvidence =
+        savedSalesCount > 0 &&
+        Number(salesState?.latest_number || 0) > 0 &&
+        (Number(salesState?.initial_floor_number || 0) > 0 || Number(salesState?.reconciliation_total || 0) > 0) &&
+        (
+          Number(salesState?.reconciliation_resolved || 0) > 0 ||
+          Number(salesState?.found_documents || 0) > 0 ||
+          Number(salesState?.scanned_numbers || 0) > 0
+        );
+      const salesOperational = salesReady || Boolean(
+        !salesState?.paused &&
+        referenceReady &&
+        sequenceStatus &&
+        sequenceEvidence
+      );
+      const ready = certReady && purchaseReady && salesOperational;
       const needsReference = !activeSync && (
         !salesState ||
         ['waiting_sales_reference', 'unsupported_source', 'error', 'failed'].some(value => salesStatus.includes(value)) ||
@@ -333,11 +356,16 @@ Deno.serve(async req => {
         ? {
             ready: true,
             status: 'ready',
-            title: 'Fontes fiscais confirmadas',
-            message: 'Compras e vendas estão sendo capturadas e conferidas.',
-            automatic_discovery: false,
+            title: salesReady ? 'Fontes fiscais confirmadas' : 'Busca fiscal funcionando',
+            message: salesReady
+              ? 'Compras e vendas estão sendo capturadas e conferidas.'
+              : 'Compras e vendas já estão sendo capturadas. A conferência completa da sequência continua automaticamente em segundo plano.',
+            automatic_discovery: !salesReady && activeSync,
             accepts_reference: false,
             last_checked_at: checkedAt,
+            coverage_complete: salesReady,
+            sales_operational: salesOperational,
+            saved_sales_count: savedSalesCount,
           }
         : !certReady
           ? {
@@ -371,7 +399,20 @@ Deno.serve(async req => {
                 last_checked_at: checkedAt,
               };
 
-      return J({ ok: true, company_id: companyId, coverage, gate });
+      return J({
+        ok: true,
+        company_id: companyId,
+        coverage,
+        gate,
+        evidence: {
+          purchases_confirmed: purchaseReady,
+          sales_confirmed: salesReady,
+          sales_operational: salesOperational,
+          saved_sales_count: savedSalesCount,
+          reference_ready: referenceReady,
+          sequence_evidence: sequenceEvidence,
+        },
+      });
     }
 
     if (action === 'history') {

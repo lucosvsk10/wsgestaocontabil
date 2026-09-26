@@ -27,7 +27,6 @@ import ExtractorAccountDrawer from '@/components/extractor/ExtractorAccountDrawe
 import ExtractorCompanySelector from '@/components/extractor/ExtractorCompanySelector';
 import ExtractorReports from '@/components/extractor/ExtractorReports';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
-import { StateCredentialPanel } from '@/components/fiscal/StateCredentialPanel';
 import {
   accessKeyFromText,
   salesReferenceFromFile,
@@ -269,7 +268,7 @@ const formatDate = (v?: string | null, withTime = false) => {
 const syncLabel = (v?: string | null) => {
   const x = String(v || '').toLowerCase();
   if (x === 'queued') return 'Na fila';
-  if (x === 'waiting_state_credentials') return 'Aguardando acesso SEFAZ';
+  if (x === 'waiting_state_credentials') return 'Preparando busca de vendas';
   if (x === 'waiting_sales_reference') return 'Preparando vendas';
   if (x === 'waiting_certificate') return 'Certificado pendente';
   if (['running', 'reconciling', 'bootstrap_window', 'retrying'].includes(x))
@@ -1723,19 +1722,6 @@ function Companies({ companies, onAdd, onOpen, onReload, setNotice, preview, adm
               </dl>
             </article>
           </div>
-          {String(fiscal.uf || selected.uf || '').toUpperCase() === 'AL' && (
-            <div className="extractor-company-state-access">
-              <StateCredentialPanel
-                fiscalCompanyId={selected.id}
-                state={fiscal.uf || selected.uf}
-                portal
-                onChanged={() => {
-                  void loadDetail(selected.id);
-                  void Promise.resolve(onReload()).catch(() => null);
-                }}
-              />
-            </div>
-          )}
         </section>
 
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -3610,7 +3596,6 @@ export function AddCompanyModal({ preview, onClose, onDone }: any) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [savedCompany, setSavedCompany] = useState<any>(null);
   const submit = async () => {
     if (busy) return;
     if (preview) return setError('O cadastro fica disponível no ambiente autenticado.');
@@ -3633,8 +3618,7 @@ export function AddCompanyModal({ preview, onClose, onDone }: any) {
       });
       setPassword('');
       setFile(null);
-      if (String(data.company?.state || '').toUpperCase() === 'AL') setSavedCompany(data.company);
-      else onDone(data.company);
+      onDone(data.company);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Não foi possível salvar. Tente novamente.');
     } finally {
@@ -3657,27 +3641,10 @@ export function AddCompanyModal({ preview, onClose, onDone }: any) {
           if (busy) e.preventDefault();
         }}
       >
-        <DialogTitle>{savedCompany ? 'Concluir acesso às vendas' : 'Adicionar ou renovar certificado A1'}</DialogTitle>
+        <DialogTitle>Adicionar ou renovar certificado A1</DialogTitle>
         <DialogDescription>
-          {savedCompany
-            ? 'O A1 já foi validado e a busca de compras começou. Informe somente a senha estadual para liberar a conferência completa das vendas de Alagoas.'
-            : 'O CNPJ é identificado pelo certificado. Na renovação, os dados já cadastrados da empresa são preservados.'}
+          O CNPJ é identificado pelo certificado. Compras e vendas começam a ser buscadas automaticamente, sem exigir cadastro ou senha do portal estadual.
         </DialogDescription>
-        {savedCompany ? <div className="space-y-4">
-          <StateCredentialPanel
-            fiscalCompanyId={savedCompany.id}
-            state={savedCompany.state}
-            portal
-            onChanged={status => {
-              if (status?.verification_status === 'valid') onDone(savedCompany);
-            }}
-          />
-          <div className="flex justify-end">
-            <button type="button" className="extractor-secondary" onClick={() => onDone(savedCompany)}>
-              Concluir depois
-            </button>
-          </div>
-        </div> :
         <form
           className="space-y-5"
           onSubmit={e => {
@@ -3736,7 +3703,7 @@ export function AddCompanyModal({ preview, onClose, onDone }: any) {
               {busy ? 'Validando e salvando…' : 'Validar e salvar'}
             </button>
           </div>
-        </form>}
+        </form>
       </DialogContent>
     </Dialog>
   );

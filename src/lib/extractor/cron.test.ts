@@ -16,7 +16,7 @@ function setup({certificate=true,paused=false}={}) {
  return{writes,fetch,run:(token='synthetic')=>handler(new Request('https://example.test',{method:'POST',headers:{'x-debug-token':token}}))};
 }
 describe('sales cron prerequisites',()=>{
- it('records missing state credential without sending fiscal requests',async()=>{const b=setup();expect((await b.run()).status).toBe(200);expect(b.writes).toHaveBeenCalledWith(expect.objectContaining({status:'waiting_state_credentials'}));expect(b.fetch).not.toHaveBeenCalled()});
+ it('starts the sales search without requiring state credentials',async()=>{const b=setup();expect((await b.run()).status).toBe(200);expect(b.writes).toHaveBeenCalledWith(expect.objectContaining({status:'running'}));expect(b.writes).not.toHaveBeenCalledWith(expect.objectContaining({status:'waiting_state_credentials'}))});
  it('records missing certificate without changing cursors',async()=>{const b=setup({certificate:false});await b.run();expect(b.writes).toHaveBeenCalledWith(expect.objectContaining({status:'waiting_certificate'}));expect(b.writes.mock.calls[0][0]).not.toHaveProperty('cursor_number')});
  it('preserves paused companies',async()=>{const b=setup({paused:true});await b.run();expect(b.writes).not.toHaveBeenCalled();expect(b.fetch).not.toHaveBeenCalled()});
  it('refuses unauthenticated calls',async()=>{const b=setup();expect((await b.run('')).status).toBe(403);expect(b.writes).not.toHaveBeenCalled()});
