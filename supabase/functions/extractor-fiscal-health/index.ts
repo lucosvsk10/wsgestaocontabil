@@ -278,7 +278,7 @@ Deno.serve(async req => {
     }
 
     if (action === 'coverage_status') {
-      const [coverageResult, salesStateResult, certificateResult, salesDocumentsResult] = await Promise.all([
+      const [coverageResult, salesStateResult, certificateResult, salesDocumentsResult, latestSalesDocumentResult] = await Promise.all([
         admin.from('fiscal_extractor_coverage')
           .select('document_type,direction,applicability,coverage_status,source_confirmed,source_name,last_error,last_verified_at,details')
           .eq('company_id', companyId)
@@ -298,16 +298,25 @@ Deno.serve(async req => {
         admin.from('fiscal_sales_documents')
           .select('id', { count: 'exact', head: true })
           .eq('company_id', companyId),
+        admin.from('fiscal_sales_documents')
+          .select('document_number,issue_date,model,series,updated_at')
+          .eq('company_id', companyId)
+          .not('issue_date', 'is', null)
+          .order('issue_date', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       if (coverageResult.error) throw coverageResult.error;
       if (salesStateResult.error) throw salesStateResult.error;
       if (certificateResult.error) throw certificateResult.error;
       if (salesDocumentsResult.error) throw salesDocumentsResult.error;
+      if (latestSalesDocumentResult.error) throw latestSalesDocumentResult.error;
 
       const coverage = coverageResult.data || [];
       const salesState = salesStateResult.data || null;
       const certificate = certificateResult.data || null;
       const savedSalesCount = Number(salesDocumentsResult.count || 0);
+      const latestSalesDocument = latestSalesDocumentResult.data || null;
       const certificateUntil = String(certificate?.valid_until || '');
       const certificateUntilMs = certificateUntil
         ? new Date(certificateUntil.includes('T') ? certificateUntil : `${certificateUntil}T23:59:59-03:00`).getTime()
@@ -350,6 +359,10 @@ Deno.serve(async req => {
         (!salesReady && ['idle', 'completed', 'success'].includes(salesStatus))
       );
       const checkedAt = new Date().toISOString();
+      const lastSearchAt = activeSync
+        ? salesState?.last_started_at || salesState?.updated_at || salesState?.last_completed_at || null
+        : salesState?.last_completed_at || salesState?.last_started_at || salesState?.updated_at || null;
+      const engineState = activeSync ? 'searching' : salesReady ? 'caught_up' : salesOperational ? 'monitoring' : 'preparing';
       const gate = ready
         ? {
             ready: true,
@@ -364,6 +377,15 @@ Deno.serve(async req => {
             coverage_complete: salesReady,
             sales_operational: salesOperational,
             saved_sales_count: savedSalesCount,
+            engine_state: engineState,
+            last_search_at: lastSearchAt,
+            latest_document: latestSalesDocument ? {
+              number: latestSalesDocument.document_number,
+              series: latestSalesDocument.series,
+              model: latestSalesDocument.model,
+              issue_date: latestSalesDocument.issue_date,
+              found_at: latestSalesDocument.updated_at,
+            } : null,
           }
         : !certReady
           ? {
@@ -384,6 +406,17 @@ Deno.serve(async req => {
                 automatic_discovery: true,
                 accepts_reference: false,
                 last_checked_at: checkedAt,
+                sales_operational: salesOperational,
+                saved_sales_count: savedSalesCount,
+                engine_state: engineState,
+                last_search_at: lastSearchAt,
+                latest_document: latestSalesDocument ? {
+                  number: latestSalesDocument.document_number,
+                  series: latestSalesDocument.series,
+                  model: latestSalesDocument.model,
+                  issue_date: latestSalesDocument.issue_date,
+                  found_at: latestSalesDocument.updated_at,
+                } : null,
               }
             : {
                 ready: false,

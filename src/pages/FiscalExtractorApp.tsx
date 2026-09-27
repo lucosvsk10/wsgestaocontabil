@@ -203,6 +203,18 @@ type CoverageGate = {
   automatic_discovery: boolean;
   accepts_reference: boolean;
   last_checked_at?: string | null;
+  coverage_complete?: boolean;
+  sales_operational?: boolean;
+  saved_sales_count?: number;
+  engine_state?: 'preparing' | 'searching' | 'monitoring' | 'caught_up';
+  last_search_at?: string | null;
+  latest_document?: {
+    number?: string | null;
+    series?: string | null;
+    model?: string | null;
+    issue_date?: string | null;
+    found_at?: string | null;
+  } | null;
 };
 
 const nav: Array<{ label: Section; icon: ExtractorIconName; group: string }> = [
@@ -2050,11 +2062,20 @@ function Documents({
       const rows = Array.isArray(data?.coverage) ? data.coverage : [];
       const remoteGate = data?.gate || null;
       const numberedSalesReady = fiscalSalesCoverage(rows).numberedReady;
+      const numberedSalesOperational = data?.evidence?.sales_operational === true;
+      const gateWithEvidence = remoteGate ? {
+        ...remoteGate,
+        sales_operational: remoteGate.sales_operational ?? numberedSalesOperational,
+        saved_sales_count: remoteGate.saved_sales_count ?? Number(data?.evidence?.saved_sales_count || 0),
+        engine_state: remoteGate.engine_state ?? (numberedSalesOperational ? 'monitoring' : undefined),
+      } : null;
 
       setCoverage(rows);
       // Defense in depth for older Edge Function versions: NFS-e coverage alone
-      // cannot unlock the model 55/65 sales experience.
-      setCoverageGate(remoteGate?.ready && !numberedSalesReady
+      // cannot unlock the model 55/65 sales experience. A numbered engine that
+      // already imported real documents may unlock while full reconciliation
+      // continues in the background.
+      setCoverageGate(gateWithEvidence?.ready && !numberedSalesReady && !numberedSalesOperational
         ? {
             ready: false,
             status: 'needs_reference',
@@ -2062,9 +2083,9 @@ function Documents({
             message: 'Envie uma única NF-e ou NFC-e de venda desta empresa. A chave, XML, DANFE ou QR Code é suficiente para localizarmos as demais automaticamente.',
             automatic_discovery: false,
             accepts_reference: true,
-            last_checked_at: remoteGate.last_checked_at || new Date().toISOString(),
+            last_checked_at: gateWithEvidence.last_checked_at || new Date().toISOString(),
           }
-        : remoteGate);
+        : gateWithEvidence);
     } catch {
       setCoverageGate(current => current || {
         ready: false,
@@ -2118,6 +2139,12 @@ function Documents({
   const fiscal = docs.filter(d => d.documentKind !== 'evento');
   const sales = fiscal.filter(d => d.direction === 'saida');
   const purchases = fiscal.filter(d => d.direction === 'entrada');
+  const latestSalesDocument = sales.reduce<Doc | null>((latest, current) => {
+    if (!latest) return current;
+    return Date.parse(String(current.issueDate || '')) > Date.parse(String(latest.issueDate || ''))
+      ? current
+      : latest;
+  }, null);
   const events = docs.filter(d => d.documentKind === 'evento' || d.direction === 'relacionada');
   const pendingSalesValues = sales.filter(d => d.value == null).length;
   const cancelledDocs = fiscal.filter(cancelled);
@@ -2286,6 +2313,15 @@ function Documents({
         title="Documentos"
         icon="document"
         description="Compras e vendas com a mesma leitura fiscal do painel administrativo."
+        actions={(
+          <FiscalEngineIndicator
+            gate={coverageGate}
+            latestDocument={latestSalesDocument}
+            lastSearchAt={company.salesLastCompletedAt || company.salesLastStartedAt}
+            salesCount={sales.length}
+            searching={isCompanySyncing(company)}
+          />
+        )}
       />
 
       <section className="extractor-active-company">
@@ -2547,6 +2583,57 @@ function Documents({
         allowAllCompanies={companies.length > 1}
         appearance="extractor"
       />
+    </div>
+  );
+}
+
+function FiscalEngineIndicator({
+  gate,
+  latestDocument,
+  lastSearchAt,
+  salesCount,
+  searching: companySearching,
+}: {
+  gate: CoverageGate | null;
+  latestDocument: Doc | null;
+  lastSearchAt: string | null;
+  salesCount: number;
+  searching: boolean;
+}) {
+  if (!gate || (!gate.sales_operational && gate.engine_state !== 'searching')) return null;
+
+  const searching = companySearching || gate.engine_state === 'searching';
+  const latest = gate.latest_document || (latestDocument ? {
+    number: latestDocument.number,
+    series: latestDocument.series,
+    model: latestDocument.model,
+    issue_date: latestDocument.issueDate,
+  } : null);
+  const latestLabel = latest?.number
+    ? `Nota ${latest.number}${latest.series ? ` · série ${latest.series}` : ''}${latest.model ? ` · modelo ${latest.model}` : ''}`
+    : 'Nenhuma nota identificada ainda';
+
+  return (
+    <div className={`extractor-engine-indicator ${searching ? 'is-searching' : 'is-monitoring'}`}>
+      <button
+        type="button"
+        aria-label={searching ? 'Busca fiscal em andamento. Passe o mouse para ver detalhes.' : 'Situação do motor fiscal. Passe o mouse para ver detalhes.'}
+        aria-describedby="extractor-engine-tooltip"
+      >
+        {searching ? <Loader2 /> : <CheckCircle2 />}
+      </button>
+      <div id="extractor-engine-tooltip" className="extractor-engine-tooltip" role="tooltip">
+        <strong>{searching ? 'Busca fiscal em andamento' : gate.coverage_complete ? 'Cobertura fiscal confirmada' : 'Motor fiscal funcionando'}</strong>
+        <span><b>Última nota encontrada</b>{latestLabel}</span>
+        <span><b>Emissão da nota</b>{latest?.issue_date ? formatDate(latest.issue_date, true) : '—'}</span>
+        <span><b>Última busca do motor</b>{gate.last_search_at || lastSearchAt ? formatDate(gate.last_search_at || lastSearchAt, true) : '—'}</span>
+        <span><b>Vendas encontradas</b>{integer.format(Number(gate.saved_sales_count ?? salesCount))}</span>
+        <small>{gate.coverage_complete
+          ? 'O período conferido está completo. Novas notas continuam sendo monitoradas.'
+          : gate.ready
+            ? 'A página está liberada porque o motor comprovou funcionamento. A conferência integral continua em segundo plano.'
+            : 'O motor está avançando no histórico. A página será liberada assim que compras e a primeira sequência de vendas forem confirmadas.'}</small>
+      </div>
     </div>
   );
 }
