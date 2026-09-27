@@ -2154,12 +2154,42 @@ function Documents({
   const nfe = fiscal.filter(d => type(d) === 'NF-e').length;
   const nfce = fiscal.filter(d => type(d) === 'NFC-e').length;
   const nfse = fiscal.filter(d => type(d) === 'NFS-e').length;
+  const lastSalesSearchMs = Math.max(
+    Date.parse(String(company.salesLastStartedAt || '')) || 0,
+    Date.parse(String(company.salesLastCompletedAt || '')) || 0
+  );
+  const recentSalesSearch = lastSalesSearchMs > 0 && Date.now() - lastSalesSearchMs <= 30 * 60 * 1000;
+  const numberedSalesObserved = sales.some(document =>
+    Boolean(document.number) && ['NF-e', 'NFC-e'].includes(type(document))
+  );
+  const purchasesObserved = purchases.some(document => type(document) === 'NF-e');
+  const localEngineOperational =
+    numberedSalesObserved &&
+    purchasesObserved &&
+    (isCompanySyncing(company) || recentSalesSearch) &&
+    !company.salesLastError;
+  const effectiveCoverageGate: CoverageGate | null = localEngineOperational
+    ? {
+        ...(coverageGate || {
+          status: 'ready' as const,
+          title: 'Busca fiscal funcionando',
+          message: 'Compras e vendas já estão sendo capturadas.',
+          automatic_discovery: true,
+          accepts_reference: false,
+        }),
+        ready: true,
+        sales_operational: true,
+        saved_sales_count: coverageGate?.saved_sales_count ?? sales.length,
+        engine_state: isCompanySyncing(company) ? 'searching' : 'monitoring',
+        last_search_at: coverageGate?.last_search_at || company.salesLastCompletedAt || company.salesLastStartedAt,
+      }
+    : coverageGate;
   const coverageBlocker = coverage.find(row =>
     ['required', 'observed'].includes(row.applicability) &&
     ['nfe55', 'nfce65', 'nfse'].includes(row.document_type) &&
     (row.coverage_status !== 'covered' || row.source_confirmed !== true)
   );
-  const documentsLocked = !preview && !coverageGate?.ready;
+  const documentsLocked = !preview && !effectiveCoverageGate?.ready;
 
   const filtered = docs.filter(d => {
     if (
@@ -2315,7 +2345,7 @@ function Documents({
         description="Compras e vendas com a mesma leitura fiscal do painel administrativo."
         actions={(
           <FiscalEngineIndicator
-            gate={coverageGate}
+            gate={effectiveCoverageGate}
             latestDocument={latestSalesDocument}
             lastSearchAt={company.salesLastCompletedAt || company.salesLastStartedAt}
             salesCount={sales.length}
@@ -2561,7 +2591,7 @@ function Documents({
       {documentsLocked && (
         <FiscalCoverageGate
           company={company}
-          gate={coverageGate}
+          gate={effectiveCoverageGate}
           blocker={coverageBlocker}
           loading={coverageLoading}
           busy={referenceBusy || xmlRetrying}
