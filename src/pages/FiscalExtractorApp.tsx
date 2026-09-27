@@ -2166,7 +2166,7 @@ function Documents({
   const localEngineOperational =
     numberedSalesObserved &&
     purchasesObserved &&
-    (isCompanySyncing(company) || recentSalesSearch) &&
+    (syncIsActive(company) || recentSalesSearch) &&
     !company.salesLastError;
   const effectiveCoverageGate: CoverageGate | null = localEngineOperational
     ? {
@@ -2180,7 +2180,7 @@ function Documents({
         ready: true,
         sales_operational: true,
         saved_sales_count: coverageGate?.saved_sales_count ?? sales.length,
-        engine_state: isCompanySyncing(company) ? 'searching' : 'monitoring',
+        engine_state: syncIsActive(company) ? 'searching' : 'monitoring',
         last_search_at: coverageGate?.last_search_at || company.salesLastCompletedAt || company.salesLastStartedAt,
       }
     : coverageGate;
@@ -2349,7 +2349,7 @@ function Documents({
             latestDocument={latestSalesDocument}
             lastSearchAt={company.salesLastCompletedAt || company.salesLastStartedAt}
             salesCount={sales.length}
-            searching={isCompanySyncing(company)}
+            searching={syncIsActive(company)}
           />
         )}
       />
