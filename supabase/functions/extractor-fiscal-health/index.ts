@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.0';
 import { documentAccess } from '../_shared/extractor-access.ts';
+import { fiscalSalesCoverage } from '../_shared/fiscal-coverage.ts';
 import { consume, limited } from '../_shared/rate-limit.ts';
 
 const cors = {
@@ -318,13 +319,10 @@ Deno.serve(async req => {
         row.coverage_status === 'covered' &&
         row.source_confirmed === true
       );
-      const salesReady = coverage.some((row: any) =>
-        row.direction === 'saida' &&
-        ['required', 'observed'].includes(String(row.applicability || '')) &&
-        ['nfe55', 'nfce65', 'nfse'].includes(String(row.document_type || '')) &&
-        row.coverage_status === 'covered' &&
-        row.source_confirmed === true
-      );
+      // NFS-e has its own national source and no numbered 55/65 sequence. A
+      // covered service-note source cannot prove that merchandise sales work.
+      const salesCoverage = fiscalSalesCoverage(coverage);
+      const salesReady = salesCoverage.numberedReady;
       const salesStatus = String(salesState?.status || '').toLowerCase();
       const activeSync = ['queued', 'running', 'discovering', 'bootstrap_window', 'reconciling'].some(value => salesStatus.includes(value));
       const sequenceStatus = ['running', 'discovering', 'bootstrap_window', 'reconciling', 'idle', 'completed', 'success']
@@ -407,6 +405,7 @@ Deno.serve(async req => {
         evidence: {
           purchases_confirmed: purchaseReady,
           sales_confirmed: salesReady,
+          service_sales_confirmed: salesCoverage.serviceReady,
           sales_operational: salesOperational,
           saved_sales_count: savedSalesCount,
           reference_ready: referenceReady,

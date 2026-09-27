@@ -32,6 +32,7 @@ import {
   salesReferenceFromFile,
   type SalesReferenceMethod,
 } from '@/lib/extractor/salesReference';
+import { fiscalSalesCoverage } from '../../supabase/functions/_shared/fiscal-coverage';
 import '@/styles/fiscal-extractor.css';
 import '@/styles/fiscal-extractor-polish.css';
 import '@/styles/fiscal-extractor-final.css';
@@ -2046,8 +2047,24 @@ function Documents({
         body: { action: 'coverage_status', company_id: company.id },
       });
       if (error) throw error;
-      setCoverage(Array.isArray(data?.coverage) ? data.coverage : []);
-      setCoverageGate(data?.gate || null);
+      const rows = Array.isArray(data?.coverage) ? data.coverage : [];
+      const remoteGate = data?.gate || null;
+      const numberedSalesReady = fiscalSalesCoverage(rows).numberedReady;
+
+      setCoverage(rows);
+      // Defense in depth for older Edge Function versions: NFS-e coverage alone
+      // cannot unlock the model 55/65 sales experience.
+      setCoverageGate(remoteGate?.ready && !numberedSalesReady
+        ? {
+            ready: false,
+            status: 'needs_reference',
+            title: 'Ajude-nos com uma nota de referência',
+            message: 'Envie uma única NF-e ou NFC-e de venda desta empresa. A chave, XML, DANFE ou QR Code é suficiente para localizarmos as demais automaticamente.',
+            automatic_discovery: false,
+            accepts_reference: true,
+            last_checked_at: remoteGate.last_checked_at || new Date().toISOString(),
+          }
+        : remoteGate);
     } catch {
       setCoverageGate(current => current || {
         ready: false,
