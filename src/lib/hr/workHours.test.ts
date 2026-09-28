@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { calculateWorkHours, emptyWorkHoursForm, formatMinutes, parseHoursToMinutes } from './workHours';
+import {
+  calculateWorkHours,
+  emptyWeeklySchedule,
+  emptyWorkHoursForm,
+  formatMinutes,
+  parseHoursToMinutes,
+  scheduleDayMinutes,
+  weeklyScheduleMinutes,
+} from './workHours';
 
 describe('workHours', () => {
   it('parses HH:MM and decimal hours', () => {
@@ -7,6 +15,36 @@ describe('workHours', () => {
     expect(parseHoursToMinutes('1h15')).toBe(75);
     expect(parseHoursToMinutes('2,5')).toBe(150);
     expect(formatMinutes(510)).toBe('08:30');
+  });
+
+  it('calculates a weekly schedule day by day', () => {
+    const schedule = emptyWeeklySchedule().map(day => ({
+      ...day,
+      entry1: day.active ? '08:00' : '',
+      exit1: day.active ? '12:00' : '',
+      entry2: day.active ? '13:00' : '',
+      exit2: day.active ? '17:00' : '',
+    }));
+
+    expect(scheduleDayMinutes(schedule[0])).toBe(480);
+    expect(weeklyScheduleMinutes(schedule)).toBe(2400);
+    expect(formatMinutes(weeklyScheduleMinutes(schedule))).toBe('40:00');
+
+    const saturday = schedule.find(day => day.key === 'saturday')!;
+    expect(scheduleDayMinutes(saturday)).toBe(0);
+  });
+
+  it('supports a shift that crosses midnight', () => {
+    const day = {
+      ...emptyWeeklySchedule()[0],
+      active: true,
+      entry1: '22:00',
+      exit1: '02:00',
+      entry2: '',
+      exit2: '',
+    };
+
+    expect(scheduleDayMinutes(day)).toBe(240);
   });
 
   it('calculates monthly salary, overtime and deductions', () => {
