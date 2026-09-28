@@ -6,6 +6,34 @@ export type MoneyAdjustment = {
   amount: number;
 };
 
+export type WeekdayKey =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
+export type WeeklyDaySchedule = {
+  key: WeekdayKey;
+  active: boolean;
+  entry1: string;
+  exit1: string;
+  entry2: string;
+  exit2: string;
+};
+
+export const WEEKDAYS: Array<{ key: WeekdayKey; label: string; short: string }> = [
+  { key: 'monday', label: 'Segunda-feira', short: 'Seg' },
+  { key: 'tuesday', label: 'Terça-feira', short: 'Ter' },
+  { key: 'wednesday', label: 'Quarta-feira', short: 'Qua' },
+  { key: 'thursday', label: 'Quinta-feira', short: 'Qui' },
+  { key: 'friday', label: 'Sexta-feira', short: 'Sex' },
+  { key: 'saturday', label: 'Sábado', short: 'Sáb' },
+  { key: 'sunday', label: 'Domingo', short: 'Dom' },
+];
+
 export type WorkHoursForm = {
   employmentType: EmploymentType;
   baseSalary: number;
@@ -28,6 +56,7 @@ export type WorkHoursForm = {
   bankPositive: string;
   bankNegative: string;
   settleBank: boolean;
+  weeklySchedule: WeeklyDaySchedule[];
   otherAdditions: MoneyAdjustment[];
   otherDeductions: MoneyAdjustment[];
 };
@@ -99,6 +128,42 @@ export function formatMinutes(minutes: number) {
   const hours = Math.floor(safe / 60);
   const rest = safe % 60;
   return `${String(hours).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
+}
+
+export function clockTimeToMinutes(value: string) {
+  const match = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+export function intervalClockMinutes(start: string, end: string) {
+  const from = clockTimeToMinutes(start);
+  const to = clockTimeToMinutes(end);
+  if (from === null || to === null) return 0;
+  return to >= from ? to - from : 24 * 60 - from + to;
+}
+
+export function scheduleDayMinutes(day: WeeklyDaySchedule) {
+  if (!day?.active) return 0;
+  return intervalClockMinutes(day.entry1, day.exit1) + intervalClockMinutes(day.entry2, day.exit2);
+}
+
+export function weeklyScheduleMinutes(schedule: WeeklyDaySchedule[]) {
+  return (schedule || []).reduce((sum, day) => sum + scheduleDayMinutes(day), 0);
+}
+
+export function emptyWeeklySchedule(): WeeklyDaySchedule[] {
+  return WEEKDAYS.map((day, index) => ({
+    key: day.key,
+    active: index < 5,
+    entry1: '',
+    exit1: '',
+    entry2: '',
+    exit2: '',
+  }));
 }
 
 export function formatCurrency(value: number) {
@@ -307,6 +372,7 @@ export function emptyWorkHoursForm(): WorkHoursForm {
     bankPositive: '',
     bankNegative: '',
     settleBank: false,
+    weeklySchedule: emptyWeeklySchedule(),
     otherAdditions: [],
     otherDeductions: [],
   };
