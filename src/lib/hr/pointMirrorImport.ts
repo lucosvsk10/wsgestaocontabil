@@ -46,16 +46,16 @@ const onlyDigits = (value: string) => String(value || '').replace(/\D/g, '');
 
 const normalizeDate = (value: string) => {
   const raw = clean(value);
-  const m = raw.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+  const match = raw.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  return match ? match[3] + '-' + match[2] + '-' + match[1] : '';
 };
 
-const escapeRegex = (value: string) => value.replace(/[.*+?^$()|[]\]/g, '\$&');
+const escapeRegex = (value: string) => value.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
 
 const capture = (text: string, label: string, nextLabels: string[]) => {
   const next = nextLabels.map(escapeRegex).join('|');
   const re = new RegExp(
-    `${escapeRegex(label)}\s*:\s*(.*?)(?=\s+(?:${next})\s*:|$)`,
+    escapeRegex(label) + '\\s*:\\s*(.*?)(?=\\s+(?:' + next + ')\\s*:|$)',
     'i',
   );
   return clean(text.match(re)?.[1] || '');
@@ -64,27 +64,35 @@ const capture = (text: string, label: string, nextLabels: string[]) => {
 function medianClock(values: string[]) {
   const minutes = values
     .map(value => {
-      const m = value.match(/^(d{2}):(d{2})$/);
-      return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+      const match = value.match(/^(\d{2}):(\d{2})$/);
+      return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
     })
     .filter(Number.isFinite)
     .sort((a, b) => a - b) as number[];
+
   if (!minutes.length) return '';
   const mid = Math.floor(minutes.length / 2);
   const value = minutes.length % 2 ? minutes[mid] : Math.round((minutes[mid - 1] + minutes[mid]) / 2);
-  return `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+  return String(Math.floor(value / 60)).padStart(2, '0') + ':' + String(value % 60).padStart(2, '0');
 }
 
 export function inferWeeklySchedule(punches: ImportedPunchDay[]): WeeklyDaySchedule[] {
   const base = emptyWeeklySchedule().map(day => ({ ...day, active: false }));
+
   return base.map(day => {
-    const matching = punches.filter(item => WEEKDAY_MAP[item.weekdayLabel] === day.key && item.punches.length >= 2);
+    const matching = punches.filter(
+      item => WEEKDAY_MAP[item.weekdayLabel] === day.key && item.punches.length >= 2,
+    );
     if (!matching.length) return day;
 
     const first = matching.map(item => item.punches[0]).filter(Boolean);
     const last = matching.map(item => item.punches[item.punches.length - 1]).filter(Boolean);
-    const middleOut = matching.filter(item => item.punches.length >= 4).map(item => item.punches[1]);
-    const middleIn = matching.filter(item => item.punches.length >= 4).map(item => item.punches[item.punches.length - 2]);
+    const middleOut = matching
+      .filter(item => item.punches.length >= 4)
+      .map(item => item.punches[1]);
+    const middleIn = matching
+      .filter(item => item.punches.length >= 4)
+      .map(item => item.punches[item.punches.length - 2]);
 
     return {
       ...day,
@@ -99,7 +107,7 @@ export function inferWeeklySchedule(punches: ImportedPunchDay[]): WeeklyDaySched
 
 export function parsePointMirrorPage(text: string, pageNumber = 1): PointMirrorEmployee | null {
   const flat = clean(text);
-  if (!/Relat[oó]rio Espelho Ponto/i.test(flat) || !/Nomes*:/i.test(flat) || !/CPFs*:/i.test(flat)) {
+  if (!/Relat[oó]rio Espelho Ponto/i.test(flat) || !/Nome\s*:/i.test(flat) || !/CPF\s*:/i.test(flat)) {
     return null;
   }
 
@@ -115,17 +123,20 @@ export function parsePointMirrorPage(text: string, pageNumber = 1): PointMirrorE
   if (!name || !cpf) return null;
 
   const periodRaw = get('Período consultado');
-  const periodDates = [...periodRaw.matchAll(/d{2}/d{2}/d{4}/g)].map(match => normalizeDate(match[0]));
+  const periodDates = [...periodRaw.matchAll(/\d{2}\/\d{2}\/\d{4}/g)].map(match =>
+    normalizeDate(match[0]),
+  );
 
-  const dayRe = /(Seg|Ter|Qua|Qui|Sex|Sab|Sáb|Dom)s*-s*(d{2})/(d{2})s*((?:(?:[01]d|2[0-3]):[0-5]d(?:s+|$))*)/g;
+  const dayRe = /\b(Seg|Ter|Qua|Qui|Sex|Sab|Sáb|Dom)\s*-\s*(\d{2})\/(\d{2})\s*((?:(?:[01]\d|2[0-3]):[0-5]\d(?:\s+|$))*)/g;
   const punches: ImportedPunchDay[] = [];
   let match: RegExpExecArray | null;
-  const year = periodDates[0]?.slice(0, 4) || new Date().getFullYear().toString();
+  const year = periodDates[0]?.slice(0, 4) || String(new Date().getFullYear());
+
   while ((match = dayRe.exec(flat))) {
-    const times = [...match[4].matchAll(/(?:[01]d|2[0-3]):[0-5]d/g)].map(item => item[0]);
+    const times = [...match[4].matchAll(/(?:[01]\d|2[0-3]):[0-5]\d/g)].map(item => item[0]);
     punches.push({
       weekdayLabel: match[1],
-      date: `${year}-${match[3]}-${match[2]}`,
+      date: year + '-' + match[3] + '-' + match[2],
       punches: times,
     });
   }
@@ -152,6 +163,7 @@ export function parsePointMirrorPage(text: string, pageNumber = 1): PointMirrorE
 
 function pageItemsToLines(items: any[]) {
   const rows = new Map<number, Array<{ x: number; text: string }>>();
+
   items.forEach((item: any) => {
     const text = clean(item?.str || '');
     if (!text) return;
@@ -165,13 +177,13 @@ function pageItemsToLines(items: any[]) {
   return [...rows.entries()]
     .sort((a, b) => b[0] - a[0])
     .map(([, parts]) => parts.sort((a, b) => a.x - b.x).map(part => part.text).join(' '))
-    .join('
-');
+    .join('\n');
 }
 
 export async function readPointMirrorPdf(file: File): Promise<PointMirrorImportResult> {
   const pdfjs: any = await import('pdfjs-dist');
   const workerModule: any = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+
   if (pdfjs.GlobalWorkerOptions) {
     pdfjs.GlobalWorkerOptions.workerSrc = workerModule.default || workerModule;
   }
@@ -190,15 +202,17 @@ export async function readPointMirrorPdf(file: File): Promise<PointMirrorImportR
   }
 
   if (!employees.length) {
-    warnings.push('Nenhum funcionário foi identificado no PDF. Confirme se o arquivo segue o modelo Relatório Espelho Ponto.');
+    warnings.push(
+      'Nenhum funcionário foi identificado no PDF. Confirme se o arquivo segue o modelo Relatório Espelho Ponto.',
+    );
   }
 
   const seen = new Set<string>();
   employees.forEach(employee => {
     const key = employee.cpf || employee.name.toLowerCase();
-    if (seen.has(key)) warnings.push(`Funcionário repetido no arquivo: ${employee.name}.`);
+    if (seen.has(key)) warnings.push('Funcionário repetido no arquivo: ' + employee.name + '.');
     seen.add(key);
-    if (!employee.punches.length) warnings.push(`Sem marcações identificadas para ${employee.name}.`);
+    if (!employee.punches.length) warnings.push('Sem marcações identificadas para ' + employee.name + '.');
   });
 
   return { employees, warnings };
