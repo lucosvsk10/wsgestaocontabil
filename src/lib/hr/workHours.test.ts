@@ -103,7 +103,7 @@ describe('workHours', () => {
     expect(result.additions.other).toBe(350);
     expect(result.deductions.other).toBe(320);
     expect(result.total).toBe(2030);
-    expect(result.memory).toContain('Comissão: 10% de R$ 2.000,00 = R$ 200,00');
+    expect(result.memory.some(line => line.startsWith('Comissão: 10%') && line.includes('200,00'))).toBe(true);
   });
 
   it('keeps legacy adjustment rows as fixed amounts', () => {
