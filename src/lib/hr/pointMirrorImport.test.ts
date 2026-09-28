@@ -21,7 +21,7 @@ describe('pointMirrorImport', () => {
       'Seg - 03/08 08:00 13:07 14:03 17:56',
       'Ter - 04/08 08:00 11:54 14:00 17:54',
       'Qua - 05/08 08:00 12:00 14:00 18:02',
-    ].join('\\n');
+    ].join('\n');
 
     const result = parsePointMirrorPage(text, 1);
     expect(result).not.toBeNull();
