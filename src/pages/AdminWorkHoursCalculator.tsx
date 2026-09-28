@@ -147,6 +147,41 @@ function writeLocal(key: string, value: unknown) {
   }
 }
 
+function migrateLegacyLocalHrData(userId: string) {
+  try {
+    const employeePrefix = `ws:hr:employees:${userId}:`;
+    const calculationPrefix = `ws:hr:calculations:${userId}:`;
+    const employeesById = new Map<string, EmployeeRow>();
+    const calculationsByKey = new Map<string, CalculationRow>();
+
+    const currentEmployees = readLocal<EmployeeRow[]>(localKey('employees', userId), []);
+    currentEmployees.forEach(item => employeesById.set(item.id, item));
+    const currentCalculations = readLocal<CalculationRow[]>(localKey('calculations', userId), []);
+    currentCalculations.forEach(item =>
+      calculationsByKey.set(`${item.employee_id}:${item.competence}`, item),
+    );
+
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index) || '';
+      if (key.startsWith(employeePrefix)) {
+        readLocal<EmployeeRow[]>(key, []).forEach(item => employeesById.set(item.id, item));
+      }
+      if (key.startsWith(calculationPrefix)) {
+        readLocal<CalculationRow[]>(key, []).forEach(item =>
+          calculationsByKey.set(`${item.employee_id}:${item.competence}`, item),
+        );
+      }
+    }
+
+    if (employeesById.size) writeLocal(localKey('employees', userId), [...employeesById.values()]);
+    if (calculationsByKey.size) {
+      writeLocal(localKey('calculations', userId), [...calculationsByKey.values()]);
+    }
+  } catch {
+    // Migration is best effort and never blocks the calculator.
+  }
+}
+
 function isMissingHrStorage(error: any) {
   const text = String(error?.message || error?.details || '').toLowerCase();
   return (
@@ -585,6 +620,8 @@ export default function AdminWorkHoursCalculator() {
       return;
     }
 
+    migrateLegacyLocalHrData(user.id);
+
     const last = readLocal<{ employeeId?: string; competence?: string }>(
       lastKey(user.id),
       {},
@@ -897,6 +934,278 @@ export default function AdminWorkHoursCalculator() {
     );
   };
 
+  const importPointMirrorEmployees = async (
+    imported: PointMirrorEmployee[],
+    fileName: string,
+  ) => {
+    if (!user?.id || !imported.length) return;
+
+    const now = new Date().toISOString();
+    let workingEmployees = [...employees];
+    let workingHistory = [...history];
+    let forceLocal = storageMode === 'local';
+
+    const persistLocal = () => {
+      writeLocal(localKey('employees', user.id), workingEmployees);
+      writeLocal(localKey('calculations', user.id), workingHistory);
+      setEmployees([...workingEmployees].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
+      setHistory(
+        [...workingHistory].sort(
+          (a, b) =>
+            b.competence.localeCompare(a.competence) ||
+            a.employee_name_snapshot.localeCompare(b.employee_name_snapshot, 'pt-BR'),
+        ),
+      );
+    };
+
+    for (const item of imported) {
+      const normalizedCpf = item.cpf.replace(/\D/g, '');
+      let employee =
+        workingEmployees.find(
+          row => normalizedCpf && String(row.cpf || '').replace(/\D/g, '') === normalizedCpf,
+        ) ||
+        workingEmployees.find(
+          row => row.name.trim().toLowerCase() === item.name.trim().toLowerCase(),
+        ) ||
+        null;
+
+      const metadata = {
+        source: 'point_mirror_pdf',
+        source_file: fileName,
+        source_page: item.sourcePage,
+        imported_at: now,
+        employer_name: item.employerName,
+        employer_cnpj: item.employerCnpj,
+        period_start: item.periodStart,
+        period_end: item.periodEnd,
+      };
+
+      if (!employee) {
+        const localEmployee: EmployeeRow = {
+          id: crypto.randomUUID(),
+          company_id: null,
+          name: item.name,
+          cpf: normalizedCpf || null,
+          employment_type: 'monthly',
+          base_salary: NATIONAL_MINIMUM_WAGE_2026,
+          hourly_rate: 0,
+          monthly_hours: 220,
+          daily_hours: 8,
+          absence_day_divisor: 30,
+          overtime_50_percent: 50,
+          overtime_100_percent: 100,
+          night_percent: 20,
+          holiday_percent: 100,
+          weekly_schedule: item.suggestedWeeklySchedule,
+          active: true,
+          registration: item.registration || null,
+          pis: item.pis || null,
+          admission_date: item.admissionDate || null,
+          role_title: item.role || null,
+          department: item.department || null,
+          employer_name: item.employerName || null,
+          employer_cnpj: item.employerCnpj || null,
+          bank_hours_start_date: item.bankHoursStartDate || null,
+          schedule_label: item.scheduleLabel || null,
+          source_metadata: metadata,
+          created_at: now,
+          updated_at: now,
+        };
+
+        if (!forceLocal) {
+          const { data, error } = await (supabase as any)
+            .from('hr_employees')
+            .insert({
+              company_id: null,
+              name: localEmployee.name,
+              cpf: localEmployee.cpf,
+              employment_type: localEmployee.employment_type,
+              base_salary: localEmployee.base_salary,
+              hourly_rate: localEmployee.hourly_rate,
+              monthly_hours: localEmployee.monthly_hours,
+              daily_hours: localEmployee.daily_hours,
+              absence_day_divisor: localEmployee.absence_day_divisor,
+              overtime_50_percent: localEmployee.overtime_50_percent,
+              overtime_100_percent: localEmployee.overtime_100_percent,
+              night_percent: localEmployee.night_percent,
+              holiday_percent: localEmployee.holiday_percent,
+              weekly_schedule: localEmployee.weekly_schedule,
+              active: true,
+              registration: localEmployee.registration,
+              pis: localEmployee.pis,
+              admission_date: localEmployee.admission_date,
+              role_title: localEmployee.role_title,
+              department: localEmployee.department,
+              employer_name: localEmployee.employer_name,
+              employer_cnpj: localEmployee.employer_cnpj,
+              bank_hours_start_date: localEmployee.bank_hours_start_date,
+              schedule_label: localEmployee.schedule_label,
+              source_metadata: metadata,
+              created_by: user.id,
+              updated_by: user.id,
+            })
+            .select('*')
+            .single();
+
+          if (error) {
+            if (isMissingHrStorage(error)) {
+              forceLocal = true;
+              setStorageMode('local');
+              employee = localEmployee;
+            } else {
+              throw error;
+            }
+          } else {
+            employee = data as EmployeeRow;
+          }
+        } else {
+          employee = localEmployee;
+        }
+
+        workingEmployees.push(employee);
+      } else {
+        const currentSchedule = normalizeWeeklySchedule(employee.weekly_schedule);
+        const hasConfiguredSchedule = currentSchedule.some(
+          day => day.active && (day.entry1 || day.exit1 || day.entry2 || day.exit2),
+        );
+        const patch = {
+          name: item.name || employee.name,
+          cpf: normalizedCpf || employee.cpf,
+          registration: item.registration || employee.registration || null,
+          pis: item.pis || employee.pis || null,
+          admission_date: item.admissionDate || employee.admission_date || null,
+          role_title: item.role || employee.role_title || null,
+          department: item.department || employee.department || null,
+          employer_name: item.employerName || employee.employer_name || null,
+          employer_cnpj: item.employerCnpj || employee.employer_cnpj || null,
+          bank_hours_start_date: item.bankHoursStartDate || employee.bank_hours_start_date || null,
+          schedule_label: item.scheduleLabel || employee.schedule_label || null,
+          weekly_schedule: hasConfiguredSchedule
+            ? employee.weekly_schedule
+            : item.suggestedWeeklySchedule,
+          source_metadata: metadata,
+          updated_at: now,
+        };
+
+        if (!forceLocal) {
+          const { data, error } = await (supabase as any)
+            .from('hr_employees')
+            .update({ ...patch, updated_by: user.id })
+            .eq('id', employee.id)
+            .select('*')
+            .single();
+
+          if (error) {
+            if (isMissingHrStorage(error)) {
+              forceLocal = true;
+              setStorageMode('local');
+              employee = { ...employee, ...patch };
+            } else {
+              throw error;
+            }
+          } else {
+            employee = data as EmployeeRow;
+          }
+        } else {
+          employee = { ...employee, ...patch };
+        }
+
+        workingEmployees = workingEmployees.map(row => (row.id === employee!.id ? employee! : row));
+      }
+
+      const competenceValue = (item.periodStart || currentCompetence()).slice(0, 7);
+      const importedForm = employeeDefaults(employee);
+      importedForm.weeklySchedule = normalizeWeeklySchedule(
+        employee.weekly_schedule || item.suggestedWeeklySchedule,
+      );
+      const importedResult = calculateWorkHours(importedForm);
+
+      const existingCalculation = workingHistory.find(
+        row =>
+          row.employee_id === employee!.id &&
+          row.competence.slice(0, 7) === competenceValue,
+      );
+
+      const localCalculation: CalculationRow = {
+        id: existingCalculation?.id || crypto.randomUUID(),
+        company_id: null,
+        employee_id: employee.id,
+        competence: competenceDate(competenceValue),
+        status: 'draft',
+        employee_name_snapshot: employee.name,
+        form_data: existingCalculation?.form_data || importedForm,
+        result_data: existingCalculation?.result_data || importedResult,
+        source_type: 'point_mirror_pdf',
+        source_metadata: metadata,
+        imported_punches: item.punches,
+        created_at: existingCalculation?.created_at || now,
+        updated_at: now,
+        finalized_at: existingCalculation?.finalized_at || null,
+      };
+
+      if (!forceLocal) {
+        const { data, error } = await (supabase as any)
+          .from('hr_work_hour_calculations')
+          .upsert(
+            {
+              company_id: null,
+              employee_id: employee.id,
+              competence: competenceDate(competenceValue),
+              status: existingCalculation?.status || 'draft',
+              employee_name_snapshot: employee.name,
+              form_data: existingCalculation?.form_data || importedForm,
+              result_data: existingCalculation?.result_data || importedResult,
+              source_type: 'point_mirror_pdf',
+              source_metadata: metadata,
+              imported_punches: item.punches,
+              updated_by: user.id,
+              ...(existingCalculation ? {} : { created_by: user.id }),
+            },
+            { onConflict: 'employee_id,competence' },
+          )
+          .select('*')
+          .single();
+
+        if (error) {
+          if (isMissingHrStorage(error)) {
+            forceLocal = true;
+            setStorageMode('local');
+          } else {
+            throw error;
+          }
+        } else {
+          Object.assign(localCalculation, data);
+        }
+      }
+
+      const calcIndex = workingHistory.findIndex(
+        row =>
+          row.employee_id === employee!.id &&
+          row.competence.slice(0, 7) === competenceValue,
+      );
+      if (calcIndex >= 0) workingHistory[calcIndex] = localCalculation;
+      else workingHistory.push(localCalculation);
+    }
+
+    persistLocal();
+
+    if (!forceLocal) {
+      await loadEmployees();
+    }
+
+    setView('history');
+    setMessage(
+      imported.length +
+        ' funcionário' +
+        (imported.length === 1 ? '' : 's') +
+        ' importado' +
+        (imported.length === 1 ? '' : 's') +
+        ' e adicionado' +
+        (imported.length === 1 ? '' : 's') +
+        ' ao Controle como rascunho.',
+    );
+  };
+
   const duplicatePrevious = () => {
     if (!employeeId) {
       setMessage('Selecione um funcionário.');
@@ -975,7 +1284,7 @@ export default function AdminWorkHoursCalculator() {
         <AdminPageHeader
           eyebrow="Departamento Pessoal"
           title="Calculadora de horas"
-          description="Configure a jornada semanal, registre apenas as ocorrências do mês e confira o resultado em uma tela separada."
+          description="Área independente do seletor de empresas do ADM. Cadastre funcionários, importe espelhos de ponto, calcule e acompanhe todos os rascunhos em um único controle."
         />
 
         {message && (
@@ -1045,6 +1354,12 @@ export default function AdminWorkHoursCalculator() {
 <span className="capitalize">{formatCompetence(competenceDate(competence))}</span>
                   <span>•</span>
                   <span>{statusLabel}</span>
+                  {currentEmployee.employer_name && (
+                    <>
+                      <span>•</span>
+                      <span>{currentEmployee.employer_name}</span>
+                    </>
+                  )}
                   {weeklyMinutes > 0 && (
                     <>
                       <span>•</span>
@@ -1165,7 +1480,12 @@ export default function AdminWorkHoursCalculator() {
               <AdminSection className="overflow-visible">
                 <ViewTabs value={view} onChange={setView} />
 
-                {view !== 'history' && (!employeeId || !currentEmployee) ? (
+                {view === 'import' ? (
+                  <PointMirrorImportPanel
+                    employees={employees}
+                    onImport={importPointMirrorEmployees}
+                  />
+                ) : view !== 'history' && (!employeeId || !currentEmployee) ? (
                   <AdminEmptyState
                     icon={<Clock3 className="h-7 w-7" />}
                     title="Selecione um funcionário"
