@@ -8,9 +8,9 @@ import { FiscalHealthAlertPopupContainer } from "@/components/notifications/Fisc
 import { Button } from "@/components/ui/button";
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 
-interface AdminLayoutProps { children: ReactNode; }
+interface AdminLayoutProps { children: ReactNode; showCompanySelector?: boolean; }
 
-export const AdminLayout = ({ children }: AdminLayoutProps) => {
+export const AdminLayout = ({ children, showCompanySelector = true }: AdminLayoutProps) => {
   const { isMobile, sidebarOpen, setSidebarOpen, handleSidebarClose } = useAdminLayout();
   const { toggleSidebar, getToggleButtonProps } = useSidebarToggle({ isMobile, sidebarOpen, setSidebarOpen });
   const toggleButtonProps = getToggleButtonProps();
@@ -19,7 +19,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     <div className="pro-ui flex min-h-screen bg-background text-foreground transition-colors duration-200">
       <AdminSidebar open={sidebarOpen} onClose={handleSidebarClose} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <AdminHeader sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} toggleSidebar={toggleSidebar} />
+        <AdminHeader sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} toggleSidebar={toggleSidebar} showCompanySelector={showCompanySelector} />
 
         <Button
           variant="ghost"
