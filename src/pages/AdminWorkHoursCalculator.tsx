@@ -20,6 +20,7 @@ import {
   AdminSection,
 } from '@/components/admin/ui/AdminPage';
 import WeeklyScheduleEditor from '@/components/admin/hr/WeeklyScheduleEditor';
+import MonthlyCalculationsTable from '@/components/admin/hr/MonthlyCalculationsTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCompanySelection } from '@/contexts/CompanySelectionContext';
@@ -31,6 +32,7 @@ import {
   emptyWorkHoursForm,
   formatCurrency,
   formatMinutes,
+  NATIONAL_MINIMUM_WAGE_2026,
   weeklyScheduleMinutes,
   type EmploymentType,
   type MoneyAdjustment,
@@ -154,7 +156,7 @@ function employeeDefaults(employee: EmployeeRow): WorkHoursForm {
   return {
     ...emptyWorkHoursForm(),
     employmentType: employee.employment_type,
-    baseSalary: Number(employee.base_salary || 0),
+    baseSalary: Number(employee.base_salary || NATIONAL_MINIMUM_WAGE_2026),
     hourlyRate: Number(employee.hourly_rate || 0),
     monthlyHours: Number(employee.monthly_hours || 220),
     dailyHours: Number(employee.daily_hours || 8),
@@ -366,7 +368,7 @@ export default function AdminWorkHoursCalculator() {
     name: '',
     cpf: '',
     employmentType: 'monthly' as EmploymentType,
-    baseSalary: 0,
+    baseSalary: NATIONAL_MINIMUM_WAGE_2026,
     hourlyRate: 0,
     monthlyHours: 220,
     dailyHours: 8,
@@ -642,7 +644,7 @@ export default function AdminWorkHoursCalculator() {
       name: '',
       cpf: '',
       employmentType: 'monthly',
-      baseSalary: 0,
+      baseSalary: NATIONAL_MINIMUM_WAGE_2026,
       hourlyRate: 0,
       monthlyHours: 220,
       dailyHours: 8,
@@ -1011,6 +1013,7 @@ export default function AdminWorkHoursCalculator() {
                           setNewEmployee(previous => ({ ...previous, baseSalary: value }))
                         }
                         prefix="R$"
+                        hint="Padrão: salário mínimo nacional de 2026 (R$ 1.621,00)."
                       />
                       <NumberInput
                         label="Jornada mensal"
@@ -1063,13 +1066,13 @@ export default function AdminWorkHoursCalculator() {
               <AdminSection className="overflow-visible">
                 <ViewTabs value={view} onChange={setView} />
 
-                {!employeeId || !currentEmployee ? (
+                {view !== 'history' && (!employeeId || !currentEmployee) ? (
                   <AdminEmptyState
                     icon={<Clock3 className="h-7 w-7" />}
                     title="Selecione um funcionário"
                     description="A jornada, as ocorrências e o histórico serão carregados para a pessoa escolhida."
                   />
-                ) : loadingRecord ? (
+                ) : view !== 'history' && loadingRecord ? (
                   <AdminLoadingState label="Abrindo cálculo..." />
                 ) : view === 'schedule' ? (
                   <div className="p-5">
@@ -1102,6 +1105,7 @@ export default function AdminWorkHoursCalculator() {
                             value={form.baseSalary}
                             onChange={value => updateForm('baseSalary', value)}
                             prefix="R$"
+                            hint="Editável. Quando não houver outro valor cadastrado, parte de R$ 1.621,00 em 2026."
                           />
                           <NumberInput
                             label="Divisor mensal"
@@ -1481,74 +1485,12 @@ export default function AdminWorkHoursCalculator() {
                     </div>
                   </div>
                 ) : (
-                  <div>
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 px-5 py-4">
-                      <div>
-                        <h2 className="text-sm font-semibold">Histórico</h2>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {selectedCompany.company_name}
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => void loadHistory()}>
-                        Atualizar
-                      </Button>
-                    </div>
-
-                    {!history.length ? (
-                      <AdminEmptyState
-                        icon={<History className="h-7 w-7" />}
-                        title="Nenhum cálculo salvo"
-                        description="Rascunhos e cálculos finalizados desta empresa aparecerão aqui."
-                      />
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full min-w-[760px] text-left text-sm">
-                          <thead className="border-b border-border/60 bg-muted/15 text-[10px] uppercase tracking-[.08em] text-muted-foreground">
-                            <tr>
-                              <th className="px-5 py-3 font-semibold">Funcionário</th>
-                              <th className="px-4 py-3 font-semibold">Competência</th>
-                              <th className="px-4 py-3 font-semibold">Status</th>
-                              <th className="px-4 py-3 font-semibold">Acréscimos</th>
-                              <th className="px-4 py-3 font-semibold">Descontos</th>
-                              <th className="px-4 py-3 font-semibold">Total</th>
-                              <th className="px-4 py-3 font-semibold">Atualizado</th>
-                              <th className="px-4 py-3" />
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-border/50">
-                            {history.map(row => (
-                              <tr key={row.id} className="hover:bg-muted/15">
-                                <td className="px-5 py-3 font-medium">{row.employee_name_snapshot}</td>
-                                <td className="px-4 py-3 capitalize">{formatCompetence(row.competence)}</td>
-                                <td className="px-4 py-3">
-                                  <span className="text-xs text-muted-foreground">
-                                    {row.status === 'finalized' ? 'Finalizado' : 'Rascunho'}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                  {formatCurrency(Number(row.result_data?.additionsTotal || 0))}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {formatCurrency(Number(row.result_data?.deductionsTotal || 0))}
-                                </td>
-                                <td className="px-4 py-3 font-semibold">
-                                  {formatCurrency(Number(row.result_data?.total || 0))}
-                                </td>
-                                <td className="px-4 py-3 text-xs text-muted-foreground">
-                                  {formatDateTime(row.updated_at)}
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <Button variant="outline" size="sm" onClick={() => openHistoryRow(row)}>
-                                    Abrir
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
+                  <MonthlyCalculationsTable
+                    companyName={selectedCompany.company_name}
+                    employees={employees}
+                    history={history}
+                    onOpen={openHistoryRow}
+                  />
                 )}
               </AdminSection>
             )}
