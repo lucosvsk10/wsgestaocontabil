@@ -2,10 +2,14 @@ export type EmploymentType = 'monthly' | 'hourly';
 
 export const NATIONAL_MINIMUM_WAGE_2026 = 1621;
 
+export type AdjustmentMode = 'fixed' | 'percent';
+
 export type MoneyAdjustment = {
   id: string;
   label: string;
   amount: number;
+  category?: string;
+  mode?: AdjustmentMode;
 };
 
 export type WeekdayKey =
@@ -105,6 +109,11 @@ const safeNumber = (value: unknown, fallback = 0) => {
 };
 
 const money = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+export function resolveMoneyAdjustment(item: MoneyAdjustment, basePay: number) {
+  const amount = Math.max(0, safeNumber(item?.amount));
+  return money(item?.mode === 'percent' ? (Math.max(0, basePay) * amount) / 100 : amount);
+}
 
 export function parseHoursToMinutes(value: unknown) {
   if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.round(value * 60));
@@ -234,7 +243,7 @@ export function calculateWorkHours(form: WorkHoursForm): WorkHoursResult {
     holidayPremium: money(holidayHours * hourlyRate * (holidayPercent / 100)),
     bankPositive: money(form.settleBank ? bankPositiveHours * hourlyRate : 0),
     other: money(
-      (form.otherAdditions || []).reduce((sum, item) => sum + Math.max(0, safeNumber(item.amount)), 0),
+      (form.otherAdditions || []).reduce((sum, item) => sum + resolveMoneyAdjustment(item, basePay), 0),
     ),
   };
 
@@ -244,7 +253,7 @@ export function calculateWorkHours(form: WorkHoursForm): WorkHoursResult {
     lateHours: money(lateHours * hourlyRate),
     bankNegative: money(form.settleBank ? bankNegativeHours * hourlyRate : 0),
     other: money(
-      (form.otherDeductions || []).reduce((sum, item) => sum + Math.max(0, safeNumber(item.amount)), 0),
+      (form.otherDeductions || []).reduce((sum, item) => sum + resolveMoneyAdjustment(item, basePay), 0),
     ),
   };
 
@@ -326,6 +335,27 @@ export function calculateWorkHours(form: WorkHoursForm): WorkHoursResult {
       )}`,
     );
   }
+
+  (form.otherAdditions || []).forEach(item => {
+    const resolved = resolveMoneyAdjustment(item, basePay);
+    if (!resolved) return;
+    const label = String(item.label || 'Acréscimo');
+    memory.push(
+      item.mode === 'percent'
+        ? `${label}: ${safeNumber(item.amount)}% de ${formatCurrency(basePay)} = ${formatCurrency(resolved)}`
+        : `${label}: ${formatCurrency(resolved)}`,
+    );
+  });
+  (form.otherDeductions || []).forEach(item => {
+    const resolved = resolveMoneyAdjustment(item, basePay);
+    if (!resolved) return;
+    const label = String(item.label || 'Desconto');
+    memory.push(
+      item.mode === 'percent'
+        ? `${label}: ${safeNumber(item.amount)}% de ${formatCurrency(basePay)} = -${formatCurrency(resolved)}`
+        : `${label}: -${formatCurrency(resolved)}`,
+    );
+  });
 
   return {
     hourlyRate,

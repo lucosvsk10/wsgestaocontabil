@@ -33,6 +33,7 @@ import {
   formatCurrency,
   formatMinutes,
   NATIONAL_MINIMUM_WAGE_2026,
+  resolveMoneyAdjustment,
   weeklyScheduleMinutes,
   type EmploymentType,
   type MoneyAdjustment,
@@ -253,56 +254,165 @@ function NumberInput({
   );
 }
 
+const ADDITION_OPTIONS = [
+  ['commission', 'Comissão'],
+  ['gratification', 'Gratificação'],
+  ['bonus', 'Bonificação'],
+  ['prize', 'Prêmio'],
+  ['function_allowance', 'Adicional de função'],
+  ['production', 'Produção'],
+  ['cost_allowance', 'Ajuda de custo'],
+  ['other', 'Outro'],
+] as const;
+
+const DEDUCTION_OPTIONS = [
+  ['salary_advance', 'Adiantamento salarial'],
+  ['transport', 'Vale-transporte'],
+  ['alimony', 'Pensão alimentícia'],
+  ['health_plan', 'Plano de saúde'],
+  ['loan', 'Empréstimo / consignado'],
+  ['contribution', 'Contribuição'],
+  ['authorized', 'Desconto autorizado'],
+  ['other', 'Outro'],
+] as const;
+
 function AdjustmentRows({
   rows,
   onChange,
   onAdd,
   onRemove,
   kind,
+  basePay,
 }: {
   rows: MoneyAdjustment[];
   onChange: (rows: MoneyAdjustment[]) => void;
   onAdd: () => void;
   onRemove: (id: string) => void;
   kind: 'addition' | 'deduction';
+  basePay: number;
 }) {
+  const options = kind === 'addition' ? ADDITION_OPTIONS : DEDUCTION_OPTIONS;
+  const knownCategories = new Set(options.map(([value]) => value));
+
+  const patchRow = (id: string, patch: Partial<MoneyAdjustment>) => {
+    onChange(rows.map(item => (item.id === id ? { ...item, ...patch } : item)));
+  };
+
   return (
-    <div className="space-y-2">
-      {rows.map(row => (
-        <div key={row.id} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px_40px]">
-          <Input
-            value={row.label}
-            onChange={event =>
-              onChange(rows.map(item => (item.id === row.id ? { ...item, label: event.target.value } : item)))
-            }
-            placeholder={kind === 'addition' ? 'Ex.: comissão, gratificação' : 'Ex.: adiantamento, vale'}
-            className="h-10"
-          />
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={row.amount}
-            onChange={event =>
-              onChange(
-                rows.map(item =>
-                  item.id === row.id ? { ...item, amount: numberValue(event.target.value) } : item,
-                ),
-              )
-            }
-            className="h-10"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => onRemove(row.id)}
-            aria-label="Remover lançamento"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ))}
+    <div className="space-y-3">
+      {rows.map(row => {
+        const category = row.category && knownCategories.has(row.category as any) ? row.category : 'other';
+        const mode = row.mode === 'percent' ? 'percent' : 'fixed';
+        const resolved = resolveMoneyAdjustment(row, basePay);
+
+        return (
+          <div key={row.id} className="rounded-lg border border-border/55 p-3">
+            <div className="grid gap-2 md:grid-cols-[minmax(180px,1.25fr)_120px_140px_110px_40px] md:items-end">
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-medium uppercase tracking-[.06em] text-muted-foreground">
+                  Tipo
+                </span>
+                <select
+                  value={category}
+                  onChange={event => {
+                    const nextCategory = event.target.value;
+                    const selected = options.find(([value]) => value === nextCategory);
+                    patchRow(row.id, {
+                      category: nextCategory,
+                      label: nextCategory === 'other' ? '' : selected?.[1] || row.label,
+                    });
+                  }}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  {options.map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-medium uppercase tracking-[.06em] text-muted-foreground">
+                  Forma
+                </span>
+                <select
+                  value={mode}
+                  onChange={event =>
+                    patchRow(row.id, { mode: event.target.value === 'percent' ? 'percent' : 'fixed' })
+                  }
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="fixed">R$ fixo</option>
+                  <option value="percent">% da base</option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-medium uppercase tracking-[.06em] text-muted-foreground">
+                  {mode === 'percent' ? 'Percentual' : 'Valor'}
+                </span>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={row.amount}
+                    onChange={event => patchRow(row.id, { amount: numberValue(event.target.value) })}
+                    className={`h-10 ${mode === 'percent' ? 'pr-8' : 'pl-9'}`}
+                  />
+                  <span
+                    className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs text-muted-foreground ${
+                      mode === 'percent' ? 'right-3' : 'left-3'
+                    }`}
+                  >
+                    {mode === 'percent' ? '%' : 'R$'}
+                  </span>
+                </div>
+              </label>
+
+              <div className="min-w-0">
+                <span className="mb-1 block text-[10px] font-medium uppercase tracking-[.06em] text-muted-foreground">
+                  Calculado
+                </span>
+                <div className="flex h-10 items-center rounded-md bg-muted/25 px-3 text-sm font-semibold tabular-nums">
+                  {kind === 'deduction' ? '-' : '+'}{formatCurrency(resolved)}
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="mb-0 h-10 w-10"
+                onClick={() => onRemove(row.id)}
+                aria-label="Remover lançamento"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {category === 'other' && (
+              <label className="mt-2 block">
+                <span className="mb-1 block text-[10px] font-medium uppercase tracking-[.06em] text-muted-foreground">
+                  Descrição
+                </span>
+                <Input
+                  value={row.label}
+                  onChange={event => patchRow(row.id, { label: event.target.value })}
+                  placeholder={kind === 'addition' ? 'Ex.: bônus especial' : 'Ex.: desconto acordado'}
+                  className="h-9"
+                />
+              </label>
+            )}
+
+            {mode === 'percent' && (
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                {row.amount || 0}% calculado sobre {formatCurrency(basePay)} de salário/base nesta competência.
+              </p>
+            )}
+          </div>
+        );
+      })}
+
       <Button type="button" variant="outline" size="sm" onClick={onAdd}>
         <Plus className="mr-1.5 h-3.5 w-3.5" />
         {kind === 'addition' ? 'Adicionar acréscimo' : 'Adicionar desconto'}
@@ -816,7 +926,7 @@ export default function AdminWorkHoursCalculator() {
   const addAdjustment = (kind: 'otherAdditions' | 'otherDeductions') => {
     updateForm(kind, [
       ...form[kind],
-      { id: crypto.randomUUID(), label: '', amount: 0 },
+      { id: crypto.randomUUID(), label: '', amount: 0, category: 'other', mode: 'fixed' },
     ] as WorkHoursForm[typeof kind]);
   };
 
@@ -1270,7 +1380,7 @@ export default function AdminWorkHoursCalculator() {
                         <div className="mb-3">
                           <p className="text-sm font-semibold">Outros acréscimos</p>
                           <p className="text-xs text-muted-foreground">
-                            Comissão, gratificação ou outro valor pontual.
+                            Escolha o tipo e informe um valor fixo ou percentual da base.
                           </p>
                         </div>
                         <AdjustmentRows
@@ -1279,6 +1389,7 @@ export default function AdminWorkHoursCalculator() {
                           onAdd={() => addAdjustment('otherAdditions')}
                           onRemove={id => removeAdjustment('otherAdditions', id)}
                           kind="addition"
+                          basePay={result.basePay}
                         />
                       </section>
 
@@ -1286,7 +1397,7 @@ export default function AdminWorkHoursCalculator() {
                         <div className="mb-3">
                           <p className="text-sm font-semibold">Outros descontos</p>
                           <p className="text-xs text-muted-foreground">
-                            Adiantamento, vale ou outro valor manual.
+                            Escolha o desconto e informe um valor fixo ou percentual da base.
                           </p>
                         </div>
                         <AdjustmentRows
@@ -1295,6 +1406,7 @@ export default function AdminWorkHoursCalculator() {
                           onAdd={() => addAdjustment('otherDeductions')}
                           onRemove={id => removeAdjustment('otherDeductions', id)}
                           kind="deduction"
+                          basePay={result.basePay}
                         />
                       </section>
                     </div>

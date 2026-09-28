@@ -1,7 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Download, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatCurrency, formatMinutes, type WorkHoursForm } from '@/lib/hr/workHours';
+import {
+  formatCurrency,
+  formatMinutes,
+  resolveMoneyAdjustment,
+  type MoneyAdjustment,
+  type WorkHoursForm,
+} from '@/lib/hr/workHours';
 
 type EmployeeLike = {
   id: string;
@@ -54,6 +60,17 @@ const safeFileName = (value: string) =>
 
 const monthOf = (competence: string) => String(competence || '').slice(5, 7);
 const yearOf = (competence: string) => String(competence || '').slice(0, 4);
+
+const adjustmentSummary = (items: MoneyAdjustment[] | undefined, basePay: number) =>
+  (items || [])
+    .filter(item => resolveMoneyAdjustment(item, basePay) > 0)
+    .map(item => {
+      const resolved = resolveMoneyAdjustment(item, basePay);
+      const label = String(item.label || 'Outro').trim() || 'Outro';
+      const rule = item.mode === 'percent' ? `${item.amount || 0}%` : 'R$ fixo';
+      return `${label} (${rule}): ${formatCurrency(resolved)}`;
+    })
+    .join(' | ');
 
 export default function MonthlyCalculationsTable({ companyName, employees, history, onOpen }: Props) {
   const availableYears = useMemo(() => {
@@ -135,7 +152,15 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
           'Banco positivo (R$)': Number(row.result_data?.additions?.bankPositive || 0),
           'Banco negativo (R$)': Number(row.result_data?.deductions?.bankNegative || 0),
           'Outros acréscimos (R$)': Number(row.result_data?.additions?.other || 0),
+          'Detalhe outros acréscimos': adjustmentSummary(
+            row.form_data?.otherAdditions,
+            Number(row.result_data?.basePay || 0),
+          ),
           'Outros descontos (R$)': Number(row.result_data?.deductions?.other || 0),
+          'Detalhe outros descontos': adjustmentSummary(
+            row.form_data?.otherDeductions,
+            Number(row.result_data?.basePay || 0),
+          ),
           'Total acréscimos': Number(row.result_data?.additionsTotal || 0),
           'Total descontos': Number(row.result_data?.deductionsTotal || 0),
           'Total apurado': Number(row.result_data?.total || 0),
@@ -156,7 +181,11 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
         { wch: 30 },
         { wch: 12 },
         { wch: 12 },
-        ...Array.from({ length: 18 }, () => ({ wch: 18 })),
+        ...Array.from({ length: 10 }, () => ({ wch: 18 })),
+        { wch: 34 },
+        { wch: 18 },
+        { wch: 34 },
+        ...Array.from({ length: 5 }, () => ({ wch: 18 })),
         { wch: 20 },
       ];
 
