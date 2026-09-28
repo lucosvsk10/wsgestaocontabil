@@ -85,6 +85,37 @@ describe('workHours', () => {
     expect(result.total).toBe(1500);
   });
 
+  it('calculates fixed and percentage additions and deductions', () => {
+    const form = {
+      ...emptyWorkHoursForm(),
+      baseSalary: 2000,
+      otherAdditions: [
+        { id: 'a1', label: 'Comissão', amount: 10, mode: 'percent' as const },
+        { id: 'a2', label: 'Prêmio', amount: 150 },
+      ],
+      otherDeductions: [
+        { id: 'd1', label: 'Vale-transporte', amount: 6, mode: 'percent' as const },
+        { id: 'd2', label: 'Adiantamento salarial', amount: 200 },
+      ],
+    };
+
+    const result = calculateWorkHours(form);
+    expect(result.additions.other).toBe(350);
+    expect(result.deductions.other).toBe(320);
+    expect(result.total).toBe(2030);
+    expect(result.memory).toContain('Comissão: 10% de R$ 2.000,00 = R$ 200,00');
+  });
+
+  it('keeps legacy adjustment rows as fixed amounts', () => {
+    const form = {
+      ...emptyWorkHoursForm(),
+      baseSalary: 2000,
+      otherDeductions: [{ id: 'legacy', label: 'Desconto antigo', amount: 75 }],
+    };
+
+    expect(calculateWorkHours(form).deductions.other).toBe(75);
+  });
+
   it('keeps bank hours informational until liquidation is enabled', () => {
     const form = {
       ...emptyWorkHoursForm(),
