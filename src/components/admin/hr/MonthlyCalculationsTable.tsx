@@ -10,6 +10,7 @@ type EmployeeLike = {
 
 export type MonthlyCalculationLike = {
   id: string;
+  company_id: string;
   employee_id: string;
   competence: string;
   status: 'draft' | 'finalized';
