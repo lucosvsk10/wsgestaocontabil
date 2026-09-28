@@ -93,7 +93,7 @@ export default function PointMirrorImportPanel({ employees, onImport }: Props) {
 
   return (
     <div>
-      <div className="border-b border-border/50 px-5 py-4">
+      <div className="border-b border-transparent px-5 py-4">
         <h2 className="text-sm font-semibold">Importar espelho de ponto</h2>
         <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">
           Use o PDF padrão “Relatório Espelho Ponto”. O sistema identifica os funcionários,
@@ -125,7 +125,7 @@ export default function PointMirrorImportPanel({ employees, onImport }: Props) {
         </label>
 
         {message && (
-          <div className="mt-4 rounded-lg border border-border/60 bg-muted/15 px-4 py-3 text-sm">
+          <div className="mt-4 rounded-lg border border-transparent bg-muted/15 px-4 py-3 text-sm">
             {message}
           </div>
         )}
@@ -140,9 +140,9 @@ export default function PointMirrorImportPanel({ employees, onImport }: Props) {
 
         {parsed.length > 0 && (
           <>
-            <div className="mt-6 overflow-x-auto rounded-lg border border-border/60">
+            <div className="mt-6 overflow-x-auto rounded-xl border border-transparent bg-muted/[0.04]">
               <table className="w-full min-w-[1050px] text-left text-sm">
-                <thead className="border-b border-border/60 bg-muted/15 text-[10px] uppercase tracking-[.08em] text-muted-foreground">
+                <thead className="border-b border-transparent bg-muted/15 text-[10px] uppercase tracking-[.08em] text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Funcionário</th>
                     <th className="px-4 py-3 font-semibold">CPF</th>
@@ -155,7 +155,7 @@ export default function PointMirrorImportPanel({ employees, onImport }: Props) {
                     <th className="px-4 py-3 font-semibold">Cadastro</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/45">
+                <tbody className="divide-y divide-transparent">
                   {parsed.map(employee => {
                     const exists = existingCpf.has(employee.cpf);
                     const punchCount = employee.punches.reduce(
@@ -199,7 +199,7 @@ export default function PointMirrorImportPanel({ employees, onImport }: Props) {
               </table>
             </div>
 
-            <div className="mt-5 rounded-lg border border-border/60 bg-muted/10 px-4 py-3 text-xs leading-5 text-muted-foreground">
+            <div className="mt-5 rounded-lg border border-transparent bg-muted/10 px-4 py-3 text-xs leading-5 text-muted-foreground">
               A jornada semanal é uma <b className="text-foreground">sugestão baseada nas marcações recorrentes</b>.
               O PDF traz as batidas realizadas, não uma escala contratual detalhada; por isso ela continua editável
               na aba Jornada antes de finalizar qualquer cálculo.
