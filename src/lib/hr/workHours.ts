@@ -1,5 +1,7 @@
 export type EmploymentType = 'monthly' | 'hourly';
 
+export const NATIONAL_MINIMUM_WAGE_2026 = 1621;
+
 export type MoneyAdjustment = {
   id: string;
   label: string;
@@ -352,7 +354,7 @@ export function calculateWorkHours(form: WorkHoursForm): WorkHoursResult {
 export function emptyWorkHoursForm(): WorkHoursForm {
   return {
     employmentType: 'monthly',
-    baseSalary: 0,
+    baseSalary: NATIONAL_MINIMUM_WAGE_2026,
     hourlyRate: 0,
     monthlyHours: 220,
     dailyHours: 8,
