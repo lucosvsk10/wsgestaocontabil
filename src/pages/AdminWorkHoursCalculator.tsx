@@ -5,6 +5,7 @@ import {
   Clock3,
   Copy,
   History,
+  Upload,
   Plus,
   ReceiptText,
   Save,
@@ -21,9 +22,10 @@ import {
 } from '@/components/admin/ui/AdminPage';
 import WeeklyScheduleEditor from '@/components/admin/hr/WeeklyScheduleEditor';
 import MonthlyCalculationsTable from '@/components/admin/hr/MonthlyCalculationsTable';
+import PointMirrorImportPanel from '@/components/admin/hr/PointMirrorImportPanel';
+import type { PointMirrorEmployee } from '@/lib/hr/pointMirrorImport';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useCompanySelection } from '@/contexts/CompanySelectionContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -43,7 +45,7 @@ import {
 
 type EmployeeRow = {
   id: string;
-  company_id: string;
+  company_id?: string | null;
   name: string;
   cpf: string | null;
   employment_type: EmploymentType;
@@ -58,13 +60,23 @@ type EmployeeRow = {
   holiday_percent: number;
   weekly_schedule?: WeeklyDaySchedule[] | null;
   active: boolean;
+  registration?: string | null;
+  pis?: string | null;
+  admission_date?: string | null;
+  role_title?: string | null;
+  department?: string | null;
+  employer_name?: string | null;
+  employer_cnpj?: string | null;
+  bank_hours_start_date?: string | null;
+  schedule_label?: string | null;
+  source_metadata?: any;
   created_at?: string;
   updated_at?: string;
 };
 
 type CalculationRow = {
   id: string;
-  company_id: string;
+  company_id?: string | null;
   employee_id: string;
   competence: string;
   status: 'draft' | 'finalized';
@@ -74,9 +86,12 @@ type CalculationRow = {
   created_at?: string;
   updated_at?: string;
   finalized_at?: string | null;
+  source_type?: string | null;
+  source_metadata?: any;
+  imported_punches?: any[];
 };
 
-type PageView = 'schedule' | 'events' | 'summary' | 'history';
+type PageView = 'schedule' | 'events' | 'summary' | 'history' | 'import';
 
 const currentCompetence = () => {
   const date = new Date();
@@ -110,12 +125,10 @@ const numberValue = (value: unknown) => {
   return Number.isFinite(next) ? next : 0;
 };
 
-const localKey = (kind: string, companyId: string, userId: string) =>
-  `ws:hr:${kind}:${userId}:${companyId}`;
-const draftKey = (userId: string, companyId: string, employeeId: string, competence: string) =>
-  `ws:hr:hours:draft:${userId}:${companyId}:${employeeId}:${competence}`;
-const lastKey = (userId: string, companyId: string) =>
-  `ws:hr:hours:last:${userId}:${companyId}`;
+const localKey = (kind: string, userId: string) => `ws:hr:global:${kind}:${userId}`;
+const draftKey = (userId: string, employeeId: string, competence: string) =>
+  `ws:hr:global:hours:draft:${userId}:${employeeId}:${competence}`;
+const lastKey = (userId: string) => `ws:hr:global:hours:last:${userId}`;
 
 function readLocal<T>(key: string, fallback: T): T {
   try {
@@ -140,7 +153,10 @@ function isMissingHrStorage(error: any) {
     error?.code === '42P01' ||
     text.includes('hr_employees') ||
     text.includes('hr_work_hour_calculations') ||
-    text.includes('weekly_schedule')
+    text.includes('weekly_schedule') ||
+    text.includes('imported_punches') ||
+    text.includes('source_type') ||
+    (text.includes('company_id') && text.includes('null'))
   );
 }
 
@@ -426,7 +442,8 @@ function ViewTabs({ value, onChange }: { value: PageView; onChange: (view: PageV
     { key: 'schedule', label: 'Jornada', icon: CalendarDays },
     { key: 'events', label: 'Ocorrências', icon: Clock3 },
     { key: 'summary', label: 'Resumo', icon: ReceiptText },
-    { key: 'history', label: 'Histórico', icon: History },
+    { key: 'history', label: 'Controle', icon: History },
+    { key: 'import', label: 'Importar ponto', icon: Upload },
   ];
 
   return (
@@ -456,9 +473,6 @@ function ViewTabs({ value, onChange }: { value: PageView; onChange: (view: PageV
 
 export default function AdminWorkHoursCalculator() {
   const { user } = useAuth();
-  const { selectedCompany } = useCompanySelection();
-  const companyId = selectedCompany?.id || '';
-
   const [view, setView] = useState<PageView>('schedule');
   const [employees, setEmployees] = useState<EmployeeRow[]>([]);
   const [history, setHistory] = useState<CalculationRow[]>([]);
@@ -496,24 +510,16 @@ export default function AdminWorkHoursCalculator() {
 
   const loadHistory = useCallback(
     async (mode = storageMode) => {
-      if (!companyId) {
-        setHistory([]);
-        return;
-      }
       if (mode === 'local') {
         setHistory(
-          readLocal<CalculationRow[]>(
-            localKey('calculations', companyId, user?.id || 'unknown'),
-            [],
-          ),
+          readLocal<CalculationRow[]>(localKey('calculations', user?.id || 'unknown'), []),
         );
         return;
       }
       const { data, error } = await (supabase as any)
         .from('hr_work_hour_calculations')
         .select('*')
-        .eq('company_id', companyId)
-        .order('competence', { ascending: false })
+.order('competence', { ascending: false })
         .order('updated_at', { ascending: false })
         .limit(240);
       if (error) {
@@ -521,7 +527,7 @@ export default function AdminWorkHoursCalculator() {
           setStorageMode('local');
           setHistory(
             readLocal<CalculationRow[]>(
-              localKey('calculations', companyId, user?.id || 'unknown'),
+              localKey('calculations', user?.id || 'unknown'),
               [],
             ),
           );
@@ -532,28 +538,23 @@ export default function AdminWorkHoursCalculator() {
       }
       setHistory((data || []) as CalculationRow[]);
     },
-    [companyId, storageMode, user?.id],
+    [storageMode, user?.id],
   );
 
   const loadEmployees = useCallback(async () => {
-    if (!companyId) {
-      setEmployees([]);
-      return;
-    }
     setLoading(true);
     setMessage('');
     const { data, error } = await (supabase as any)
       .from('hr_employees')
       .select('*')
-      .eq('company_id', companyId)
-      .eq('active', true)
+.eq('active', true)
       .order('name');
 
     if (error) {
       if (isMissingHrStorage(error)) {
         setStorageMode('local');
         setEmployees(
-          readLocal<EmployeeRow[]>(localKey('employees', companyId, user?.id || 'unknown'), []),
+          readLocal<EmployeeRow[]>(localKey('employees', user?.id || 'unknown'), []),
         );
         await loadHistory('local');
       } else {
@@ -567,7 +568,7 @@ export default function AdminWorkHoursCalculator() {
     setEmployees((data || []) as EmployeeRow[]);
     await loadHistory('database');
     setLoading(false);
-  }, [companyId, loadHistory, user?.id]);
+  }, [loadHistory, user?.id]);
 
   useEffect(() => {
     setEmployees([]);
@@ -579,27 +580,27 @@ export default function AdminWorkHoursCalculator() {
     setDirty(false);
     setView('schedule');
 
-    if (!companyId || !user?.id) {
+    if (!user?.id) {
       setEmployeeId('');
       return;
     }
 
     const last = readLocal<{ employeeId?: string; competence?: string }>(
-      lastKey(user.id, companyId),
+      lastKey(user.id),
       {},
     );
     setEmployeeId(last.employeeId || '');
     setCompetence(last.competence || currentCompetence());
     void loadEmployees();
-  }, [companyId, user?.id, loadEmployees]);
+  }, [user?.id, loadEmployees]);
 
   useEffect(() => {
-    if (!user?.id || !companyId) return;
-    writeLocal(lastKey(user.id, companyId), { employeeId, competence });
-  }, [user?.id, companyId, employeeId, competence]);
+    if (!user?.id) return;
+    writeLocal(lastKey(user.id), { employeeId, competence });
+  }, [user?.id, employeeId, competence]);
 
   useEffect(() => {
-    if (!employeeId || !currentEmployee || !companyId || !user?.id) {
+    if (!employeeId || !currentEmployee || !user?.id) {
       setCurrentRecordId(null);
       setRecordStatus('draft');
       if (!employeeId) setForm(emptyWorkHoursForm());
@@ -616,7 +617,7 @@ export default function AdminWorkHoursCalculator() {
       if (storageMode === 'local') {
         saved =
           readLocal<CalculationRow[]>(
-            localKey('calculations', companyId, user.id),
+            localKey('calculations', user.id),
             [],
           ).find(
             row => row.employee_id === employeeId && row.competence.slice(0, 7) === competence,
@@ -625,8 +626,7 @@ export default function AdminWorkHoursCalculator() {
         const { data, error } = await (supabase as any)
           .from('hr_work_hour_calculations')
           .select('*')
-          .eq('company_id', companyId)
-          .eq('employee_id', employeeId)
+.eq('employee_id', employeeId)
           .eq('competence', competenceDate(competence))
           .maybeSingle();
 
@@ -634,7 +634,7 @@ export default function AdminWorkHoursCalculator() {
           setStorageMode('local');
           saved =
             readLocal<CalculationRow[]>(
-              localKey('calculations', companyId, user.id),
+              localKey('calculations', user.id),
               [],
             ).find(
               row => row.employee_id === employeeId && row.competence.slice(0, 7) === competence,
@@ -649,7 +649,7 @@ export default function AdminWorkHoursCalculator() {
       if (!active) return;
 
       const browserDraft = readLocal<WorkHoursForm | null>(
-        draftKey(user.id, companyId, employeeId, competence),
+        draftKey(user.id, employeeId, competence),
         null,
       );
 
@@ -671,12 +671,12 @@ export default function AdminWorkHoursCalculator() {
     return () => {
       active = false;
     };
-  }, [employeeId, competence, currentEmployee?.id, companyId, user?.id, storageMode]);
+  }, [employeeId, competence, currentEmployee?.id, user?.id, storageMode]);
 
   useEffect(() => {
-    if (!dirty || !user?.id || !companyId || !employeeId) return;
-    writeLocal(draftKey(user.id, companyId, employeeId, competence), form);
-  }, [dirty, user?.id, companyId, employeeId, competence, form]);
+    if (!dirty || !user?.id || !employeeId) return;
+    writeLocal(draftKey(user.id, employeeId, competence), form);
+  }, [dirty, user?.id, employeeId, competence, form]);
 
   const updateForm = <K extends keyof WorkHoursForm>(key: K, value: WorkHoursForm[K]) => {
     setForm(previous => ({ ...previous, [key]: value }));
@@ -685,7 +685,7 @@ export default function AdminWorkHoursCalculator() {
   };
 
   const createEmployee = async () => {
-    if (!companyId || !user?.id || !newEmployee.name.trim()) {
+    if (!user?.id || !newEmployee.name.trim()) {
       setMessage('Informe o nome do funcionário.');
       return;
     }
@@ -694,7 +694,7 @@ export default function AdminWorkHoursCalculator() {
     setMessage('');
     const row: EmployeeRow = {
       id: crypto.randomUUID(),
-      company_id: companyId,
+      company_id: null,
       name: newEmployee.name.trim(),
       cpf: newEmployee.cpf.replace(/\D/g, '') || null,
       employment_type: newEmployee.employmentType,
@@ -714,7 +714,7 @@ export default function AdminWorkHoursCalculator() {
     if (storageMode === 'local') {
       const next = [...employees, row].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
       setEmployees(next);
-      writeLocal(localKey('employees', companyId, user.id), next);
+      writeLocal(localKey('employees', user.id), next);
       setEmployeeId(row.id);
     } else {
       const { data, error } = await (supabase as any)
@@ -733,7 +733,7 @@ export default function AdminWorkHoursCalculator() {
           setStorageMode('local');
           const next = [...employees, row].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
           setEmployees(next);
-          writeLocal(localKey('employees', companyId, user.id), next);
+          writeLocal(localKey('employees', user.id), next);
           setEmployeeId(row.id);
         } else {
           setMessage(error.message || 'Não foi possível cadastrar o funcionário.');
@@ -763,7 +763,7 @@ export default function AdminWorkHoursCalculator() {
   };
 
   const persistEmployeeDefaults = async () => {
-    if (!currentEmployee || !user?.id || !companyId) return;
+    if (!currentEmployee || !user?.id) return;
 
     const patch = {
       employment_type: form.employmentType,
@@ -786,15 +786,14 @@ export default function AdminWorkHoursCalculator() {
         employee.id === currentEmployee.id ? { ...employee, ...patch } : employee,
       );
       setEmployees(next);
-      writeLocal(localKey('employees', companyId, user.id), next);
+      writeLocal(localKey('employees', user.id), next);
       return;
     }
 
     const { error } = await (supabase as any)
       .from('hr_employees')
       .update(patch)
-      .eq('id', currentEmployee.id)
-      .eq('company_id', companyId);
+      .eq('id', currentEmployee.id);
 
     if (!error) {
       setEmployees(previous =>
@@ -806,7 +805,7 @@ export default function AdminWorkHoursCalculator() {
   };
 
   const saveCalculation = async (status: 'draft' | 'finalized') => {
-    if (!companyId || !user?.id || !employeeId || !currentEmployee) {
+    if (!user?.id || !employeeId || !currentEmployee) {
       setMessage('Selecione um funcionário antes de salvar.');
       return;
     }
@@ -816,7 +815,7 @@ export default function AdminWorkHoursCalculator() {
     const now = new Date().toISOString();
     const payload: CalculationRow = {
       id: currentRecordId || crypto.randomUUID(),
-      company_id: companyId,
+      company_id: null,
       employee_id: employeeId,
       competence: competenceDate(competence),
       status,
@@ -830,7 +829,7 @@ export default function AdminWorkHoursCalculator() {
     let savedLocally = storageMode === 'local';
     const persistLocalCalculation = () => {
       const rows = readLocal<CalculationRow[]>(
-        localKey('calculations', companyId, user.id),
+        localKey('calculations', user.id),
         [],
       );
       const existingIndex = rows.findIndex(
@@ -842,7 +841,7 @@ export default function AdminWorkHoursCalculator() {
       };
       if (existingIndex >= 0) rows[existingIndex] = persisted;
       else rows.unshift(persisted);
-      writeLocal(localKey('calculations', companyId, user.id), rows);
+      writeLocal(localKey('calculations', user.id), rows);
       setHistory(rows);
       setCurrentRecordId(persisted.id);
     };
@@ -851,7 +850,7 @@ export default function AdminWorkHoursCalculator() {
       persistLocalCalculation();
     } else {
       const dbPayload = {
-        company_id: companyId,
+        company_id: null,
         employee_id: employeeId,
         competence: competenceDate(competence),
         status,
@@ -864,7 +863,7 @@ export default function AdminWorkHoursCalculator() {
       };
       const { data, error } = await (supabase as any)
         .from('hr_work_hour_calculations')
-        .upsert(dbPayload, { onConflict: 'company_id,employee_id,competence' })
+        .upsert(dbPayload, { onConflict: 'employee_id,competence' })
         .select('*')
         .single();
 
@@ -885,7 +884,7 @@ export default function AdminWorkHoursCalculator() {
     }
 
     await persistEmployeeDefaults();
-    localStorage.removeItem(draftKey(user.id, companyId, employeeId, competence));
+    localStorage.removeItem(draftKey(user.id, employeeId, competence));
     setRecordStatus(status);
     setDirty(false);
     setSaving(false);
@@ -971,7 +970,7 @@ export default function AdminWorkHoursCalculator() {
   ] as const;
 
   return (
-    <AdminLayout>
+    <AdminLayout showCompanySelector={false}>
       <AdminPage className="space-y-5">
         <AdminPageHeader
           eyebrow="Departamento Pessoal"
@@ -985,15 +984,7 @@ export default function AdminWorkHoursCalculator() {
           </div>
         )}
 
-        {!selectedCompany ? (
-          <AdminSection>
-            <AdminEmptyState
-              icon={<Clock3 className="h-7 w-7" />}
-              title="Selecione uma empresa no topo"
-              description="A calculadora sempre trabalha dentro da empresa ativa do painel."
-            />
-          </AdminSection>
-        ) : loading ? (
+        {loading ? (
           <AdminSection>
             <AdminLoadingState label="Carregando Departamento Pessoal..." />
           </AdminSection>
@@ -1051,9 +1042,7 @@ export default function AdminWorkHoursCalculator() {
 
               {employeeId && currentEmployee && (
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span>{selectedCompany.company_name}</span>
-                  <span>•</span>
-                  <span className="capitalize">{formatCompetence(competenceDate(competence))}</span>
+<span className="capitalize">{formatCompetence(competenceDate(competence))}</span>
                   <span>•</span>
                   <span>{statusLabel}</span>
                   {weeklyMinutes > 0 && (
@@ -1598,7 +1587,7 @@ export default function AdminWorkHoursCalculator() {
                   </div>
                 ) : (
                   <MonthlyCalculationsTable
-                    companyName={selectedCompany.company_name}
+                    companyName="Departamento Pessoal"
                     employees={employees}
                     history={history}
                     onOpen={openHistoryRow}
