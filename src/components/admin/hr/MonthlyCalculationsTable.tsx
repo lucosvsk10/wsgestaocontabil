@@ -258,7 +258,7 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-transparent px-5 py-4">
         <div>
           <h2 className="text-sm font-semibold">Cálculos por funcionário e mês</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -273,7 +273,7 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
             <select
               value={year}
               onChange={event => setYear(event.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 rounded-md border border-transparent bg-muted/20 px-3 text-sm"
             >
               {availableYears.map(item => (
                 <option key={item} value={item}>{item}</option>
@@ -303,16 +303,16 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1500px] table-fixed text-left text-sm">
-            <thead className="border-b border-border/60 bg-muted/15 text-[10px] uppercase tracking-[.08em] text-muted-foreground">
+            <thead className="border-b border-transparent bg-muted/15 text-[10px] uppercase tracking-[.08em] text-muted-foreground">
               <tr>
-                <th className="sticky left-0 z-10 w-[240px] bg-card px-5 py-3 font-semibold">Funcionário</th>
+                <th className="sticky left-0 z-10 w-[240px] bg-card/95 px-5 py-3 font-semibold">Funcionário</th>
                 {MONTHS.map(([, label]) => (
                   <th key={label} className="w-[96px] px-2 py-3 text-center font-semibold">{label}</th>
                 ))}
                 <th className="w-[120px] px-3 py-3 text-right font-semibold">Total ano</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/45">
+            <tbody className="divide-y divide-transparent">
               {people.map(person => {
                 const annualTotal = MONTHS.reduce((sum, [month]) => {
                   const calc = byEmployeeMonth.get(`${person.id}:${month}`);
@@ -321,7 +321,7 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
 
                 return (
                   <tr key={person.id}>
-                    <td className="sticky left-0 z-10 bg-card px-5 py-3 font-medium">{person.name}</td>
+                    <td className="sticky left-0 z-10 bg-card/95 px-5 py-3 font-medium">{person.name}</td>
                     {MONTHS.map(([month]) => {
                       const calc = byEmployeeMonth.get(`${person.id}:${month}`);
                       return (
@@ -357,7 +357,7 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
         </div>
       )}
 
-      <div className="mt-7 border-t border-border/60">
+      <div className="mt-7 border-t border-transparent">
         <div className="px-5 py-4">
           <h3 className="text-sm font-semibold">Todos os registros</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -366,7 +366,7 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
         </div>
 
         {!yearRows.length ? null : (
-          <div className="overflow-x-auto border-t border-border/50">
+          <div className="overflow-x-auto border-t border-transparent">
             <table className="w-full min-w-[980px] text-left text-sm">
               <thead className="bg-muted/15 text-[10px] uppercase tracking-[.08em] text-muted-foreground">
                 <tr>
@@ -381,7 +381,7 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/45">
+              <tbody className="divide-y divide-transparent">
                 {yearRows
                   .slice()
                   .sort((a, b) =>
