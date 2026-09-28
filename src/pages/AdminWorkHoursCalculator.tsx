@@ -251,7 +251,7 @@ function TimeInput({
         onChange={event => onChange(event.target.value)}
         placeholder="00:00"
         inputMode="decimal"
-        className="mt-1.5 h-10"
+        className="mt-1.5 h-10 border-transparent bg-muted/20"
       />
       {hint && <span className="mt-1 block text-[10px] leading-4 text-muted-foreground">{hint}</span>}
     </label>
@@ -292,7 +292,7 @@ function NumberInput({
           step={step}
           value={Number.isFinite(value) ? value : 0}
           onChange={event => onChange(numberValue(event.target.value))}
-          className={`h-10 ${prefix ? 'pl-9' : ''} ${suffix ? 'pr-10' : ''}`}
+          className={`h-10 border-transparent bg-muted/20 ${prefix ? 'pl-9' : ''} ${suffix ? 'pr-10' : ''}`}
         />
         {suffix && (
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
@@ -357,7 +357,7 @@ function AdjustmentRows({
         const resolved = resolveMoneyAdjustment(row, basePay);
 
         return (
-          <div key={row.id} className="rounded-lg border border-border/55 p-3">
+          <div key={row.id} className="rounded-lg border border-transparent p-3">
             <div className="grid gap-2 md:grid-cols-[minmax(180px,1.25fr)_120px_140px_110px_40px] md:items-end">
               <label className="block">
                 <span className="mb-1 block text-[10px] font-medium uppercase tracking-[.06em] text-muted-foreground">
@@ -373,7 +373,7 @@ function AdjustmentRows({
                       label: nextCategory === 'other' ? '' : selected?.[1] || row.label,
                     });
                   }}
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-transparent bg-muted/20 px-3 text-sm"
                 >
                   {options.map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
@@ -390,7 +390,7 @@ function AdjustmentRows({
                   onChange={event =>
                     patchRow(row.id, { mode: event.target.value === 'percent' ? 'percent' : 'fixed' })
                   }
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-transparent bg-muted/20 px-3 text-sm"
                 >
                   <option value="fixed">R$ fixo</option>
                   <option value="percent">% da base</option>
@@ -408,7 +408,7 @@ function AdjustmentRows({
                     step="0.01"
                     value={row.amount}
                     onChange={event => patchRow(row.id, { amount: numberValue(event.target.value) })}
-                    className={`h-10 ${mode === 'percent' ? 'pr-8' : 'pl-9'}`}
+                    className={`h-10 border-transparent bg-muted/20 ${mode === 'percent' ? 'pr-8' : 'pl-9'}`}
                   />
                   <span
                     className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs text-muted-foreground ${
@@ -424,7 +424,7 @@ function AdjustmentRows({
                 <span className="mb-1 block text-[10px] font-medium uppercase tracking-[.06em] text-muted-foreground">
                   Calculado
                 </span>
-                <div className="flex h-10 items-center rounded-md bg-muted/25 px-3 text-sm font-semibold tabular-nums">
+                <div className="flex h-10 items-center rounded-md border border-transparent bg-muted/25 px-3 text-sm font-semibold tabular-nums">
                   {kind === 'deduction' ? '-' : '+'}{formatCurrency(resolved)}
                 </div>
               </div>
@@ -450,7 +450,7 @@ function AdjustmentRows({
                   value={row.label}
                   onChange={event => patchRow(row.id, { label: event.target.value })}
                   placeholder={kind === 'addition' ? 'Ex.: bônus especial' : 'Ex.: desconto acordado'}
-                  className="h-9"
+                  className="h-9 border-transparent bg-muted/20"
                 />
               </label>
             )}
@@ -472,32 +472,109 @@ function AdjustmentRows({
   );
 }
 
-function ViewTabs({ value, onChange }: { value: PageView; onChange: (view: PageView) => void }) {
-  const tabs: Array<{ key: PageView; label: string; icon: typeof Clock3 }> = [
-    { key: 'schedule', label: 'Jornada', icon: CalendarDays },
-    { key: 'events', label: 'Ocorrências', icon: Clock3 },
-    { key: 'summary', label: 'Resumo', icon: ReceiptText },
-    { key: 'history', label: 'Controle', icon: History },
-    { key: 'import', label: 'Importar ponto', icon: Upload },
+type PrimaryArea = 'manual' | 'history' | 'import';
+type ManualStep = 'schedule' | 'events' | 'summary';
+
+function PrimaryNavigation({
+  value,
+  onChange,
+}: {
+  value: PrimaryArea;
+  onChange: (value: PrimaryArea) => void;
+}) {
+  const items: Array<{
+    key: PrimaryArea;
+    label: string;
+    description: string;
+    icon: typeof Clock3;
+  }> = [
+    {
+      key: 'manual',
+      label: 'Cálculo manual',
+      description: 'Jornada, ocorrências e fechamento',
+      icon: Clock3,
+    },
+    {
+      key: 'history',
+      label: 'Controle',
+      description: 'Rascunhos e cálculos de todos',
+      icon: History,
+    },
+    {
+      key: 'import',
+      label: 'Importar ponto',
+      description: 'Ler PDF e criar cadastros',
+      icon: Upload,
+    },
   ];
 
   return (
-    <div className="flex w-full overflow-x-auto border-b border-border/60">
+    <div className="grid gap-2 rounded-2xl bg-muted/15 p-2 md:grid-cols-3">
+      {items.map(item => {
+        const Icon = item.icon;
+        const active = value === item.key;
+        return (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => onChange(item.key)}
+            className={`flex min-w-0 items-center gap-3 rounded-xl border border-transparent px-4 py-3 text-left transition-colors ${
+              active
+                ? 'bg-muted/55 text-foreground'
+                : 'bg-transparent text-muted-foreground hover:bg-muted/30 hover:text-foreground'
+            }`}
+          >
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+              active ? 'bg-background/60 text-foreground' : 'bg-muted/25'
+            }`}>
+              <Icon className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <b className="block text-sm font-semibold">{item.label}</b>
+              <span className="mt-0.5 block truncate text-[11px] font-normal opacity-75">
+                {item.description}
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ManualStepTabs({
+  value,
+  onChange,
+}: {
+  value: ManualStep;
+  onChange: (value: ManualStep) => void;
+}) {
+  const tabs: Array<{ key: ManualStep; label: string; number: number }> = [
+    { key: 'schedule', label: 'Jornada', number: 1 },
+    { key: 'events', label: 'Ocorrências', number: 2 },
+    { key: 'summary', label: 'Resumo', number: 3 },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-2 bg-muted/10 p-3">
       {tabs.map(tab => {
-        const Icon = tab.icon;
         const active = value === tab.key;
         return (
           <button
             key={tab.key}
             type="button"
             onClick={() => onChange(tab.key)}
-            className={`flex min-w-[150px] flex-1 items-center justify-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+            className={`inline-flex items-center gap-2 rounded-lg border border-transparent px-3.5 py-2 text-sm font-medium transition-colors ${
               active
-                ? 'border-foreground text-foreground'
-                : 'border-transparent text-muted-foreground hover:bg-muted/25 hover:text-foreground'
+                ? 'bg-muted/55 text-foreground'
+                : 'text-muted-foreground hover:bg-muted/30 hover:text-foreground'
             }`}
           >
-            <Icon className="h-4 w-4" />
+            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ${
+              active ? 'bg-foreground text-background' : 'bg-muted/40'
+            }`}>
+              {tab.number}
+            </span>
             {tab.label}
           </button>
         );
@@ -551,6 +628,11 @@ export default function AdminWorkHoursCalculator() {
     () => weeklyScheduleMinutes(form.weeklySchedule || []),
     [form.weeklySchedule],
   );
+  const primaryArea: PrimaryArea =
+    view === 'history' ? 'history' : view === 'import' ? 'import' : 'manual';
+  const manualStep: ManualStep =
+    view === 'events' ? 'events' : view === 'summary' ? 'summary' : 'schedule';
+
 
   const loadHistory = useCallback(
     async (mode = storageMode) => {
@@ -1296,19 +1378,32 @@ export default function AdminWorkHoursCalculator() {
           description="Área independente do seletor de empresas do ADM. Cadastre funcionários, importe espelhos de ponto, calcule e acompanhe todos os rascunhos em um único controle."
         />
 
+        <PrimaryNavigation
+          value={primaryArea}
+          onChange={area => {
+            if (area === 'manual') {
+              setView('schedule');
+            } else {
+              setView(area);
+              setShowNewEmployee(false);
+            }
+          }}
+        />
+
         {message && (
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm">
+          <div className="rounded-lg border border-transparent bg-muted/20 px-4 py-3 text-sm">
             {message}
           </div>
         )}
 
         {loading ? (
-          <AdminSection>
+          <AdminSection className="!border-transparent !shadow-none bg-card/35">
             <AdminLoadingState label="Carregando Departamento Pessoal..." />
           </AdminSection>
         ) : (
           <>
-            <div className="border-y border-border/60 bg-background py-3">
+            {primaryArea === 'manual' && (
+            <div className="rounded-xl border border-transparent bg-muted/10 px-4 py-4">
               <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_190px_auto_auto] lg:items-end">
                 <label className="block">
                   <span className="text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground">
@@ -1320,7 +1415,7 @@ export default function AdminWorkHoursCalculator() {
                       setEmployeeId(event.target.value);
                       setView('schedule');
                     }}
-                    className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    className="mt-1.5 h-10 w-full rounded-md border border-transparent bg-muted/20 px-3 text-sm"
                   >
                     <option value="">Selecione...</option>
                     {employees.map(employee => (
@@ -1378,10 +1473,11 @@ export default function AdminWorkHoursCalculator() {
                 </div>
               )}
             </div>
+            )}
 
-            {showNewEmployee && (
-              <AdminSection>
-                <div className="border-b border-border/50 px-5 py-4">
+            {primaryArea === 'manual' && showNewEmployee && (
+              <AdminSection className="!border-transparent !shadow-none bg-card/40">
+                <div className="border-b border-transparent px-5 py-4">
                   <h2 className="text-sm font-semibold">Novo funcionário</h2>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     Só os dados necessários para começar. A jornada detalhada é configurada depois.
@@ -1421,7 +1517,7 @@ export default function AdminWorkHoursCalculator() {
                           employmentType: event.target.value as EmploymentType,
                         }))
                       }
-                      className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      className="mt-1.5 h-10 w-full rounded-md border border-transparent bg-muted/20 px-3 text-sm"
                     >
                       <option value="monthly">Mensalista</option>
                       <option value="hourly">Horista</option>
@@ -1477,8 +1573,13 @@ export default function AdminWorkHoursCalculator() {
               </AdminSection>
             )}
 
-            <AdminSection className="overflow-visible">
-                <ViewTabs value={view} onChange={setView} />
+            <AdminSection className="overflow-visible !border-transparent !shadow-none bg-card/35">
+                {primaryArea === 'manual' && (
+                  <ManualStepTabs
+                    value={manualStep}
+                    onChange={step => setView(step)}
+                  />
+                )}
 
                 {view === 'import' ? (
                   <PointMirrorImportPanel
@@ -1489,7 +1590,7 @@ export default function AdminWorkHoursCalculator() {
                   <AdminEmptyState
                     icon={<Clock3 className="h-7 w-7" />}
                     title="Selecione um funcionário"
-                    description="A jornada, as ocorrências e o histórico serão carregados para a pessoa escolhida."
+                    description="A jornada e as ocorrências do cálculo manual serão carregadas para a pessoa escolhida."
                   />
                 ) : view !== 'history' && loadingRecord ? (
                   <AdminLoadingState label="Abrindo cálculo..." />
@@ -1508,7 +1609,7 @@ export default function AdminWorkHoursCalculator() {
                       currentEmployee.admission_date ||
                       currentEmployee.role_title ||
                       currentEmployee.employer_name) && (
-                      <div className="mb-6 grid gap-x-6 gap-y-3 border-b border-border/50 pb-5 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="mb-6 grid gap-x-6 gap-y-3 border-b border-transparent pb-5 sm:grid-cols-2 lg:grid-cols-4">
                         <div>
                           <span className="text-[10px] uppercase tracking-[.08em] text-muted-foreground">CPF</span>
                           <b className="mt-0.5 block text-sm">{currentEmployee.cpf || '—'}</b>
@@ -1537,7 +1638,7 @@ export default function AdminWorkHoursCalculator() {
                       </div>
                     )}
 
-                    <div className="grid gap-4 border-b border-border/50 pb-6 sm:grid-cols-2 xl:grid-cols-5">
+                    <div className="grid gap-4 border-b border-transparent pb-6 sm:grid-cols-2 xl:grid-cols-5">
                       <label className="block">
                         <span className="text-[11px] font-medium">Tipo</span>
                         <select
@@ -1545,7 +1646,7 @@ export default function AdminWorkHoursCalculator() {
                           onChange={event =>
                             updateForm('employmentType', event.target.value as EmploymentType)
                           }
-                          className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          className="mt-1.5 h-10 w-full rounded-md border border-transparent bg-muted/20 px-3 text-sm"
                         >
                           <option value="monthly">Mensalista</option>
                           <option value="hourly">Horista</option>
@@ -1610,14 +1711,14 @@ export default function AdminWorkHoursCalculator() {
                     {currentCalculation?.source_type === 'point_mirror_pdf' &&
                       Array.isArray(currentCalculation.imported_punches) &&
                       currentCalculation.imported_punches.length > 0 && (
-                        <details className="mt-6 border-t border-border/50 pt-4">
+                        <details className="mt-6 border-t border-transparent pt-4">
                           <summary className="cursor-pointer text-sm font-semibold">
                             Marcações importadas do espelho de ponto
                             <span className="ml-2 text-xs font-normal text-muted-foreground">
                               {currentCalculation.imported_punches.length} dias no relatório
                             </span>
                           </summary>
-                          <div className="mt-3 max-h-[360px] overflow-auto rounded-lg border border-border/60">
+                          <div className="mt-3 max-h-[360px] overflow-auto rounded-lg border border-transparent">
                             <table className="w-full min-w-[520px] text-left text-sm">
                               <thead className="sticky top-0 bg-muted/90 text-[10px] uppercase tracking-[.08em] text-muted-foreground">
                                 <tr>
@@ -1626,7 +1727,7 @@ export default function AdminWorkHoursCalculator() {
                                   <th className="px-3 py-2 font-semibold">Marcações</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-border/45">
+                              <tbody className="divide-y divide-transparent">
                                 {currentCalculation.imported_punches.map((day: any, index: number) => (
                                   <tr key={String(day?.date || index)}>
                                     <td className="px-3 py-2">{day?.date || '—'}</td>
@@ -1647,7 +1748,7 @@ export default function AdminWorkHoursCalculator() {
                         </details>
                       )}
 
-                    <div className="mt-6 flex justify-end border-t border-border/50 pt-4">
+                    <div className="mt-6 flex justify-end border-t border-transparent pt-4">
                       <Button onClick={() => setView('events')}>
                         Próximo: ocorrências
                       </Button>
@@ -1664,7 +1765,7 @@ export default function AdminWorkHoursCalculator() {
 
                     <div className="grid gap-0 lg:grid-cols-3">
                       <section className="pb-6 lg:pr-6">
-                        <div className="mb-4 border-b border-border/50 pb-3">
+                        <div className="mb-4 border-b border-transparent pb-3">
                           <p className="text-sm font-semibold">Horas extras e adicionais</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             Acréscimos gerados no mês.
@@ -1696,8 +1797,8 @@ export default function AdminWorkHoursCalculator() {
                         </div>
                       </section>
 
-                      <section className="border-t border-border/50 py-6 lg:border-l lg:border-t-0 lg:px-6 lg:py-0">
-                        <div className="mb-4 border-b border-border/50 pb-3">
+                      <section className="border-t border-transparent py-6 lg:border-l lg:border-t-0 lg:px-6 lg:py-0">
+                        <div className="mb-4 border-b border-transparent pb-3">
                           <p className="text-sm font-semibold">Faltas e atrasos</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             Tempo não trabalhado e saídas antecipadas.
@@ -1723,8 +1824,8 @@ export default function AdminWorkHoursCalculator() {
                         </div>
                       </section>
 
-                      <section className="border-t border-border/50 pt-6 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-                        <div className="mb-4 border-b border-border/50 pb-3">
+                      <section className="border-t border-transparent pt-6 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                        <div className="mb-4 border-b border-transparent pb-3">
                           <p className="text-sm font-semibold">Banco de horas</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             Registre o saldo e escolha se entra no cálculo.
@@ -1742,7 +1843,7 @@ export default function AdminWorkHoursCalculator() {
                             onChange={value => updateForm('bankNegative', value)}
                           />
                         </div>
-                        <label className="mt-4 flex items-center justify-between gap-3 border-t border-border/40 pt-4 text-sm">
+                        <label className="mt-4 flex items-center justify-between gap-3 border-t border-transparent pt-4 text-sm">
                           <span>
                             <b className="block font-medium">Liquidar nesta competência</b>
                             <small className="text-muted-foreground">
@@ -1759,7 +1860,7 @@ export default function AdminWorkHoursCalculator() {
                       </section>
                     </div>
 
-                    <div className="mt-7 grid gap-6 border-t border-border/50 pt-6 lg:grid-cols-2">
+                    <div className="mt-7 grid gap-6 border-t border-transparent pt-6 lg:grid-cols-2">
                       <section>
                         <div className="mb-3">
                           <p className="text-sm font-semibold">Outros acréscimos</p>
@@ -1777,7 +1878,7 @@ export default function AdminWorkHoursCalculator() {
                         />
                       </section>
 
-                      <section className="border-t border-border/50 pt-6 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                      <section className="border-t border-transparent pt-6 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
                         <div className="mb-3">
                           <p className="text-sm font-semibold">Outros descontos</p>
                           <p className="text-xs text-muted-foreground">
@@ -1795,7 +1896,7 @@ export default function AdminWorkHoursCalculator() {
                       </section>
                     </div>
 
-                    <details className="mt-7 border-t border-border/50 pt-4">
+                    <details className="mt-7 border-t border-transparent pt-4">
                       <summary className="cursor-pointer text-sm font-semibold">
                         Percentuais avançados
                         <span className="ml-2 text-xs font-normal text-muted-foreground">
@@ -1830,7 +1931,7 @@ export default function AdminWorkHoursCalculator() {
                       </div>
                     </details>
 
-                    <div className="mt-6 flex flex-wrap justify-between gap-2 border-t border-border/50 pt-4">
+                    <div className="mt-6 flex flex-wrap justify-between gap-2 border-t border-transparent pt-4">
                       <Button variant="outline" onClick={() => setView('schedule')}>
                         Voltar para jornada
                       </Button>
@@ -1856,7 +1957,7 @@ export default function AdminWorkHoursCalculator() {
                         <strong className="mt-2 block text-4xl tracking-tight">
                           {formatCurrency(result.total)}
                         </strong>
-                        <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-border/50 pt-4 text-sm">
+                        <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-transparent pt-4 text-sm">
                           <span>
                             <small className="block text-[10px] uppercase tracking-[.08em] text-muted-foreground">
                               Valor da hora
@@ -1884,7 +1985,7 @@ export default function AdminWorkHoursCalculator() {
                         </div>
                       </div>
 
-                      <div className="border-t border-border/50 pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+                      <div className="border-t border-transparent pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
                         <div className="grid gap-8 md:grid-cols-2">
                           <section>
                             <p className="mb-3 text-xs font-semibold uppercase tracking-[.08em] text-muted-foreground">
@@ -1925,7 +2026,7 @@ export default function AdminWorkHoursCalculator() {
 
                         {!form.settleBank &&
                           (result.minutes.bankPositive > 0 || result.minutes.bankNegative > 0) && (
-                            <p className="mt-5 border-t border-border/50 pt-4 text-xs text-muted-foreground">
+                            <p className="mt-5 border-t border-transparent pt-4 text-xs text-muted-foreground">
                               Banco de horas apenas registrado: +{formatMinutes(result.minutes.bankPositive)} / -
                               {formatMinutes(result.minutes.bankNegative)}. Não altera o total.
                             </p>
@@ -1933,7 +2034,7 @@ export default function AdminWorkHoursCalculator() {
                       </div>
                     </div>
 
-                    <details className="mt-7 border-t border-border/50 pt-4">
+                    <details className="mt-7 border-t border-transparent pt-4">
                       <summary className="cursor-pointer text-sm font-semibold">
                         Ver memória de cálculo
                       </summary>
@@ -1953,12 +2054,12 @@ export default function AdminWorkHoursCalculator() {
                     </details>
 
                     {storageMode === 'local' && (
-                      <p className="mt-5 border-t border-border/50 pt-4 text-xs leading-5 text-muted-foreground">
+                      <p className="mt-5 border-t border-transparent pt-4 text-xs leading-5 text-muted-foreground">
                         Modo temporário: estes dados estão sendo preservados neste navegador enquanto a estrutura de banco do Departamento Pessoal não é aplicada.
                       </p>
                     )}
 
-                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-4">
+                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-transparent pt-4">
                       <Button variant="outline" onClick={() => setView('events')}>
                         Voltar para ocorrências
                       </Button>
