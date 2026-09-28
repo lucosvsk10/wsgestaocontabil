@@ -12,11 +12,14 @@ import {
 type EmployeeLike = {
   id: string;
   name: string;
+  cpf?: string | null;
+  employer_name?: string | null;
+  employer_cnpj?: string | null;
 };
 
 export type MonthlyCalculationLike = {
   id: string;
-  company_id: string;
+  company_id?: string | null;
   employee_id: string;
   competence: string;
   status: 'draft' | 'finalized';
@@ -24,6 +27,9 @@ export type MonthlyCalculationLike = {
   form_data: WorkHoursForm;
   result_data: any;
   updated_at?: string;
+  source_type?: string | null;
+  source_metadata?: any;
+  imported_punches?: any[];
 };
 
 type Props = {
@@ -88,7 +94,7 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
   );
 
   const people = useMemo(() => {
-    const byId = new Map<string, { id: string; name: string }>();
+    const byId = new Map<string, EmployeeLike>();
     employees.forEach(employee => byId.set(employee.id, employee));
     yearRows.forEach(row => {
       if (!byId.has(row.employee_id)) {
@@ -133,7 +139,13 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
           const employeeCompare = a.employee_name_snapshot.localeCompare(b.employee_name_snapshot, 'pt-BR');
           return employeeCompare || a.competence.localeCompare(b.competence);
         })
-        .map(row => ({
+        .map(row => {
+          const employee = employees.find(item => item.id === row.employee_id);
+          return ({
+          Origem: row.source_type === 'point_mirror_pdf' ? 'Importado do espelho de ponto' : 'Manual',
+          Empregador: employee?.employer_name || row.source_metadata?.employer_name || '',
+          CPF: employee?.cpf || '',
+
           Empresa: companyName,
           Funcionário: row.employee_name_snapshot,
           Competência: row.competence.slice(0, 7),
@@ -164,8 +176,12 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
           'Total acréscimos': Number(row.result_data?.additionsTotal || 0),
           'Total descontos': Number(row.result_data?.deductionsTotal || 0),
           'Total apurado': Number(row.result_data?.total || 0),
+          'Marcações importadas': Array.isArray(row.imported_punches)
+            ? row.imported_punches.reduce((sum: number, day: any) => sum + (day?.punches?.length || 0), 0)
+            : 0,
           Atualizado: row.updated_at ? new Date(row.updated_at).toLocaleString('pt-BR') : '',
-        }));
+        });
+        });
 
       const workbook = XLSX.utils.book_new();
       const summarySheet = XLSX.utils.json_to_sheet(summaryData);
@@ -340,6 +356,77 @@ export default function MonthlyCalculationsTable({ companyName, employees, histo
           </table>
         </div>
       )}
+
+      <div className="mt-7 border-t border-border/60">
+        <div className="px-5 py-4">
+          <h3 className="text-sm font-semibold">Todos os registros</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Lista completa de rascunhos e cálculos finalizados do ano selecionado.
+          </p>
+        </div>
+
+        {!yearRows.length ? null : (
+          <div className="overflow-x-auto border-t border-border/50">
+            <table className="w-full min-w-[980px] text-left text-sm">
+              <thead className="bg-muted/15 text-[10px] uppercase tracking-[.08em] text-muted-foreground">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Funcionário</th>
+                  <th className="px-4 py-3 font-semibold">Empregador</th>
+                  <th className="px-4 py-3 font-semibold">Competência</th>
+                  <th className="px-4 py-3 font-semibold">Origem</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold text-right">Acréscimos</th>
+                  <th className="px-4 py-3 font-semibold text-right">Descontos</th>
+                  <th className="px-4 py-3 font-semibold text-right">Total</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/45">
+                {yearRows
+                  .slice()
+                  .sort((a, b) =>
+                    b.competence.localeCompare(a.competence) ||
+                    a.employee_name_snapshot.localeCompare(b.employee_name_snapshot, 'pt-BR'),
+                  )
+                  .map(row => {
+                    const employee = employees.find(item => item.id === row.employee_id);
+                    return (
+                      <tr key={row.id} className="hover:bg-muted/10">
+                        <td className="px-5 py-3 font-medium">{row.employee_name_snapshot}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          {employee?.employer_name || row.source_metadata?.employer_name || '—'}
+                        </td>
+                        <td className="px-4 py-3">{row.competence.slice(0, 7)}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          {row.source_type === 'point_mirror_pdf' ? 'PDF ponto' : 'Manual'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs font-medium">
+                            {row.status === 'finalized' ? 'Finalizado' : 'Rascunho'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {formatCurrency(Number(row.result_data?.additionsTotal || 0))}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {formatCurrency(Number(row.result_data?.deductionsTotal || 0))}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                          {formatCurrency(Number(row.result_data?.total || 0))}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button variant="outline" size="sm" onClick={() => onOpen(row)}>
+                            Abrir
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
