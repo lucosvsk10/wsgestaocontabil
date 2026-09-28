@@ -538,6 +538,15 @@ export default function AdminWorkHoursCalculator() {
     [employees, employeeId],
   );
   const result = useMemo(() => calculateWorkHours(form), [form]);
+  const currentCalculation = useMemo(
+    () =>
+      history.find(
+        row =>
+          row.employee_id === employeeId &&
+          row.competence.slice(0, 7) === competence,
+      ) || null,
+    [history, employeeId, competence],
+  );
   const weeklyMinutes = useMemo(
     () => weeklyScheduleMinutes(form.weeklySchedule || []),
     [form.weeklySchedule],
@@ -1468,16 +1477,7 @@ export default function AdminWorkHoursCalculator() {
               </AdminSection>
             )}
 
-            {!employees.length && !showNewEmployee ? (
-              <AdminSection>
-                <AdminEmptyState
-                  icon={<UserPlus className="h-7 w-7" />}
-                  title="Cadastre o primeiro funcionário"
-                  description="Depois você configura os horários de cada dia da semana na própria calculadora."
-                />
-              </AdminSection>
-            ) : (
-              <AdminSection className="overflow-visible">
+            <AdminSection className="overflow-visible">
                 <ViewTabs value={view} onChange={setView} />
 
                 {view === 'import' ? (
@@ -1501,6 +1501,41 @@ export default function AdminWorkHoursCalculator() {
                         Primeiro defina a base do funcionário. Depois informe os horários de cada dia.
                       </p>
                     </div>
+
+                    {(currentEmployee.cpf ||
+                      currentEmployee.registration ||
+                      currentEmployee.pis ||
+                      currentEmployee.admission_date ||
+                      currentEmployee.role_title ||
+                      currentEmployee.employer_name) && (
+                      <div className="mb-6 grid gap-x-6 gap-y-3 border-b border-border/50 pb-5 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                          <span className="text-[10px] uppercase tracking-[.08em] text-muted-foreground">CPF</span>
+                          <b className="mt-0.5 block text-sm">{currentEmployee.cpf || '—'}</b>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase tracking-[.08em] text-muted-foreground">Matrícula / PIS</span>
+                          <b className="mt-0.5 block text-sm">
+                            {currentEmployee.registration || '—'}
+                            {currentEmployee.pis ? ` · ${currentEmployee.pis}` : ''}
+                          </b>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase tracking-[.08em] text-muted-foreground">Cargo / admissão</span>
+                          <b className="mt-0.5 block text-sm">
+                            {currentEmployee.role_title || '—'}
+                            {currentEmployee.admission_date ? ` · ${currentEmployee.admission_date}` : ''}
+                          </b>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase tracking-[.08em] text-muted-foreground">Empregador</span>
+                          <b className="mt-0.5 block text-sm">
+                            {currentEmployee.employer_name || '—'}
+                            {currentEmployee.employer_cnpj ? ` · ${currentEmployee.employer_cnpj}` : ''}
+                          </b>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid gap-4 border-b border-border/50 pb-6 sm:grid-cols-2 xl:grid-cols-5">
                       <label className="block">
@@ -1571,6 +1606,46 @@ export default function AdminWorkHoursCalculator() {
                         onChange={value => updateForm('weeklySchedule', value)}
                       />
                     </div>
+
+                    {currentCalculation?.source_type === 'point_mirror_pdf' &&
+                      Array.isArray(currentCalculation.imported_punches) &&
+                      currentCalculation.imported_punches.length > 0 && (
+                        <details className="mt-6 border-t border-border/50 pt-4">
+                          <summary className="cursor-pointer text-sm font-semibold">
+                            Marcações importadas do espelho de ponto
+                            <span className="ml-2 text-xs font-normal text-muted-foreground">
+                              {currentCalculation.imported_punches.length} dias no relatório
+                            </span>
+                          </summary>
+                          <div className="mt-3 max-h-[360px] overflow-auto rounded-lg border border-border/60">
+                            <table className="w-full min-w-[520px] text-left text-sm">
+                              <thead className="sticky top-0 bg-muted/90 text-[10px] uppercase tracking-[.08em] text-muted-foreground">
+                                <tr>
+                                  <th className="px-3 py-2 font-semibold">Data</th>
+                                  <th className="px-3 py-2 font-semibold">Dia</th>
+                                  <th className="px-3 py-2 font-semibold">Marcações</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/45">
+                                {currentCalculation.imported_punches.map((day: any, index: number) => (
+                                  <tr key={String(day?.date || index)}>
+                                    <td className="px-3 py-2">{day?.date || '—'}</td>
+                                    <td className="px-3 py-2 text-muted-foreground">{day?.weekdayLabel || '—'}</td>
+                                    <td className="px-3 py-2 font-medium">
+                                      {Array.isArray(day?.punches) && day.punches.length
+                                        ? day.punches.join(' · ')
+                                        : 'Sem marcação'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          <p className="mt-2 text-[10px] leading-4 text-muted-foreground">
+                            A jornada acima é sugerida a partir do padrão das batidas importadas e deve ser conferida antes de finalizar o cálculo.
+                          </p>
+                        </details>
+                      )}
 
                     <div className="mt-6 flex justify-end border-t border-border/50 pt-4">
                       <Button onClick={() => setView('events')}>
@@ -1914,7 +1989,6 @@ export default function AdminWorkHoursCalculator() {
                   />
                 )}
               </AdminSection>
-            )}
           </>
         )}
       </AdminPage>
