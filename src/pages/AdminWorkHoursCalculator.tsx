@@ -251,7 +251,7 @@ function TimeInput({
         onChange={event => onChange(event.target.value)}
         placeholder="00:00"
         inputMode="decimal"
-        className="mt-1.5 h-10"
+        className="mt-1.5 h-10 border-transparent bg-muted/20"
       />
       {hint && <span className="mt-1 block text-[10px] leading-4 text-muted-foreground">{hint}</span>}
     </label>
@@ -292,7 +292,7 @@ function NumberInput({
           step={step}
           value={Number.isFinite(value) ? value : 0}
           onChange={event => onChange(numberValue(event.target.value))}
-          className={`h-10 ${prefix ? 'pl-9' : ''} ${suffix ? 'pr-10' : ''}`}
+          className={`h-10 border-transparent bg-muted/20 ${prefix ? 'pl-9' : ''} ${suffix ? 'pr-10' : ''}`}
         />
         {suffix && (
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
@@ -408,7 +408,7 @@ function AdjustmentRows({
                     step="0.01"
                     value={row.amount}
                     onChange={event => patchRow(row.id, { amount: numberValue(event.target.value) })}
-                    className={`h-10 ${mode === 'percent' ? 'pr-8' : 'pl-9'}`}
+                    className={`h-10 border-transparent bg-muted/20 ${mode === 'percent' ? 'pr-8' : 'pl-9'}`}
                   />
                   <span
                     className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs text-muted-foreground ${
@@ -424,7 +424,7 @@ function AdjustmentRows({
                 <span className="mb-1 block text-[10px] font-medium uppercase tracking-[.06em] text-muted-foreground">
                   Calculado
                 </span>
-                <div className="flex h-10 items-center rounded-md bg-muted/25 px-3 text-sm font-semibold tabular-nums">
+                <div className="flex h-10 items-center rounded-md border border-transparent bg-muted/25 px-3 text-sm font-semibold tabular-nums">
                   {kind === 'deduction' ? '-' : '+'}{formatCurrency(resolved)}
                 </div>
               </div>
@@ -450,7 +450,7 @@ function AdjustmentRows({
                   value={row.label}
                   onChange={event => patchRow(row.id, { label: event.target.value })}
                   placeholder={kind === 'addition' ? 'Ex.: bônus especial' : 'Ex.: desconto acordado'}
-                  className="h-9"
+                  className="h-9 border-transparent bg-muted/20"
                 />
               </label>
             )}
@@ -1382,7 +1382,7 @@ export default function AdminWorkHoursCalculator() {
           value={primaryArea}
           onChange={area => {
             if (area === 'manual') {
-              setView(manualStep);
+              setView('schedule');
             } else {
               setView(area);
               setShowNewEmployee(false);
@@ -1397,7 +1397,7 @@ export default function AdminWorkHoursCalculator() {
         )}
 
         {loading ? (
-          <AdminSection>
+          <AdminSection className="!border-transparent !shadow-none bg-card/35">
             <AdminLoadingState label="Carregando Departamento Pessoal..." />
           </AdminSection>
         ) : (
