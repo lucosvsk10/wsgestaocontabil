@@ -10,6 +10,10 @@ import {
 } from './workHours';
 
 describe('workHours', () => {
+  it('starts monthly calculations with the 2026 national minimum wage', () => {
+    expect(emptyWorkHoursForm().baseSalary).toBe(1621);
+  });
+
   it('parses HH:MM and decimal hours', () => {
     expect(parseHoursToMinutes('08:30')).toBe(510);
     expect(parseHoursToMinutes('1h15')).toBe(75);
