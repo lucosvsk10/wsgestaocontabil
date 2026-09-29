@@ -3,6 +3,10 @@
 -- becomes the stable identity used when portal credentials are replaced or unified.
 
 -- Recover company_id for documents that still only know the legacy portal user.
+-- The document update guard intentionally blocks client-side metadata edits, so suspend
+-- only this trigger while the migration performs an admin-controlled identity backfill.
+alter table public.documents disable trigger trg_guard_client_document_update;
+
 update public.documents d
 set company_id = cul.company_id
 from public.company_user_links cul
@@ -21,6 +25,8 @@ join public.companies c
 where d.company_id is null
   and d.user_id = cd.user_id
   and length(regexp_replace(coalesce(cd.cnpj, ''), '\D', '', 'g')) = 14;
+
+alter table public.documents enable trigger trg_guard_client_document_update;
 
 create index if not exists documents_company_status_uploaded_idx
   on public.documents(company_id, status, uploaded_at desc)
