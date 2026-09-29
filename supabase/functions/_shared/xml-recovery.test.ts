@@ -21,6 +21,12 @@ describe("XML recovery", () => {
     expect(findFiscalXml({ body_text: bodyText })).toBe(xml);
   });
 
+  it("extracts XML from a double-encoded stringJson assignment", () => {
+    const xml = `<nfeProc>${"x".repeat(1100)}</nfeProc>`;
+    const bodyText = `<script>var stringJson = ${JSON.stringify(JSON.stringify({ xml }))};</script>`;
+    expect(findFiscalXml({ body_text: bodyText })).toBe(xml);
+  });
+
   it("returns only the fiscal XML when the bridge wraps it in HTML", () => {
     const xml = `<nfeProc>${"x".repeat(1100)}</nfeProc>`;
     expect(findFiscalXml(`<html><body>${xml}</body></html>`)).toBe(xml);

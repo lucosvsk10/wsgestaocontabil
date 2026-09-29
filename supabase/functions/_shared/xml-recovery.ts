@@ -41,7 +41,28 @@ export function findFiscalXml(value: unknown, depth = 0): string {
     try {
       return findFiscalXml(JSON.parse(value), depth + 1);
     } catch {
-      const embedded = value.match(/(?:"xml"|"Xml"|"XML"|"conteudoXml"|"documentoXml")\s*:\s*"((?:\\.|[^"\\])*)"/i);
+      const assignment = value.match(/\bstringJson\s*=\s*([\s\S]*?);\s*(?:<\/script>)?/i)?.[1]?.trim();
+      if (assignment) {
+        try {
+          const xml = findFiscalXml(JSON.parse(assignment), depth + 1);
+          if (xml) return xml;
+        } catch {
+          const unquoted = assignment.match(/^(['"])([\s\S]*)\1$/)?.[2];
+          if (unquoted) {
+            const xml = findFiscalXml(unquoted.replace(/\\(['"])/g, "$1"), depth + 1);
+            if (xml) return xml;
+          }
+        }
+      }
+      const normalized = value
+        .replace(/\\u003c/gi, "<")
+        .replace(/\\u003e/gi, ">")
+        .replace(/\\"/g, '"');
+      if (normalized !== value) {
+        const xml = findFiscalXml(normalized, depth + 1);
+        if (xml) return xml;
+      }
+      const embedded = normalized.match(/(?:"xml"|"Xml"|"XML"|"conteudoXml"|"documentoXml")\s*:\s*"((?:\\.|[^"\\])*)"/i);
       if (!embedded?.[1]) return "";
       try {
         return validFiscalXml(JSON.parse(`"${embedded[1]}"`));
