@@ -2,7 +2,6 @@ import "jsr:@supabase/functions-js@2.5.0/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { Buffer } from "node:buffer";
 import { lerCertificado } from "npm:nfse-node@0.3.2/certificado";
-import { findFiscalXml } from "../_shared/xml-recovery.ts";
 
 const E=new TextEncoder(),D=new TextDecoder(),B=(v:string)=>Uint8Array.from(atob(v),c=>c.charCodeAt(0));
 const J=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{"content-type":"application/json","cache-control":"no-store"}});
@@ -10,6 +9,9 @@ const dg=(v:unknown)=>String(v??"").replace(/\D/g,"");
 const retryDelay=(attempts:number)=>attempts<=2?120000:attempts<=5?600000:attempts<=8?1800000:21600000;
 const isXmlRetryDue=(row:any)=>{const checked=Date.parse(String(row?.xml_last_checked_at||""));return !Number.isFinite(checked)||Date.now()-checked>=retryDelay(Math.max(0,Number(row?.xml_attempts||0)))};
 const tag=(x:string,n:string)=>x.match(new RegExp(`<(?:\\w+:)?${n}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:\\w+:)?${n}>`,"i"))?.[1]?.trim()||"";
+const decodeEntities=(v:string)=>String(v||"").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,"\"").replace(/&#39;/g,"'").replace(/&amp;/g,"&");
+function validXml(v:unknown){const text=decodeEntities(String(v??"")).trim(),xml=text.match(/<(?:\\w+:)?(nfeProc|procNFe|NFe)\\b[^>]*>[\\s\\S]*?<\\/(?:\\w+:)?\\1>/i)?.[0]||"";return xml.length>1000?xml:""}
+function findFiscalXml(v:unknown,depth=0):string{if(depth>6||v==null)return"";const direct=validXml(v);if(direct)return direct;if(typeof v==="string"){try{return findFiscalXml(JSON.parse(v),depth+1)}catch{const embedded=v.match(/(?:"xml"|"Xml"|"XML"|"conteudoXml"|"documentoXml")\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"/i);if(!embedded?.[1])return"";try{return validXml(JSON.parse(`"${embedded[1]}"`))}catch{return""}}}if(Array.isArray(v)){for(const item of v){const xml=findFiscalXml(item,depth+1);if(xml)return xml}}else if(typeof v==="object")for(const item of Object.values(v as Record<string,unknown>)){const xml=findFiscalXml(item,depth+1);if(xml)return xml}return""}
 async function K(){const s=Deno.env.get("ACCOUNTING_ENGINE_SESSION_SECRET")||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");if(!s)throw Error("vault_secret_missing");const h=await crypto.subtle.digest("SHA-256",E.encode("ws-fiscal-vault:"+s));return crypto.subtle.importKey("raw",h,{name:"AES-GCM"},false,["decrypt"])}
 async function dec(c:string,i:string){return D.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:B(i)},await K(),B(c)))}
 async function gunzip(v:string){const b=Uint8Array.from(atob(v.replace(/\s/g,"")),c=>c.charCodeAt(0));return D.decode(await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer())}
