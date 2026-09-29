@@ -45,17 +45,27 @@ export const useDocumentFetch = () => {
       // Fetch viewed documents first
       const viewedDocs = await fetchViewedDocuments(userId);
       
-      // Then fetch all documents
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('user_id', userId)
-        .order('uploaded_at', { ascending: false });
+      // Fetch documents through the office-company identity. This includes legacy
+      // documents that still carry an older auth user_id but belong to the same company.
+      let { data, error } = await (supabase as any)
+        .rpc('portal_documents', { _target_user_id: userId });
+
+      // Compatibility fallback while the migration is being applied.
+      if (error) {
+        console.warn('[Documents] portal_documents RPC unavailable, using direct ownership fallback:', error.message);
+        const fallback = await supabase
+          .from('documents')
+          .select('*')
+          .eq('user_id', userId)
+          .order('uploaded_at', { ascending: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
       
       if (error) throw error;
       
       // Mark documents as viewed or not viewed
-      const docsWithViewStatus = data?.map(doc => ({
+      const docsWithViewStatus = data?.map((doc: any) => ({
         ...doc,
         viewed: viewedDocs ? !!viewedDocs[doc.id] : false
       })) as Document[] || [];
