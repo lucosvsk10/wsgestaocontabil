@@ -63,7 +63,6 @@ export const useDocumentManager = (users: any[], supabaseUsers: any[]) => {
             event: '*',  // Monitorar todos os eventos (INSERT, UPDATE, DELETE)
             schema: 'public',
             table: 'documents',
-            filter: `user_id=eq.${selectedUserId}`,
           },
           (payload) => {
             console.log("Mudança detectada em documentos:", payload);
