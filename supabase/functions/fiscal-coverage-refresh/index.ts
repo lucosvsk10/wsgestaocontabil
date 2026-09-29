@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { assessNfseSyncState } from "../_shared/nfse-health.ts";
 
 const J=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json","cache-control":"no-store"}});
 const dg=(v:unknown)=>String(v??"").replace(/\D/g,"");
@@ -37,7 +38,7 @@ Deno.serve(async req=>{
 
     for(const company of companies||[]){
       const companyId=String(company.id),uf=String(company.uf||"").toUpperCase(),cnpj=dg(company.cnpj);
-      const [purchaseState,salesState,nfseState,stateCred,dfeState,cteState,mdfeState,observed,sale55Rec,sale65Rec,sp55Rows]=await Promise.all([
+      const [purchaseState,salesState,nfseState,stateCred,dfeState,cteState,mdfeState,observed,nfseInCount,nfseOutCount,sale55Rec,sale65Rec,sp55Rows]=await Promise.all([
         admin.from("fiscal_purchase_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
         admin.from("fiscal_sales_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
         admin.from("fiscal_nfse_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
@@ -46,6 +47,8 @@ Deno.serve(async req=>{
         admin.from("fiscal_transport_sync_state").select("*").eq("company_id",companyId).eq("document_family","cte57").eq("environment",company.ambiente_padrao==="homologacao"?"homologacao":"producao").maybeSingle(),
         admin.from("fiscal_transport_sync_state").select("*").eq("company_id",companyId).eq("document_family","mdfe58").eq("environment",company.ambiente_padrao==="homologacao"?"homologacao":"producao").maybeSingle(),
         admin.from("fiscal_dfe_documents").select("model,direction,document_kind").eq("company_id",companyId).limit(1000),
+        admin.from("fiscal_dfe_documents").select("id",{count:"exact",head:true}).eq("company_id",companyId).eq("model","NFS-e").eq("direction","entrada").neq("document_kind","evento"),
+        admin.from("fiscal_dfe_documents").select("id",{count:"exact",head:true}).eq("company_id",companyId).eq("model","NFS-e").eq("direction","saida").neq("document_kind","evento"),
         admin.from("fiscal_source_reconciliation").select("status,source_confirmed,source_count,site_count,xml_pending_count,checked_at,reason,details").eq("company_id",companyId).eq("document_type","sale_nfe55").order("checked_at",{ascending:false}).limit(1).maybeSingle(),
         admin.from("fiscal_source_reconciliation").select("status,source_confirmed,source_count,site_count,xml_pending_count,checked_at,reason,details").eq("company_id",companyId).eq("document_type","sale_nfce65").order("checked_at",{ascending:false}).limit(1).maybeSingle(),
         uf==="SP"?admin.from("fiscal_sales_documents").select("access_key,xml,source,source_reference,updated_at").eq("company_id",companyId).eq("model","55").limit(5000):Promise.resolve({data:[],error:null}),
@@ -57,6 +60,7 @@ Deno.serve(async req=>{
       );
       const obs=observed.data||[];
       const seen=(model:string,direction:string)=>obs.some((r:any)=>String(r.model||"")===model&&String(r.direction||"")===direction);
+      const nfseDirectionCount=(direction:"entrada"|"saida")=>Number(direction==="entrada"?nfseInCount.count:nfseOutCount.count)||0;
       const now=new Date().toISOString();
       const rows:Row[]=[];
 
@@ -148,15 +152,37 @@ Deno.serve(async req=>{
         });
       }
 
-      const nfseOk=Boolean(ns?.status==="idle"&&!ns?.last_error&&ns?.last_completed_at);
+      const nfseAssessment=assessNfseSyncState(ns);
+      const nfseCaughtUpAt=nfseAssessment.caughtUpAt;
+      const nfseFresh=nfseAssessment.fresh;
+      const nfseOk=nfseAssessment.sourceConfirmed;
       for(const direction of ["entrada","saida"] as const){
+        const directionCount=nfseDirectionCount(direction);
+        const directionSeen=directionCount>0;
+        const zeroConfirmed=nfseOk&&!directionSeen;
+        const nfseError=ns?.last_error
+          ||(ns?.status==="catching_up"?"ADN NFS-e está percorrendo o histórico disponível.":null)
+          ||(nfseCaughtUpAt&&!nfseFresh?"A última confirmação da ADN NFS-e está atrasada.":null)
+          ||"ADN NFS-e ainda não chegou ao fim disponível.";
         rows.push({
-          document_type:"nfse",direction,applicability:seen("NFS-e",direction)?"observed":"unknown",
+          document_type:"nfse",direction,applicability:directionSeen?"observed":"unknown",
           source_name:"ADN NFS-e Nacional",source_mode:"national_nfse",
           coverage_status:nfseOk?"covered":ns?.last_error?"error":"partial",
-          source_confirmed:nfseOk,last_verified_at:ns?.last_completed_at||null,last_success_at:nfseOk?ns?.last_completed_at:null,
-          last_error:nfseOk?null:(ns?.last_error||"ADN NFS-e ainda não concluído."),
-          details:{last_nsu:ns?.last_nsu||null},
+          source_confirmed:nfseOk,last_verified_at:nfseCaughtUpAt,last_success_at:nfseOk?nfseCaughtUpAt:null,
+          last_error:nfseOk?null:nfseError,
+          details:{
+            last_nsu:ns?.last_nsu||null,
+            sync_status:ns?.status||"not_started",
+            source_exhausted:ns?.source_exhausted===true,
+            fresh:nfseFresh,
+            zero_confirmed:zeroConfirmed,
+            last_caught_up_at:nfseCaughtUpAt,
+            next_scheduled_at:ns?.next_scheduled_at||null,
+            documents_saved:Number(ns?.documents_saved||0),
+            direction_documents:directionCount,
+            last_run_documents:Number(ns?.last_run_documents||0),
+            last_run_batches:Number(ns?.last_run_batches||0),
+          },
         });
       }
 

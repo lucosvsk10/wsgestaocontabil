@@ -216,6 +216,32 @@ type CoverageGate = {
     found_at?: string | null;
   } | null;
 };
+type NfseEngineStatus = {
+  status: 'checking' | 'syncing' | 'current' | 'empty' | 'stale' | 'error';
+  source_confirmed: boolean;
+  zero_confirmed: boolean;
+  source_exhausted: boolean;
+  sync_status: string;
+  last_nsu: number;
+  last_started_at?: string | null;
+  last_caught_up_at?: string | null;
+  next_scheduled_at?: string | null;
+  last_error?: string | null;
+  total_documents: number;
+  full_xml_documents: number;
+  pending_xml_documents: number;
+  entries: number;
+  exits: number;
+  last_run_documents: number;
+  last_run_events: number;
+  last_run_batches: number;
+  latest_document?: {
+    number?: string | null;
+    series?: string | null;
+    issue_date?: string | null;
+    found_at?: string | null;
+  } | null;
+};
 
 const nav: Array<{ label: Section; icon: ExtractorIconName; group: string }> = [
   { label: 'Visão geral', icon: 'dashboard', group: 'Operação' },
@@ -1966,6 +1992,7 @@ function Documents({
   const [availableFrom, setAvailableFrom] = useState<string>('');
   const [coverage, setCoverage] = useState<CoverageRow[]>([]);
   const [coverageGate, setCoverageGate] = useState<CoverageGate | null>(null);
+  const [nfseEngine, setNfseEngine] = useState<NfseEngineStatus | null>(null);
   const [coverageLoading, setCoverageLoading] = useState(true);
   const [referenceBusy, setReferenceBusy] = useState(false);
   const requestSequence = useRef(0);
@@ -2042,6 +2069,7 @@ function Documents({
   const loadCoverage = useCallback(async () => {
     if (preview || !company) {
       setCoverage([]);
+      setNfseEngine(null);
       setCoverageGate(preview ? {
         ready: true,
         status: 'ready',
@@ -2061,6 +2089,7 @@ function Documents({
       if (error) throw error;
       const rows = Array.isArray(data?.coverage) ? data.coverage : [];
       const remoteGate = data?.gate || null;
+      setNfseEngine(data?.nfse_engine || null);
       const numberedSalesReady = fiscalSalesCoverage(rows).numberedReady;
       const numberedSalesOperational = data?.evidence?.sales_operational === true;
       const gateWithEvidence = remoteGate ? {
@@ -2108,6 +2137,7 @@ function Documents({
   useEffect(() => {
     setCoverage([]);
     setCoverageGate(null);
+    setNfseEngine(null);
     setCoverageLoading(true);
     void loadCoverage();
     if (preview || !company?.id) return;
@@ -2344,13 +2374,16 @@ function Documents({
         icon="document"
         description="Compras e vendas com a mesma leitura fiscal do painel administrativo."
         actions={(
-          <FiscalEngineIndicator
-            gate={effectiveCoverageGate}
-            latestDocument={latestSalesDocument}
-            lastSearchAt={company.salesLastCompletedAt || company.salesLastStartedAt}
-            salesCount={sales.length}
-            searching={syncIsActive(company)}
-          />
+          <>
+            <NfseEngineIndicator state={nfseEngine} loading={coverageLoading} />
+            <FiscalEngineIndicator
+              gate={effectiveCoverageGate}
+              latestDocument={latestSalesDocument}
+              lastSearchAt={company.salesLastCompletedAt || company.salesLastStartedAt}
+              salesCount={sales.length}
+              searching={syncIsActive(company)}
+            />
+          </>
         )}
       />
 
@@ -2663,6 +2696,59 @@ function FiscalEngineIndicator({
           : gate.ready
             ? 'A página está liberada porque o motor comprovou funcionamento. A conferência integral continua em segundo plano.'
             : 'O motor está avançando no histórico. A página será liberada assim que compras e a primeira sequência de vendas forem confirmadas.'}</small>
+      </div>
+    </div>
+  );
+}
+
+function NfseEngineIndicator({ state, loading }: { state: NfseEngineStatus | null; loading: boolean }) {
+  if (!state && !loading) return null;
+
+  const status = state?.status || 'checking';
+  const searching = (!state && loading) || status === 'checking' || status === 'syncing';
+  const healthy = status === 'current' || status === 'empty';
+  const title = searching
+    ? 'NFS-e em verificação'
+    : status === 'empty'
+      ? 'NFS-e em dia · zero confirmado'
+      : status === 'current'
+        ? 'NFS-e em dia'
+        : status === 'stale'
+          ? 'NFS-e atrasada'
+          : 'Erro na busca de NFS-e';
+  const latest = state?.latest_document;
+  const latestLabel = latest?.number
+    ? `NFS-e ${latest.number}${latest.series ? ` · série ${latest.series}` : ''}`
+    : state?.zero_confirmed
+      ? 'Nenhuma NFS-e encontrada — zero confirmado'
+      : 'Nenhuma NFS-e confirmada ainda';
+
+  return (
+    <div className={`extractor-engine-indicator is-nfse ${searching ? 'is-searching' : healthy ? 'is-monitoring' : 'is-warning'}`}>
+      <button
+        type="button"
+        aria-label={`${title}. Passe o mouse para ver detalhes.`}
+        aria-describedby="extractor-nfse-engine-tooltip"
+      >
+        {searching ? <Loader2 /> : healthy ? <CheckCircle2 /> : <AlertTriangle />}
+      </button>
+      <div id="extractor-nfse-engine-tooltip" className="extractor-engine-tooltip" role="tooltip">
+        <strong>{title}</strong>
+        <span><b>Última nota</b>{latestLabel}</span>
+        <span><b>Emissão</b>{latest?.issue_date ? formatDate(latest.issue_date, true) : '—'}</span>
+        <span><b>Última conferência</b>{state?.last_caught_up_at ? formatDate(state.last_caught_up_at, true) : '—'}</span>
+        <span><b>Último NSU</b>{state?.last_nsu ? integer.format(state.last_nsu) : '—'}</span>
+        <span><b>Documentos</b>{integer.format(state?.total_documents || 0)}</span>
+        <span><b>Entradas / saídas</b>{integer.format(state?.entries || 0)} / {integer.format(state?.exits || 0)}</span>
+        <span><b>XML integral</b>{integer.format(state?.full_xml_documents || 0)}</span>
+        <span><b>XML pendente</b>{integer.format(state?.pending_xml_documents || 0)}</span>
+        {state?.last_error ? <small>{state.last_error}</small> : (
+          <small>{searching
+            ? 'O motor está percorrendo a ADN Nacional. A página continua disponível enquanto a busca avança.'
+            : state?.zero_confirmed
+              ? 'A ADN foi consultada até o fim disponível e confirmou que não há NFS-e para esta empresa.'
+              : 'A ADN foi consultada até o fim disponível. Novas NFS-e continuarão sendo verificadas automaticamente.'}</small>
+        )}
       </div>
     </div>
   );

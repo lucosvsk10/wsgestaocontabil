@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { assessNfseSyncState } from "../_shared/nfse-health.ts";
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -108,29 +109,34 @@ async function auditSales(admin: any, company: any, salesState: any, health: any
   }
 
   if (String(company.uf || "").toUpperCase() === "SP") {
-    const rows = await fetchPaged(() => admin.from("fiscal_sales_documents").select("access_key,xml,issue_date").eq("company_id", companyId).eq("model","65").gte("issue_date", range.start).lt("issue_date", range.next).order("issue_date",{ascending:true}));
+    const rows = await fetchPaged(() => admin.from("fiscal_sales_documents").select("access_key,xml,issue_date,model").eq("company_id", companyId).in("model",["55","65"]).gte("issue_date", range.start).lt("issue_date", range.next).order("issue_date",{ascending:true}));
     const withoutXml = rows.filter((row:any)=>!row.xml).length;
-    if (withoutXml) issues.push({ issue_code:"SALES_XML_PENDING", severity:"error", title:"XML de venda pendente", message: withoutXml+" NFC-e de SP continuam sem XML integral.", data:{count:withoutXml} });
-    if (!lastCompleted || Date.now()-lastCompleted > 4*60*60*1000) issues.push({ issue_code:"SALES_SYNC_STALE", severity:"error", title:"Busca de vendas atrasada", message:"A consulta oficial de NFC-e/SP não concluiu nas últimas 4 horas.", data:{last_completed_at:salesState.last_completed_at} });
+    if (withoutXml) issues.push({ issue_code:"SALES_XML_PENDING", severity:"error", title:"XML de venda pendente", message: withoutXml+" NF-e/NFC-e de SP continuam sem XML integral.", data:{count:withoutXml} });
+    if (!lastCompleted || Date.now()-lastCompleted > 4*60*60*1000) issues.push({ issue_code:"SALES_SYNC_STALE", severity:"error", title:"Busca de vendas atrasada", message:"A consulta oficial de NF-e/NFC-e de SP não concluiu nas últimas 4 horas.", data:{last_completed_at:salesState.last_completed_at} });
     return issues;
   }
 
   if (String(company.uf || "").toUpperCase() !== "AL") return issues;
   const latest = Number(salesState.latest_number || 0);
-  const all = await fetchPaged(() => admin.from("fiscal_sales_reconciliation").select("status,access_key,issue_date,note_number").eq("company_id", companyId).eq("model", "65").eq("series", "1").lte("note_number", latest || 999999999).order("note_number", { ascending: true }));
+  const referenceKey = digits(salesState.reference_access_key);
+  const targetModel = String(salesState.reference_model || referenceKey.slice(20, 22) || "65");
+  const targetSeries = String(Number(salesState.reference_series || referenceKey.slice(22, 25) || 1));
+  const floor = Math.max(1, Number(salesState.initial_floor_number || 1));
+  const expectedTotal = latest >= floor ? latest - floor + 1 : 0;
+  const all = await fetchPaged(() => admin.from("fiscal_sales_reconciliation").select("status,access_key,issue_date,note_number,model,series").eq("company_id", companyId).eq("model", targetModel).eq("series", targetSeries).gte("note_number", floor).lte("note_number", latest || 999999999).order("note_number", { ascending: true }));
   const counts: Record<string, number> = {};
   for (const row of all) counts[row.status] = (counts[row.status] || 0) + 1;
   const unresolved = Number(counts.pending || 0) + Number(counts.error || 0);
   const resolved = all.length - unresolved;
-  const sequenceComplete = latest > 0 && all.length === latest && unresolved === 0;
+  const sequenceComplete = latest > 0 && all.length === expectedTotal && unresolved === 0;
   if (sequenceComplete) {
-    const stale = salesState.reconciliation_complete !== true || Number(salesState.reconciliation_total || 0) !== latest || Number(salesState.reconciliation_resolved || 0) !== resolved || Number(salesState.reconciliation_pending || 0) !== 0 || String(salesState.status || "") === "reconciling";
-    if (stale) await admin.from("fiscal_sales_sync_state").update({ status: "idle", reconciliation_total: latest, reconciliation_resolved: resolved, reconciliation_found: Number(counts.found || 0), reconciliation_cancelled: Number(counts.cancelled || 0), reconciliation_inutilized: Number(counts.inutilized || 0), reconciliation_not_authorized: Number(counts.not_authorized || 0), reconciliation_missing: Number(counts.not_found || 0), reconciliation_pending: 0, reconciliation_complete: true, reconciliation_completed_at: new Date().toISOString(), last_error: salesState.last_error || null, updated_at: new Date().toISOString() }).eq("company_id", companyId);
+    const stale = salesState.reconciliation_complete !== true || Number(salesState.reconciliation_total || 0) !== expectedTotal || Number(salesState.reconciliation_resolved || 0) !== resolved || Number(salesState.reconciliation_pending || 0) !== 0 || String(salesState.status || "") === "reconciling";
+    if (stale) await admin.from("fiscal_sales_sync_state").update({ status: "idle", reconciliation_total: expectedTotal, reconciliation_resolved: resolved, reconciliation_found: Number(counts.found || 0), reconciliation_cancelled: Number(counts.cancelled || 0), reconciliation_inutilized: Number(counts.inutilized || 0), reconciliation_not_authorized: Number(counts.not_authorized || 0), reconciliation_missing: Number(counts.not_found || 0), reconciliation_pending: 0, reconciliation_complete: true, reconciliation_completed_at: new Date().toISOString(), last_error: salesState.last_error || null, updated_at: new Date().toISOString() }).eq("company_id", companyId);
     if (Number(counts.found || 0)===0 && salesState.last_error) {
       issues.push({ issue_code:"SALES_ZERO_UNCONFIRMED", severity:"attention", title:"Zero vendas ainda não confirmado", message:salesState.last_error, data:{latest_number:latest,reconciliation_complete:true} });
     }
   } else if (latest > 0) {
-    issues.push({ issue_code: "SALES_RECONCILIATION_PENDING", severity: Number(health?.sales_failure_count || 0) >= 3 ? "error" : "attention", title: "Conferência de vendas pendente", message: `A sequência de vendas ainda não terminou: ${resolved}/${latest} posições resolvidas.`, data: { total: latest, resolved, unresolved } });
+    issues.push({ issue_code: "SALES_RECONCILIATION_PENDING", severity: Number(health?.sales_failure_count || 0) >= 3 ? "error" : "attention", title: "Conferência de vendas pendente", message: `A sequência de vendas ainda não terminou: ${resolved}/${expectedTotal} posições resolvidas.`, data: { total: expectedTotal, resolved, unresolved, model: targetModel, series: targetSeries, floor } });
   }
   const foundThisMonth = all.filter((row) => row.status === "found" && row.issue_date && row.issue_date >= range.start && row.issue_date < range.next);
   const expectedKeys = [...new Set(foundThisMonth.map((row) => digits(row.access_key)).filter((key) => key.length === 44))];
@@ -142,6 +148,42 @@ async function auditSales(admin: any, company: any, salesState: any, health: any
   const xmlPending = expectedKeys.filter((key) => saved.has(key) && !withXml.has(key));
   if (xmlPending.length) issues.push({ issue_code: "SALES_XML_PENDING", severity: "error", title: "XML de venda pendente", message: `${xmlPending.length} venda(s) continuam sem XML integral após a reconciliação.`, data: { count: xmlPending.length, access_keys: xmlPending.slice(0, 20) } });
   return issues;
+}
+
+function auditNfse(state: any): Issue[] {
+  if (!state) return [{
+    issue_code: "NFSE_STATE_MISSING",
+    severity: "attention",
+    title: "Busca de NFS-e ainda não inicializada",
+    message: "O motor nacional de NFS-e ainda não registrou a primeira execução desta empresa.",
+  }];
+
+  const status = String(state.status || "").toLowerCase();
+  const assessment = assessNfseSyncState(state);
+  const caughtUpAt = assessment.caughtUpAt;
+  const updatedMs = state.updated_at ? Date.parse(String(state.updated_at)) : 0;
+  if (state.last_error && Number(state.consecutive_failures || 0) >= 3) return [{
+    issue_code: "NFSE_SYNC_FAILURE",
+    severity: "error",
+    title: "Falha persistente na busca de NFS-e",
+    message: "A consulta à ADN Nacional falhou repetidamente e continuará sendo tentada automaticamente.",
+    data: { error: state.last_error, consecutive_failures: Number(state.consecutive_failures || 0) },
+  }];
+  if (["running", "catching_up"].includes(status) && (!updatedMs || Date.now() - updatedMs > 30 * 60 * 1000)) return [{
+    issue_code: "NFSE_CURSOR_STALLED",
+    severity: "error",
+    title: "Busca de NFS-e sem avanço",
+    message: "O cursor da ADN Nacional está em processamento, mas não avançou nos últimos 30 minutos.",
+    data: { status, last_nsu: Number(state.last_nsu || 0), updated_at: state.updated_at || null },
+  }];
+  if (!assessment.sourceConfirmed) return [{
+    issue_code: "NFSE_SYNC_STALE",
+    severity: "attention",
+    title: "Cobertura de NFS-e aguardando confirmação",
+    message: "A ADN Nacional ainda não confirmou o fim disponível ou a última confirmação ocorreu há mais de quatro horas.",
+    data: { status, source_exhausted: state.source_exhausted === true, last_caught_up_at: caughtUpAt },
+  }];
+  return [];
 }
 
 async function persistIssues(admin: any, companyId: string, issues: Issue[]) {
@@ -171,20 +213,22 @@ Deno.serve(async (req) => {
     const token = String(tokenRow?.token || "");
     if (!token || req.headers.get("x-debug-token") !== token) return json({ error: "unauthorized" }, 403);
     const range = bounds();
-    const [fiscals, certs, credentials, purchases, sales, health] = await Promise.all([
+    const [fiscals, certs, credentials, purchases, sales, nfseStates, health] = await Promise.all([
       admin.from("fiscal_companies").select("id,company_id,cnpj,razao_social,nome_fantasia,status,uf").eq("status", "ativa"),
       admin.from("fiscal_certificates").select("company_id,valid_until,is_active,created_at").eq("is_active", true).order("created_at", { ascending: false }),
       admin.from("fiscal_state_credentials").select("company_id,uf,is_active").eq("is_active", true),
       admin.from("fiscal_purchase_sync_state").select("*"),
       admin.from("fiscal_sales_sync_state").select("*"),
+      admin.from("fiscal_nfse_sync_state").select("*"),
       admin.from("fiscal_sync_health").select("*"),
     ]);
-    for (const result of [fiscals, certs, credentials, purchases, sales, health]) if (result.error) throw result.error;
+    for (const result of [fiscals, certs, credentials, purchases, sales, nfseStates, health]) if (result.error) throw result.error;
     const certByCompany = new Map<string, any>();
     for (const cert of certs.data || []) if (!certByCompany.has(String(cert.company_id))) certByCompany.set(String(cert.company_id), cert);
     const credentialSet = new Set((credentials.data || []).filter((row: any) => String(row.uf || "").toUpperCase() === "AL").map((row: any) => String(row.company_id)));
     const purchaseByCompany = new Map((purchases.data || []).map((row: any) => [String(row.company_id), row]));
     const salesByCompany = new Map((sales.data || []).map((row: any) => [String(row.company_id), row]));
+    const nfseByCompany = new Map((nfseStates.data || []).map((row: any) => [String(row.company_id), row]));
     const healthByCompany = new Map((health.data || []).map((row: any) => [String(row.company_id), row]));
     const monitored = (fiscals.data || []).filter((company: any) => certByCompany.has(String(company.id)) && (purchaseByCompany.has(String(company.id)) || salesByCompany.has(String(company.id))));
     const results: any[] = [];
@@ -194,7 +238,11 @@ Deno.serve(async (req) => {
       try {
         let issues: Issue[] = [];
         if (cert?.valid_until && Date.parse(`${cert.valid_until}T23:59:59Z`) < Date.now()) issues = [{ issue_code: "CERTIFICATE_EXPIRED", severity: "error", title: "Certificado A1 vencido", message: "A extração fiscal desta empresa está bloqueada porque o certificado A1 venceu.", data: { valid_until: cert.valid_until } }];
-        else issues = [...await auditPurchases(admin, base, token, company, purchaseByCompany.get(id), String(company.uf || "").toUpperCase() !== "AL" || credentialSet.has(id), range), ...await auditSales(admin, company, salesByCompany.get(id), healthByCompany.get(id), range)];
+        else issues = [
+          ...await auditPurchases(admin, base, token, company, purchaseByCompany.get(id), String(company.uf || "").toUpperCase() !== "AL" || credentialSet.has(id), range),
+          ...await auditSales(admin, company, salesByCompany.get(id), healthByCompany.get(id), range),
+          ...auditNfse(nfseByCompany.get(id)),
+        ];
         const persistence = await persistIssues(admin, id, issues);
         results.push({ company_id: id, issues: issues.map((issue) => issue.issue_code), ...persistence });
       } catch (error) {

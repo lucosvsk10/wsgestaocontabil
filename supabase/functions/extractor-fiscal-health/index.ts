@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.0';
 import { documentAccess } from '../_shared/extractor-access.ts';
 import { fiscalSalesCoverage } from '../_shared/fiscal-coverage.ts';
+import { assessNfseSyncState } from '../_shared/nfse-health.ts';
 import { consume, limited } from '../_shared/rate-limit.ts';
 
 const cors = {
@@ -278,7 +279,7 @@ Deno.serve(async req => {
     }
 
     if (action === 'coverage_status') {
-      const [coverageResult, salesStateResult, certificateResult, salesDocumentsResult, latestSalesDocumentResult] = await Promise.all([
+      const [coverageResult, salesStateResult, certificateResult, salesDocumentsResult, latestSalesDocumentResult, nfseStateResult, nfseDocumentsResult, nfseFullXmlResult, nfseEntriesResult, nfseExitsResult] = await Promise.all([
         admin.from('fiscal_extractor_coverage')
           .select('document_type,direction,applicability,coverage_status,source_confirmed,source_name,last_error,last_verified_at,details')
           .eq('company_id', companyId)
@@ -305,18 +306,57 @@ Deno.serve(async req => {
           .order('issue_date', { ascending: false })
           .limit(1)
           .maybeSingle(),
+        admin.from('fiscal_nfse_sync_state')
+          .select('status,last_nsu,last_started_at,last_completed_at,last_caught_up_at,next_scheduled_at,last_error,source_exhausted,documents_saved,last_run_documents,last_run_events,last_run_batches,consecutive_failures,updated_at')
+          .eq('company_id', companyId)
+          .maybeSingle(),
+        admin.from('fiscal_dfe_documents')
+          .select('note_number,series,issue_date,updated_at,full_xml', { count: 'exact' })
+          .eq('company_id', companyId)
+          .eq('source', 'national_nfse_adn')
+          .eq('document_kind', 'nfse')
+          .order('issue_date', { ascending: false })
+          .limit(1),
+        admin.from('fiscal_dfe_documents')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .eq('source', 'national_nfse_adn')
+          .eq('document_kind', 'nfse')
+          .eq('full_xml', true)
+          .not('xml', 'is', null),
+        admin.from('fiscal_dfe_documents')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .eq('source', 'national_nfse_adn')
+          .eq('document_kind', 'nfse')
+          .eq('direction', 'entrada'),
+        admin.from('fiscal_dfe_documents')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .eq('source', 'national_nfse_adn')
+          .eq('document_kind', 'nfse')
+          .eq('direction', 'saida'),
       ]);
       if (coverageResult.error) throw coverageResult.error;
       if (salesStateResult.error) throw salesStateResult.error;
       if (certificateResult.error) throw certificateResult.error;
       if (salesDocumentsResult.error) throw salesDocumentsResult.error;
       if (latestSalesDocumentResult.error) throw latestSalesDocumentResult.error;
+      if (nfseStateResult.error) throw nfseStateResult.error;
+      if (nfseDocumentsResult.error) throw nfseDocumentsResult.error;
+      if (nfseFullXmlResult.error) throw nfseFullXmlResult.error;
+      if (nfseEntriesResult.error) throw nfseEntriesResult.error;
+      if (nfseExitsResult.error) throw nfseExitsResult.error;
 
       const coverage = coverageResult.data || [];
       const salesState = salesStateResult.data || null;
       const certificate = certificateResult.data || null;
       const savedSalesCount = Number(salesDocumentsResult.count || 0);
       const latestSalesDocument = latestSalesDocumentResult.data || null;
+      const nfseState = nfseStateResult.data || null;
+      const latestNfseDocument = nfseDocumentsResult.data?.[0] || null;
+      const nfseDocumentsCount = Number(nfseDocumentsResult.count || 0);
+      const nfseFullXmlCount = Number(nfseFullXmlResult.count || 0);
       const certificateUntil = String(certificate?.valid_until || '');
       const certificateUntilMs = certificateUntil
         ? new Date(certificateUntil.includes('T') ? certificateUntil : `${certificateUntil}T23:59:59-03:00`).getTime()
@@ -363,6 +403,13 @@ Deno.serve(async req => {
         ? salesState?.last_started_at || salesState?.updated_at || salesState?.last_completed_at || null
         : salesState?.last_completed_at || salesState?.last_started_at || salesState?.updated_at || null;
       const engineState = activeSync ? 'searching' : salesReady ? 'caught_up' : salesOperational ? 'monitoring' : 'preparing';
+      const nfseStateStatus = String(nfseState?.status || 'not_started').toLowerCase();
+      const nfseAssessment = assessNfseSyncState(nfseState);
+      const nfseCaughtUpAt = nfseAssessment.caughtUpAt;
+      const nfseCurrent = nfseAssessment.sourceConfirmed;
+      const nfseEngineStatus = nfseAssessment.phase === 'current'
+        ? nfseDocumentsCount > 0 ? 'current' : 'empty'
+        : nfseAssessment.phase;
       const gate = ready
         ? {
             ready: true,
@@ -443,6 +490,32 @@ Deno.serve(async req => {
           saved_sales_count: savedSalesCount,
           reference_ready: referenceReady,
           sequence_evidence: sequenceEvidence,
+        },
+        nfse_engine: {
+          status: nfseEngineStatus,
+          source_confirmed: nfseCurrent,
+          zero_confirmed: nfseCurrent && nfseDocumentsCount === 0,
+          source_exhausted: nfseState?.source_exhausted === true,
+          sync_status: nfseStateStatus,
+          last_nsu: Number(nfseState?.last_nsu || 0),
+          last_started_at: nfseState?.last_started_at || null,
+          last_caught_up_at: nfseCaughtUpAt,
+          next_scheduled_at: nfseState?.next_scheduled_at || null,
+          last_error: nfseState?.last_error || null,
+          total_documents: nfseDocumentsCount,
+          full_xml_documents: nfseFullXmlCount,
+          pending_xml_documents: Math.max(0, nfseDocumentsCount - nfseFullXmlCount),
+          entries: Number(nfseEntriesResult.count || 0),
+          exits: Number(nfseExitsResult.count || 0),
+          last_run_documents: Number(nfseState?.last_run_documents || 0),
+          last_run_events: Number(nfseState?.last_run_events || 0),
+          last_run_batches: Number(nfseState?.last_run_batches || 0),
+          latest_document: latestNfseDocument ? {
+            number: latestNfseDocument.note_number,
+            series: latestNfseDocument.series,
+            issue_date: latestNfseDocument.issue_date,
+            found_at: latestNfseDocument.updated_at,
+          } : null,
         },
       });
     }

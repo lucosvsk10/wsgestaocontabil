@@ -1755,37 +1755,55 @@ export type Database = {
       fiscal_nfse_sync_state: {
         Row: {
           company_id: string
+          consecutive_failures: number
           documents_saved: number
           events_saved: number
+          last_caught_up_at: string | null
           last_completed_at: string | null
           last_error: string | null
           last_nsu: number
+          last_run_batches: number
+          last_run_documents: number
+          last_run_events: number
           last_started_at: string | null
           next_scheduled_at: string | null
+          source_exhausted: boolean
           status: string
           updated_at: string
         }
         Insert: {
           company_id: string
+          consecutive_failures?: number
           documents_saved?: number
           events_saved?: number
+          last_caught_up_at?: string | null
           last_completed_at?: string | null
           last_error?: string | null
           last_nsu?: number
+          last_run_batches?: number
+          last_run_documents?: number
+          last_run_events?: number
           last_started_at?: string | null
           next_scheduled_at?: string | null
+          source_exhausted?: boolean
           status?: string
           updated_at?: string
         }
         Update: {
           company_id?: string
+          consecutive_failures?: number
           documents_saved?: number
           events_saved?: number
+          last_caught_up_at?: string | null
           last_completed_at?: string | null
           last_error?: string | null
           last_nsu?: number
+          last_run_batches?: number
+          last_run_documents?: number
+          last_run_events?: number
           last_started_at?: string | null
           next_scheduled_at?: string | null
+          source_exhausted?: boolean
           status?: string
           updated_at?: string
         }
