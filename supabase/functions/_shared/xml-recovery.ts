@@ -26,8 +26,11 @@ export function decodeXmlEntities(value: string): string {
 }
 
 export function validFiscalXml(value: unknown): string {
-  const xml = decodeXmlEntities(String(value ?? "")).trim();
-  return /<(?:\w+:)?(?:nfeProc|procNFe|NFe)\b/i.test(xml) && xml.length > 1000 ? xml : "";
+  const text = decodeXmlEntities(String(value ?? "")).trim();
+  const embedded = text.match(
+    /<(?:\w+:)?(nfeProc|procNFe|NFe)\b[^>]*>[\s\S]*?<\/(?:\w+:)?\1>/i,
+  )?.[0] || "";
+  return embedded.length > 1000 ? embedded : "";
 }
 
 export function findFiscalXml(value: unknown, depth = 0): string {

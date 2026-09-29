@@ -14,4 +14,15 @@ describe("XML recovery", () => {
     expect(findFiscalXml({ data: { result: { documentoXml: xml } } })).toBe(xml);
     expect(findFiscalXml(JSON.stringify({ payload: { XML: xml } }))).toBe(xml);
   });
+
+  it("extracts XML embedded in the bridge HTML stringJson response", () => {
+    const xml = `<nfeProc>${"x".repeat(1100)}</nfeProc>`;
+    const bodyText = `<script>var stringJson = ${JSON.stringify({ xml })};</script>`;
+    expect(findFiscalXml({ body_text: bodyText })).toBe(xml);
+  });
+
+  it("returns only the fiscal XML when the bridge wraps it in HTML", () => {
+    const xml = `<nfeProc>${"x".repeat(1100)}</nfeProc>`;
+    expect(findFiscalXml(`<html><body>${xml}</body></html>`)).toBe(xml);
+  });
 });
