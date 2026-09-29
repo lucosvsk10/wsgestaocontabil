@@ -83,17 +83,11 @@ export const getUserDocumentsFromDB = async (userId: string) => {
  * @param userId Current user ID (for security check)
  * @returns Promise with download result
  */
-export const downloadDocument = async (storagePath: string, userId: string) => {
+export const downloadDocument = async (storagePath: string) => {
   try {
-    // Security check: ensure the storage path includes userId for security
-    if (!storagePath.startsWith(`${userId}/`)) {
-      // If not, add userId to path
-      const filename = storagePath.split('/').pop();
-      storagePath = `${userId}/${filename}`;
-    }
-    
-    // Debug log
-    console.log(`Attempting to download file with secure path: ${storagePath}`);
+    // Use the persisted storage key exactly as stored. Access is enforced by Storage RLS,
+    // which also authorizes legacy folders through the linked office company.
+    console.log(`Attempting to download file with canonical storage path: ${storagePath}`);
     
     // Download using Supabase Storage
     const { data, error } = await supabase.storage
