@@ -43,6 +43,10 @@ as $$
       or private.is_any_admin(auth.uid())
     )
     and (
+      private.is_any_admin(auth.uid())
+      or coalesce(d.status, 'active') = 'active'
+    )
+    and (
       d.user_id = _target_user_id
       or (
         d.company_id is not null
