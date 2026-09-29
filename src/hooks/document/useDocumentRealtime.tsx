@@ -40,7 +40,6 @@ export const useDocumentRealtime = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'documents',
-          filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
           console.log("Novo documento detectado:", payload);

@@ -32,11 +32,21 @@ export const uploadUserDocument = async (userId: string, file: File, documentNam
       .from('documents')
       .getPublicUrl(fileName);
 
+    // Resolve the stable office company before saving the document.
+    const { data: companyLink } = await (supabase as any)
+      .from('company_user_links')
+      .select('company_id,is_primary')
+      .eq('user_id', userId)
+      .order('is_primary', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     // 3. Save document record in database
     const { data, error: dbError } = await supabase
       .from('documents')
       .insert({
         user_id: userId,
+        company_id: companyLink?.company_id || null,
         name: documentName || file.name,
         file_url: urlData.publicUrl,
         original_filename: file.name,
@@ -62,11 +72,18 @@ export const uploadUserDocument = async (userId: string, file: File, documentNam
  */
 export const getUserDocumentsFromDB = async (userId: string) => {
   try {
-    const { data, error } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('user_id', userId)
-      .order('uploaded_at', { ascending: false });
+    let { data, error } = await (supabase as any)
+      .rpc('portal_documents', { _target_user_id: userId });
+
+    if (error) {
+      const fallback = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', userId)
+        .order('uploaded_at', { ascending: false });
+      data = fallback.data;
+      error = fallback.error;
+    }
       
     if (error) throw error;
     
@@ -83,17 +100,11 @@ export const getUserDocumentsFromDB = async (userId: string) => {
  * @param userId Current user ID (for security check)
  * @returns Promise with download result
  */
-export const downloadDocument = async (storagePath: string, userId: string) => {
+export const downloadDocument = async (storagePath: string) => {
   try {
-    // Security check: ensure the storage path includes userId for security
-    if (!storagePath.startsWith(`${userId}/`)) {
-      // If not, add userId to path
-      const filename = storagePath.split('/').pop();
-      storagePath = `${userId}/${filename}`;
-    }
-    
-    // Debug log
-    console.log(`Attempting to download file with secure path: ${storagePath}`);
+    // Use the persisted storage key exactly as stored. Access is enforced by Storage RLS,
+    // which also authorizes legacy folders through the linked office company.
+    console.log(`Attempting to download file with canonical storage path: ${storagePath}`);
     
     // Download using Supabase Storage
     const { data, error } = await supabase.storage
