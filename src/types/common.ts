@@ -19,6 +19,7 @@ export interface Document {
   file_url: string;
   uploaded_at: string;
   user_id: string;
+  company_id?: string | null;
   storage_key?: string;
   category: string; // ID da categoria
   categoryObject?: DocumentCategory; // Objeto da categoria para facilitar acesso
