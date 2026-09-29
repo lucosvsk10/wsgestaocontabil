@@ -4,7 +4,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Document } from "@/utils/auth/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { downloadDocument } from "@/utils/documents/documentManagement";
-import { hasDocumentAccess } from "@/utils/auth/userChecks";
 import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/useNotifications";
 
@@ -40,14 +39,7 @@ export const useDocumentActions = () => {
         
       if (viewError) throw viewError;
       
-      // Also update viewed flag in documents table for consistency
-      const { error } = await supabase
-        .from('documents')
-        .update({ viewed: true, viewed_at: new Date().toISOString() })
-        .eq('id', docItem.id);
-        
-      if (error) throw error;
-      
+
     } catch (error: any) {
       console.error('Error marking document as viewed:', error);
       toast({
@@ -81,31 +73,21 @@ export const useDocumentActions = () => {
     try {
       setLoadingDocumentIds(prev => new Set([...prev, docItem.id]));
       
-      // Check if document belongs to authenticated user
-      if (!hasDocumentAccess(user.id, docItem.user_id, docItem.storage_key)) {
-        throw new Error("Você não tem permissão para baixar este documento.");
-      }
-      
+      // Authorization is enforced by database/storage RLS through the company link.
+      // Legacy files may physically remain inside the previous portal user's folder.
       let storagePath = "";
-      
-      // If we have storage_key, use it as base to build the path
       if (docItem.storage_key) {
-        // Verify storage_key starts with user ID for security
-        if (!docItem.storage_key.startsWith(`${user.id}/`)) {
-          throw new Error("Caminho de armazenamento inválido para este usuário.");
-        }
         storagePath = docItem.storage_key;
       } else {
-        // Fallback to build a path based on user ID and filename
         const filename = docItem.filename || docItem.original_filename || docItem.name;
-        storagePath = `${user.id}/${filename}`;
-        console.warn("Using alternative path for download:", storagePath);
+        storagePath = `${docItem.user_id}/${filename}`;
+        console.warn("Using legacy document path fallback:", storagePath);
       }
       
       console.log('Attempting to download document with path:', storagePath);
       
       // Download file from storage
-      const { data, error } = await downloadDocument(storagePath, user.id);
+      const { data, error } = await downloadDocument(storagePath);
       
       if (error) {
         console.error("Supabase download error:", error);
