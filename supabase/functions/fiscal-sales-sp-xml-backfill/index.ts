@@ -50,7 +50,7 @@ Deno.serve(async req=>{try{
     if(gatewayToken){try{
       const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+gatewayToken},body:JSON.stringify({action:"nfe-distribution",environment:c.ambiente_padrao==="homologacao"?"homologation":"production",certificate_pem:parsed.certificadoPem,private_key_pem:parsed.chavePrivadaPem,chain_pem:parsed.cadeiaPem||[],cnpj:c.cnpj,uf_code:"35",access_key:key}),signal:AbortSignal.timeout(70000)});
       const o=await r.json().catch(()=>({})) as any;if(!r.ok||!o?.ok)throw Error("gateway_"+r.status+":"+String(o?.error||"failed"));
-      const raw=de(String(o.text||"")),docs:any[]=[];const rx=/<docZip\b([^>]*)>([\s\S]*?)<\/docZip>/gi;let m;
+      const raw=decodeEntities(String(o.text||"")),docs:any[]=[];const rx=/<docZip\b([^>]*)>([\s\S]*?)<\/docZip>/gi;let m;
       while((m=rx.exec(raw)))try{const xml=await gunzip(m[2]),sm=String(m[1]||"").match(/schema=["']([^"']+)["']/i),schema=sm?.[1]||"",access=tag(xml,"chNFe")||xml.match(/Id=["']NFe(\d{44})/i)?.[1]||"";if(access===key)docs.push({xml,schema,full:/(?:procNFe|nfeProc)/i.test(schema)||/<(?:\w+:)?NFe\b/i.test(xml)})}catch{}
       full=docs.find(d=>d.full)||null;if(!full){if(docs.length){summaryOnly++;officialError="summary_only:"+docs.map(d=>d.schema).join(",")}else officialError="no_document:"+String(tag(raw,"cStat")||"")+":"+String(tag(raw,"xMotivo")||"")}
     }catch(error){officialError=error instanceof Error?error.message:String(error)}}else{officialError="gateway_token_missing"}
