@@ -27,6 +27,7 @@ export type UserType = {
 export type Document = {
   id: string;
   user_id: string;
+  company_id?: string | null;
   name: string;
   file_url: string;
   storage_key?: string; // Changed to optional to match common.ts
