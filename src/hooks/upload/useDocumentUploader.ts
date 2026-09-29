@@ -108,12 +108,25 @@ export const useDocumentUploader = (fetchUserDocuments: (userId: string) => Prom
         .from('documents')
         .getPublicUrl(fileKey);
       
+      // Resolve the stable office company recipient. user_id remains for compatibility,
+      // but company_id is the canonical identity when portal credentials change.
+      const { data: companyLink, error: companyLinkError } = await (supabase as any)
+        .from('company_user_links')
+        .select('company_id,is_primary')
+        .eq('user_id', selectedUserId)
+        .order('is_primary', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (companyLinkError) throw companyLinkError;
+
       // Create document record in the database
       const { data: documentData, error: documentError } = await supabase
         .from('documents')
         .insert([
           {
             user_id: selectedUserId,
+            company_id: companyLink?.company_id || null,
             name: documentName,
             category: documentCategory,
             observations: documentObservations,
