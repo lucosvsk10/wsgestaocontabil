@@ -30,6 +30,36 @@ export type WeeklyDaySchedule = {
   exit2: string;
 };
 
+export type PunchDayInput = {
+  date?: string;
+  weekdayLabel?: string;
+  punches?: string[];
+};
+
+export type PunchDaySummary = {
+  date: string;
+  weekdayLabel: string;
+  punches: string[];
+  workedMinutes: number;
+  referenceMinutes: number;
+  balanceMinutes: number | null;
+  excessMinutes: number;
+  deficitMinutes: number;
+  status: 'complete' | 'incomplete' | 'no_punches';
+};
+
+export type PunchPeriodSummary = {
+  days: PunchDaySummary[];
+  workedMinutes: number;
+  referenceMinutes: number;
+  excessMinutes: number;
+  deficitMinutes: number;
+  netMinutes: number;
+  completeDays: number;
+  incompleteDays: number;
+  noPunchDays: number;
+};
+
 export const WEEKDAYS: Array<{ key: WeekdayKey; label: string; short: string }> = [
   { key: 'monday', label: 'Segunda-feira', short: 'Seg' },
   { key: 'tuesday', label: 'Terça-feira', short: 'Ter' },
@@ -141,6 +171,13 @@ export function formatMinutes(minutes: number) {
   return `${String(hours).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
 }
 
+export function formatSignedMinutes(minutes: number) {
+  const safe = Math.round(Number.isFinite(minutes) ? minutes : 0);
+  if (safe === 0) return '00:00';
+  const sign = safe > 0 ? '+' : '-';
+  return `${sign}${formatMinutes(Math.abs(safe))}`;
+}
+
 export function clockTimeToMinutes(value: string) {
   const match = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return null;
@@ -155,6 +192,90 @@ export function intervalClockMinutes(start: string, end: string) {
   const to = clockTimeToMinutes(end);
   if (from === null || to === null) return 0;
   return to >= from ? to - from : 24 * 60 - from + to;
+}
+
+export function summarizePunchDay(
+  day: PunchDayInput,
+  dailyHours = 8,
+): PunchDaySummary {
+  const punches = Array.isArray(day?.punches)
+    ? day.punches.map(value => String(value || '').trim()).filter(Boolean)
+    : [];
+  const referenceMinutes = Math.max(0, Math.round(safeNumber(dailyHours, 8) * 60));
+
+  if (!punches.length) {
+    return {
+      date: String(day?.date || ''),
+      weekdayLabel: String(day?.weekdayLabel || ''),
+      punches,
+      workedMinutes: 0,
+      referenceMinutes,
+      balanceMinutes: null,
+      excessMinutes: 0,
+      deficitMinutes: 0,
+      status: 'no_punches',
+    };
+  }
+
+  let workedMinutes = 0;
+  let invalidPair = false;
+  const completePairCount = Math.floor(punches.length / 2);
+
+  for (let index = 0; index < completePairCount * 2; index += 2) {
+    const start = punches[index];
+    const end = punches[index + 1];
+    if (clockTimeToMinutes(start) === null || clockTimeToMinutes(end) === null) {
+      invalidPair = true;
+      continue;
+    }
+    workedMinutes += intervalClockMinutes(start, end);
+  }
+
+  const incomplete = punches.length % 2 !== 0 || invalidPair;
+  const balanceMinutes = incomplete ? null : workedMinutes - referenceMinutes;
+
+  return {
+    date: String(day?.date || ''),
+    weekdayLabel: String(day?.weekdayLabel || ''),
+    punches,
+    workedMinutes,
+    referenceMinutes,
+    balanceMinutes,
+    excessMinutes: balanceMinutes !== null ? Math.max(0, balanceMinutes) : 0,
+    deficitMinutes: balanceMinutes !== null ? Math.max(0, -balanceMinutes) : 0,
+    status: incomplete ? 'incomplete' : 'complete',
+  };
+}
+
+export function summarizePunchPeriod(
+  days: PunchDayInput[],
+  dailyHours = 8,
+): PunchPeriodSummary {
+  const summaries = (Array.isArray(days) ? days : []).map(day =>
+    summarizePunchDay(day, dailyHours),
+  );
+
+  const workedMinutes = summaries.reduce((sum, day) => sum + day.workedMinutes, 0);
+  const completeDays = summaries.filter(day => day.status === 'complete').length;
+  const incompleteDays = summaries.filter(day => day.status === 'incomplete').length;
+  const noPunchDays = summaries.filter(day => day.status === 'no_punches').length;
+  const referenceMinutes = summaries
+    .filter(day => day.status === 'complete')
+    .reduce((sum, day) => sum + day.referenceMinutes, 0);
+  const excessMinutes = summaries.reduce((sum, day) => sum + day.excessMinutes, 0);
+  const deficitMinutes = summaries.reduce((sum, day) => sum + day.deficitMinutes, 0);
+
+  return {
+    days: summaries,
+    workedMinutes,
+    referenceMinutes,
+    excessMinutes,
+    deficitMinutes,
+    netMinutes: excessMinutes - deficitMinutes,
+    completeDays,
+    incompleteDays,
+    noPunchDays,
+  };
 }
 
 export function scheduleDayMinutes(day: WeeklyDaySchedule) {

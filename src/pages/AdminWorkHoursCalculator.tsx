@@ -23,6 +23,7 @@ import {
 import WeeklyScheduleEditor from '@/components/admin/hr/WeeklyScheduleEditor';
 import MonthlyCalculationsTable from '@/components/admin/hr/MonthlyCalculationsTable';
 import PointMirrorImportPanel from '@/components/admin/hr/PointMirrorImportPanel';
+import DailyPunchSummary from '@/components/admin/hr/DailyPunchSummary';
 import type { PointMirrorEmployee } from '@/lib/hr/pointMirrorImport';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1351,23 +1352,88 @@ export default function AdminWorkHoursCalculator() {
       ? 'Finalizado'
       : 'Rascunho';
 
-  const summaryRows = [
-    ['Salário / base', result.basePay],
-    [`HE ${form.overtime50Percent}%`, result.additions.overtime50],
-    [`HE ${form.overtime100Percent}%`, result.additions.overtime100],
-    ['Adicional noturno', result.additions.nightPremium],
-    ['Domingo / feriado', result.additions.holidayPremium],
-    ['Banco positivo', result.additions.bankPositive],
-    ['Outros acréscimos', result.additions.other],
-  ] as const;
-
-  const deductionRows = [
-    ['Faltas em dias', result.deductions.absenceDays],
-    ['Faltas em horas', result.deductions.absenceHours],
-    ['Atrasos / saídas', result.deductions.lateHours],
-    ['Banco negativo', result.deductions.bankNegative],
-    ['Outros descontos', result.deductions.other],
-  ] as const;
+  const payrollRows = [
+    {
+      label: 'Salário / base',
+      reference:
+        form.employmentType === 'monthly'
+          ? `${form.monthlyHours}h mensais`
+          : formatMinutes(result.minutes.normal),
+      earning: result.basePay,
+      deduction: 0,
+    },
+    {
+      label: `Hora extra ${form.overtime50Percent}%`,
+      reference: formatMinutes(result.minutes.overtime50),
+      earning: result.additions.overtime50,
+      deduction: 0,
+    },
+    {
+      label: `Hora extra ${form.overtime100Percent}%`,
+      reference: formatMinutes(result.minutes.overtime100),
+      earning: result.additions.overtime100,
+      deduction: 0,
+    },
+    {
+      label: 'Adicional noturno',
+      reference: formatMinutes(result.minutes.night),
+      earning: result.additions.nightPremium,
+      deduction: 0,
+    },
+    {
+      label: 'Domingo / feriado',
+      reference: formatMinutes(result.minutes.holiday),
+      earning: result.additions.holidayPremium,
+      deduction: 0,
+    },
+    {
+      label: 'Banco positivo liquidado',
+      reference: formatMinutes(result.minutes.bankPositive),
+      earning: result.additions.bankPositive,
+      deduction: 0,
+    },
+    {
+      label: 'Outros acréscimos',
+      reference: form.otherAdditions.length
+        ? `${form.otherAdditions.length} lançamento(s)`
+        : '—',
+      earning: result.additions.other,
+      deduction: 0,
+    },
+    {
+      label: 'Faltas em dias',
+      reference: form.absenceDays ? `${form.absenceDays} dia(s)` : '—',
+      earning: 0,
+      deduction: result.deductions.absenceDays,
+    },
+    {
+      label: 'Faltas em horas',
+      reference: formatMinutes(result.minutes.absence),
+      earning: 0,
+      deduction: result.deductions.absenceHours,
+    },
+    {
+      label: 'Atrasos / saídas',
+      reference: formatMinutes(result.minutes.late),
+      earning: 0,
+      deduction: result.deductions.lateHours,
+    },
+    {
+      label: 'Banco negativo liquidado',
+      reference: formatMinutes(result.minutes.bankNegative),
+      earning: 0,
+      deduction: result.deductions.bankNegative,
+    },
+    {
+      label: 'Outros descontos',
+      reference: form.otherDeductions.length
+        ? `${form.otherDeductions.length} lançamento(s)`
+        : '—',
+      earning: 0,
+      deduction: result.deductions.other,
+    },
+  ];
+  const totalEarnings = result.basePay + result.additionsTotal;
 
   return (
     <AdminLayout showCompanySelector={false}>
@@ -1949,90 +2015,125 @@ export default function AdminWorkHoursCalculator() {
                       </p>
                     </div>
 
-                    <div className="grid gap-8 lg:grid-cols-[minmax(260px,.72fr)_minmax(0,1.28fr)]">
-                      <div>
-                        <span className="text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">
-                          Total apurado
-                        </span>
-                        <strong className="mt-2 block text-4xl tracking-tight">
-                          {formatCurrency(result.total)}
-                        </strong>
-                        <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-transparent pt-4 text-sm">
-                          <span>
-                            <small className="block text-[10px] uppercase tracking-[.08em] text-muted-foreground">
-                              Valor da hora
-                            </small>
-                            <b>{formatCurrency(result.hourlyRate)}</b>
+                    <section className="overflow-hidden rounded-2xl bg-muted/[0.04]">
+                      <div className="grid gap-4 bg-muted/15 px-5 py-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                          <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-muted-foreground">
+                            Funcionário
                           </span>
-                          <span>
-                            <small className="block text-[10px] uppercase tracking-[.08em] text-muted-foreground">
-                              Jornada semanal
-                            </small>
-                            <b>{formatMinutes(weeklyMinutes)}</b>
+                          <b className="mt-1 block text-sm">{currentEmployee?.name || '—'}</b>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-muted-foreground">
+                            CPF
                           </span>
-                          <span>
-                            <small className="block text-[10px] uppercase tracking-[.08em] text-muted-foreground">
-                              Acréscimos
-                            </small>
-                            <b>{formatCurrency(result.additionsTotal)}</b>
+                          <b className="mt-1 block text-sm">{currentEmployee?.cpf || '—'}</b>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-muted-foreground">
+                            Competência
                           </span>
-                          <span>
-                            <small className="block text-[10px] uppercase tracking-[.08em] text-muted-foreground">
-                              Descontos
-                            </small>
-                            <b>-{formatCurrency(result.deductionsTotal)}</b>
+                          <b className="mt-1 block text-sm capitalize">
+                            {formatCompetence(competenceDate(competence))}
+                          </b>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-muted-foreground">
+                            Status
                           </span>
+                          <b className="mt-1 block text-sm">{statusLabel}</b>
                         </div>
                       </div>
 
-                      <div className="border-t border-transparent pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-                        <div className="grid gap-8 md:grid-cols-2">
-                          <section>
-                            <p className="mb-3 text-xs font-semibold uppercase tracking-[.08em] text-muted-foreground">
-                              Proventos
-                            </p>
-                            <div className="space-y-2.5">
-                              {summaryRows
-                                .filter(([, value]) => value !== 0 || value === result.basePay)
-                                .map(([label, value]) => (
-                                  <div key={label} className="flex items-center justify-between gap-3 text-sm">
-                                    <span className="text-muted-foreground">{label}</span>
-                                    <b>{formatCurrency(value)}</b>
-                                  </div>
-                                ))}
-                            </div>
-                          </section>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[720px] text-sm">
+                          <thead className="bg-muted/[0.07] text-[10px] font-semibold uppercase tracking-[.08em] text-muted-foreground">
+                            <tr>
+                              <th className="px-5 py-3 text-left">Descrição</th>
+                              <th className="px-4 py-3 text-left">Referência</th>
+                              <th className="px-4 py-3 text-right">Proventos</th>
+                              <th className="px-5 py-3 text-right">Descontos</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-transparent">
+                            {payrollRows
+                              .filter(row => row.label === 'Salário / base' || row.earning !== 0 || row.deduction !== 0)
+                              .map(row => (
+                                <tr key={row.label}>
+                                  <td className="px-5 py-3 font-medium">{row.label}</td>
+                                  <td className="px-4 py-3 text-muted-foreground">{row.reference}</td>
+                                  <td className="px-4 py-3 text-right tabular-nums">
+                                    {row.earning ? formatCurrency(row.earning) : '—'}
+                                  </td>
+                                  <td className="px-5 py-3 text-right tabular-nums">
+                                    {row.deduction ? formatCurrency(row.deduction) : '—'}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                          <tfoot className="bg-muted/10">
+                            <tr>
+                              <td className="px-5 py-3 text-xs font-semibold uppercase tracking-[.08em] text-muted-foreground">
+                                Totais
+                              </td>
+                              <td />
+                              <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                                {formatCurrency(totalEarnings)}
+                              </td>
+                              <td className="px-5 py-3 text-right font-semibold tabular-nums">
+                                {formatCurrency(result.deductionsTotal)}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="px-5 py-4 text-sm font-semibold" colSpan={2}>
+                                Líquido apurado
+                              </td>
+                              <td className="px-5 py-4 text-right" colSpan={2}>
+                                <strong className="text-2xl tabular-nums">{formatCurrency(result.total)}</strong>
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </section>
 
-                          <section>
-                            <p className="mb-3 text-xs font-semibold uppercase tracking-[.08em] text-muted-foreground">
-                              Descontos
-                            </p>
-                            <div className="space-y-2.5">
-                              {deductionRows.filter(([, value]) => value !== 0).length ? (
-                                deductionRows
-                                  .filter(([, value]) => value !== 0)
-                                  .map(([label, value]) => (
-                                    <div key={label} className="flex items-center justify-between gap-3 text-sm">
-                                      <span className="text-muted-foreground">{label}</span>
-                                      <b>-{formatCurrency(value)}</b>
-                                    </div>
-                                  ))
-                              ) : (
-                                <p className="text-sm text-muted-foreground">Nenhum desconto informado.</p>
-                              )}
-                            </div>
-                          </section>
-                        </div>
-
-                        {!form.settleBank &&
-                          (result.minutes.bankPositive > 0 || result.minutes.bankNegative > 0) && (
-                            <p className="mt-5 border-t border-transparent pt-4 text-xs text-muted-foreground">
-                              Banco de horas apenas registrado: +{formatMinutes(result.minutes.bankPositive)} / -
-                              {formatMinutes(result.minutes.bankNegative)}. Não altera o total.
-                            </p>
-                          )}
+                    <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                      <div className="rounded-xl bg-muted/15 px-4 py-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-muted-foreground">
+                          Valor da hora
+                        </span>
+                        <b className="mt-1 block text-sm">{formatCurrency(result.hourlyRate)}</b>
+                      </div>
+                      <div className="rounded-xl bg-muted/15 px-4 py-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-muted-foreground">
+                          Jornada diária ref.
+                        </span>
+                        <b className="mt-1 block text-sm">{formatMinutes(Math.round(form.dailyHours * 60))}</b>
+                      </div>
+                      <div className="rounded-xl bg-muted/15 px-4 py-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-[.08em] text-muted-foreground">
+                          Jornada semanal
+                        </span>
+                        <b className="mt-1 block text-sm">{formatMinutes(weeklyMinutes)}</b>
                       </div>
                     </div>
+
+                    {currentCalculation?.source_type === 'point_mirror_pdf' &&
+                      Array.isArray(currentCalculation.imported_punches) &&
+                      currentCalculation.imported_punches.length > 0 && (
+                        <DailyPunchSummary
+                          punches={currentCalculation.imported_punches}
+                          dailyHours={form.dailyHours}
+                        />
+                      )}
+
+                    {!form.settleBank &&
+                      (result.minutes.bankPositive > 0 || result.minutes.bankNegative > 0) && (
+                        <p className="mt-5 rounded-lg bg-muted/15 px-4 py-3 text-xs text-muted-foreground">
+                          Banco de horas apenas registrado: +{formatMinutes(result.minutes.bankPositive)} / -
+                          {formatMinutes(result.minutes.bankNegative)}. Não altera o líquido enquanto não for liquidado.
+                        </p>
+                      )}
 
                     <details className="mt-7 border-t border-transparent pt-4">
                       <summary className="cursor-pointer text-sm font-semibold">
