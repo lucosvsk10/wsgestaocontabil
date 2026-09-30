@@ -6,6 +6,8 @@ import {
   formatMinutes,
   parseHoursToMinutes,
   scheduleDayMinutes,
+  summarizePunchDay,
+  summarizePunchPeriod,
   weeklyScheduleMinutes,
 } from './workHours';
 
@@ -114,6 +116,80 @@ describe('workHours', () => {
     };
 
     expect(calculateWorkHours(form).deductions.other).toBe(75);
+  });
+
+  it('sums paired punches and compares the day against the daily reference', () => {
+    const exact = summarizePunchDay(
+      {
+        date: '2026-08-03',
+        weekdayLabel: 'Seg',
+        punches: ['08:00', '12:00', '13:00', '17:00'],
+      },
+      8,
+    );
+    expect(exact.workedMinutes).toBe(480);
+    expect(exact.balanceMinutes).toBe(0);
+
+    const extra = summarizePunchDay(
+      {
+        date: '2026-08-04',
+        weekdayLabel: 'Ter',
+        punches: ['08:00', '12:00', '13:00', '18:00'],
+      },
+      8,
+    );
+    expect(extra.workedMinutes).toBe(540);
+    expect(extra.balanceMinutes).toBe(60);
+    expect(extra.excessMinutes).toBe(60);
+
+    const short = summarizePunchDay(
+      {
+        date: '2026-08-05',
+        weekdayLabel: 'Qua',
+        punches: ['08:00', '12:00', '13:00', '16:30'],
+      },
+      8,
+    );
+    expect(short.workedMinutes).toBe(450);
+    expect(short.balanceMinutes).toBe(-30);
+    expect(short.deficitMinutes).toBe(30);
+  });
+
+  it('does not invent a missing punch when a day has an odd number of marks', () => {
+    const incomplete = summarizePunchDay(
+      {
+        date: '2026-08-06',
+        weekdayLabel: 'Qui',
+        punches: ['08:00', '12:00', '13:00'],
+      },
+      8,
+    );
+
+    expect(incomplete.workedMinutes).toBe(240);
+    expect(incomplete.balanceMinutes).toBeNull();
+    expect(incomplete.status).toBe('incomplete');
+  });
+
+  it('summarizes worked, reference, excess and deficit only from complete days', () => {
+    const period = summarizePunchPeriod(
+      [
+        { date: '2026-08-03', weekdayLabel: 'Seg', punches: ['08:00', '12:00', '13:00', '17:00'] },
+        { date: '2026-08-04', weekdayLabel: 'Ter', punches: ['08:00', '12:00', '13:00', '18:00'] },
+        { date: '2026-08-05', weekdayLabel: 'Qua', punches: ['08:00', '12:00', '13:00', '16:30'] },
+        { date: '2026-08-06', weekdayLabel: 'Qui', punches: ['08:00', '12:00', '13:00'] },
+        { date: '2026-08-07', weekdayLabel: 'Sex', punches: [] },
+      ],
+      8,
+    );
+
+    expect(period.workedMinutes).toBe(1710);
+    expect(period.referenceMinutes).toBe(1440);
+    expect(period.excessMinutes).toBe(60);
+    expect(period.deficitMinutes).toBe(30);
+    expect(period.netMinutes).toBe(30);
+    expect(period.completeDays).toBe(3);
+    expect(period.incompleteDays).toBe(1);
+    expect(period.noPunchDays).toBe(1);
   });
 
   it('keeps bank hours informational until liquidation is enabled', () => {
