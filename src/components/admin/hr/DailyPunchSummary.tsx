@@ -3,11 +3,13 @@ import {
   formatSignedMinutes,
   summarizePunchPeriod,
   type PunchDayInput,
+  type WeeklyDaySchedule,
 } from '@/lib/hr/workHours';
 
 type Props = {
   punches: PunchDayInput[];
   dailyHours: number;
+  weeklySchedule: WeeklyDaySchedule[];
 };
 
 const formatDate = (value: string) => {
@@ -16,8 +18,8 @@ const formatDate = (value: string) => {
   return year && month && day ? `${day}/${month}/${year}` : value;
 };
 
-export default function DailyPunchSummary({ punches, dailyHours }: Props) {
-  const summary = summarizePunchPeriod(punches, dailyHours);
+export default function DailyPunchSummary({ punches, dailyHours, weeklySchedule }: Props) {
+  const summary = summarizePunchPeriod(punches, dailyHours, weeklySchedule);
 
   return (
     <section className="mt-7">
@@ -25,8 +27,10 @@ export default function DailyPunchSummary({ punches, dailyHours }: Props) {
         <div>
           <p className="text-sm font-semibold">Apuração do ponto importado</p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Cada par de marcações é somado como tempo trabalhado. A comparação usa a referência diária de{' '}
-            <b className="text-foreground">{formatMinutes(Math.round(Math.max(0, dailyHours) * 60))}</b>.
+            Cada par de marcações é somado como tempo trabalhado. A referência vem da jornada configurada
+            para cada dia da semana; quando um dia ativo não tem horário configurado, usa{' '}
+            <b className="text-foreground">{formatMinutes(Math.round(Math.max(0, dailyHours) * 60))}</b>{' '}
+            como referência geral.
           </p>
         </div>
         <p className="text-[10px] leading-4 text-muted-foreground">
@@ -68,14 +72,18 @@ export default function DailyPunchSummary({ punches, dailyHours }: Props) {
             {summary.days.map((day, index) => {
               const status =
                 day.status === 'complete'
-                  ? day.balanceMinutes === 0
-                    ? 'Completo'
-                    : day.balanceMinutes! > 0
-                      ? 'Acima da referência'
-                      : 'Abaixo da referência'
+                  ? day.referenceMinutes === 0 && day.workedMinutes > 0
+                    ? 'Trabalho em folga'
+                    : day.balanceMinutes === 0
+                      ? 'Completo'
+                      : day.balanceMinutes! > 0
+                        ? 'Acima da referência'
+                        : 'Abaixo da referência'
                   : day.status === 'incomplete'
                     ? 'Marcação incompleta'
-                    : 'Sem marcação';
+                    : day.referenceMinutes === 0
+                      ? 'Folga'
+                      : 'Sem marcação';
 
               return (
                 <tr key={`${day.date || 'day'}-${index}`} className="hover:bg-muted/[0.04]">
@@ -92,7 +100,7 @@ export default function DailyPunchSummary({ punches, dailyHours }: Props) {
                     {day.punches.length ? formatMinutes(day.workedMinutes) : '—'}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
-                    {day.status === 'no_punches' ? '—' : formatMinutes(day.referenceMinutes)}
+                    {formatMinutes(day.referenceMinutes)}
                   </td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">
                     {day.balanceMinutes === null ? '—' : formatSignedMinutes(day.balanceMinutes)}
@@ -111,7 +119,7 @@ export default function DailyPunchSummary({ punches, dailyHours }: Props) {
             ? `${summary.incompleteDays} dia(s) têm número ímpar ou inválido de marcações; apenas intervalos completos foram somados e o saldo diário não foi inventado. `
             : ''}
           {summary.noPunchDays > 0
-            ? `${summary.noPunchDays} dia(s) estão sem marcação e não entram automaticamente como falta.`
+            ? `${summary.noPunchDays} dia(s) estão sem marcação; dias de folga permanecem com referência 00:00 e dias previstos não viram falta automaticamente.`
             : ''}
         </p>
       )}
