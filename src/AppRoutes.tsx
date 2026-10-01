@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 import ClientLogin from './pages/ClientLogin';
-import PublicSignupPage from './pages/PublicSignupPage';
 import PrivateRoute from './components/PrivateRoute';
 import { useAuth } from './contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,15 +37,11 @@ import AppLoadingScreen from './components/AppLoadingScreen';
 import HomePreview from './pages/HomePreview';
 import BusinessGuidePage from './pages/BusinessGuidePage';
 import BusinessGuidesIndexPage from './pages/BusinessGuidesIndexPage';
-import FiscalIssuerLandingPage from './pages/FiscalIssuerLandingPage';
-import ExtractorFiscalLandingPage from './pages/ExtractorFiscalLandingPage';
 import SimulationsHubPage from './pages/SimulationsHubPage';
 import FiscalExtractorApp from './pages/FiscalExtractorApp';
-import EmissorPreview from './pages/EmissorPreview';
 import ProductChooser from './pages/ProductChooser';
 import BillingOnboardingPage, { LegacyBillingRedirect } from './pages/BillingOnboardingPage';
 import PaymentReturnPage from './pages/PaymentReturnPage';
-import SignupChooserPage from './pages/SignupChooserPage';
 import { getPendingCheckoutDestination } from './utils/auth/productAccess';
 
 const DashboardRouter = () => {
@@ -126,15 +120,15 @@ const AppRoutes = () => (
     <Route path="/nova-home" element={<HomePreview />} />
     <Route path="/guias" element={<BusinessGuidesIndexPage />} />
     <Route path="/guias/:slug" element={<BusinessGuidePage />} />
-    <Route path="/emissor-fiscal" element={<FiscalIssuerLandingPage />} />
-    <Route path="/extrator-fiscal" element={<ExtractorFiscalLandingPage />} />
+    <Route path="/emissor-fiscal" element={<Navigate to="/" replace />} />
+    <Route path="/extrator-fiscal" element={<Navigate to="/" replace />} />
     <Route path="/simulacoes" element={<SimulationsHubPage />} />
-    <Route path="/extrator-preview" element={<FiscalExtractorApp preview />} />
-    <Route path="/emissor-preview" element={<EmissorPreview />} />
-    <Route path="/" element={<Index />} />
+    <Route path="/extrator-preview" element={<Navigate to="/" replace />} />
+    <Route path="/emissor-preview" element={<Navigate to="/" replace />} />
+    <Route path="/" element={<HomePreview />} />
     <Route path="/login" element={<ClientLogin />} />
-    <Route path="/cadastro" element={<PublicSignupPage />} />
-    <Route path="/cadastro-escolha" element={<SignupChooserPage />} />
+    <Route path="/cadastro" element={<Navigate to="/" replace />} />
+    <Route path="/cadastro-escolha" element={<Navigate to="/" replace />} />
     <Route
       path="/escolher-produto"
       element={

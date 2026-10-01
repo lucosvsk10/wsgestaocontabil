@@ -5,7 +5,6 @@ import {
   Building2,
   Briefcase,
   Calculator,
-  Check,
   FileText,
   FolderX,
   Instagram,
@@ -167,39 +166,6 @@ const services = [
   },
 ];
 
-const products = [
-  {
-    eyebrow: 'EMISSÃO SEM REDIGITAÇÃO',
-    name: 'Emissor Fiscal WS',
-    description:
-      'Emita NF-e, NFC-e, NFS-e, CT-e e MDF-e em um só sistema. Reaproveite clientes, produtos e dados fiscais para reduzir erros e concluir cada emissão com muito mais agilidade.',
-    image: '/assets/ws-emissor-dashboard-transparent-v2.png',
-    imageAlt: 'Painel interno do Emissor Fiscal WS',
-    features: [
-      'Cinco tipos de documento fiscal no mesmo painel',
-      'Cadastros prontos para reutilizar em novas emissões',
-      'Histórico completo para localizar e acompanhar cada nota',
-    ],
-    cta: 'Conhecer o Emissor',
-    href: '/emissor-fiscal',
-  },
-  {
-    eyebrow: '7 DIAS GRÁTIS • SEM PEDIR NOTA AO CLIENTE',
-    name: 'Extrator Fiscal WS',
-    description:
-      'Pare de cobrar notas por WhatsApp e esperar o cliente enviar arquivos. O Extrator reúne os documentos fiscais de compras e vendas, separa tudo por empresa e deixa o escritório pronto para trabalhar sem atrasos no fechamento.',
-    image: '/assets/ws-extrator-dashboard-transparent-v2.png',
-    imageAlt: 'Painel interno do Extrator Fiscal WS',
-    features: [
-      'Notas disponíveis sem depender do envio manual do cliente',
-      'Documentos de compras e vendas organizados por empresa',
-      'Menos cobranças, retrabalho e fechamento fiscal atrasado',
-    ],
-    cta: 'Conhecer o Extrator gratuitamente',
-    href: '/extrator-fiscal',
-  },
-];
-
 const heroMessages = [
   ['Contabilidade', 'Aliada ao seu', 'empreendimento'],
   ['Mais clareza', 'para o seu', 'negócio'],
@@ -276,9 +242,6 @@ const HomePreview = () => {
             <a href="#servicos" onClick={() => setMenuOpen(false)}>
               SERVIÇOS
             </a>
-            <a href="#softwares" onClick={() => setMenuOpen(false)}>
-              SOFTWARES
-            </a>
             <a href="#conteudos" onClick={() => setMenuOpen(false)}>
               CONTEÚDOS
             </a>
@@ -293,14 +256,9 @@ const HomePreview = () => {
                 <UserRound size={19} /> MINHA CONTA
               </Link>
             ) : (
-              <>
-                <Link className="preview-login" to="/login">
-                  <UserRound size={19} /> LOGIN
-                </Link>
-                <Link className="preview-register" to="/cadastro-escolha">
-                  CADASTRE-SE
-                </Link>
-              </>
+              <Link className="preview-login" to="/login">
+                <UserRound size={19} /> LOGIN
+              </Link>
             )}
           </div>
         </nav>
@@ -424,47 +382,6 @@ const HomePreview = () => {
           </div>
         </section>
 
-        <section id="softwares" className="preview-software preview-section">
-          <div className="preview-products-heading">
-            <span>TECNOLOGIA DESENVOLVIDA PELA WS</span>
-            <h2>
-              SISTEMAS PARA
-              <br />A ROTINA FISCAL
-            </h2>
-            <p>
-              Menos tarefas repetitivas, menos documentos perdidos e mais tempo para cuidar do que
-              realmente exige análise do seu escritório.
-            </p>
-          </div>
-          <div className="preview-product-showcase">
-            {products.map((product, index) => (
-              <article className="preview-product-card" key={product.name}>
-                <div className="preview-product-visual">
-                  <img src={product.image} alt={product.imageAlt} loading="lazy" />
-                </div>
-                <div className="preview-product-copy">
-                  <span>{product.eyebrow}</span>
-                  <small>0{index + 1}</small>
-                  <h3>{product.name}</h3>
-                  <p>{product.description}</p>
-                  <ul>
-                    {product.features.map(feature => (
-                      <li key={feature}>
-                        <Check size={16} />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link to={product.href}>
-                    {product.cta}
-                    <ArrowUpRight size={18} />
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <TrustedCompaniesSection />
 
         <section
@@ -552,13 +469,6 @@ const HomePreview = () => {
               <p>
                 Sim. Essa conversa ajuda a avaliar atividade, endereço, participação de sócios e a
                 estrutura mais adequada antes do registro.
-              </p>
-            </details>
-            <details>
-              <summary>A WS oferece sistema para emissão de notas fiscais?</summary>
-              <p>
-                Sim. O Emissor WS reúne emissão e gerenciamento de notas em um ambiente próprio para
-                empresas.
               </p>
             </details>
             <details>
