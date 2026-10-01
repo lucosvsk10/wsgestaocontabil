@@ -194,14 +194,68 @@ export function intervalClockMinutes(start: string, end: string) {
   return to >= from ? to - from : 24 * 60 - from + to;
 }
 
+const JS_WEEKDAY_TO_KEY: WeekdayKey[] = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+];
+
+const SHORT_WEEKDAY_TO_KEY: Record<string, WeekdayKey> = {
+  seg: 'monday',
+  ter: 'tuesday',
+  qua: 'wednesday',
+  qui: 'thursday',
+  sex: 'friday',
+  sab: 'saturday',
+  sáb: 'saturday',
+  dom: 'sunday',
+};
+
+export function punchDayWeekdayKey(day: PunchDayInput): WeekdayKey | null {
+  const rawDate = String(day?.date || '');
+  const dateMatch = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateMatch) {
+    const date = new Date(Date.UTC(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3])));
+    if (!Number.isNaN(date.getTime())) return JS_WEEKDAY_TO_KEY[date.getUTCDay()] || null;
+  }
+
+  const normalizedLabel = String(day?.weekdayLabel || '')
+    .trim()
+    .toLowerCase()
+    .slice(0, 3);
+  return SHORT_WEEKDAY_TO_KEY[normalizedLabel] || null;
+}
+
+export function punchDayReferenceMinutes(
+  day: PunchDayInput,
+  weeklySchedule: WeeklyDaySchedule[] = [],
+  fallbackDailyHours = 8,
+) {
+  const key = punchDayWeekdayKey(day);
+  const scheduledDay = key ? (weeklySchedule || []).find(item => item?.key === key) : null;
+
+  if (scheduledDay) {
+    if (!scheduledDay.active) return 0;
+    const configuredMinutes = scheduleDayMinutes(scheduledDay);
+    if (configuredMinutes > 0) return configuredMinutes;
+  }
+
+  return Math.max(0, Math.round(safeNumber(fallbackDailyHours, 8) * 60));
+}
+
 export function summarizePunchDay(
   day: PunchDayInput,
   dailyHours = 8,
+  weeklySchedule: WeeklyDaySchedule[] = [],
 ): PunchDaySummary {
   const punches = Array.isArray(day?.punches)
     ? day.punches.map(value => String(value || '').trim()).filter(Boolean)
     : [];
-  const referenceMinutes = Math.max(0, Math.round(safeNumber(dailyHours, 8) * 60));
+  const referenceMinutes = punchDayReferenceMinutes(day, weeklySchedule, dailyHours);
 
   if (!punches.length) {
     return {
@@ -250,9 +304,10 @@ export function summarizePunchDay(
 export function summarizePunchPeriod(
   days: PunchDayInput[],
   dailyHours = 8,
+  weeklySchedule: WeeklyDaySchedule[] = [],
 ): PunchPeriodSummary {
   const summaries = (Array.isArray(days) ? days : []).map(day =>
-    summarizePunchDay(day, dailyHours),
+    summarizePunchDay(day, dailyHours, weeklySchedule),
   );
 
   const workedMinutes = summaries.reduce((sum, day) => sum + day.workedMinutes, 0);
