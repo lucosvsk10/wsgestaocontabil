@@ -39,7 +39,6 @@ import BusinessGuidePage from './pages/BusinessGuidePage';
 import BusinessGuidesIndexPage from './pages/BusinessGuidesIndexPage';
 import SimulationsHubPage from './pages/SimulationsHubPage';
 import FiscalExtractorApp from './pages/FiscalExtractorApp';
-import EmissorPreview from './pages/EmissorPreview';
 import ProductChooser from './pages/ProductChooser';
 import BillingOnboardingPage, { LegacyBillingRedirect } from './pages/BillingOnboardingPage';
 import PaymentReturnPage from './pages/PaymentReturnPage';
@@ -124,8 +123,8 @@ const AppRoutes = () => (
     <Route path="/emissor-fiscal" element={<Navigate to="/" replace />} />
     <Route path="/extrator-fiscal" element={<Navigate to="/" replace />} />
     <Route path="/simulacoes" element={<SimulationsHubPage />} />
-    <Route path="/extrator-preview" element={<FiscalExtractorApp preview />} />
-    <Route path="/emissor-preview" element={<EmissorPreview />} />
+    <Route path="/extrator-preview" element={<Navigate to="/" replace />} />
+    <Route path="/emissor-preview" element={<Navigate to="/" replace />} />
     <Route path="/" element={<HomePreview />} />
     <Route path="/login" element={<ClientLogin />} />
     <Route path="/cadastro" element={<Navigate to="/" replace />} />
