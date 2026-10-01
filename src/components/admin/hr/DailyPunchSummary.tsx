@@ -27,10 +27,9 @@ export default function DailyPunchSummary({ punches, dailyHours, weeklySchedule 
         <div>
           <p className="text-sm font-semibold">Apuração do ponto importado</p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Cada par de marcações é somado como tempo trabalhado. A referência vem da jornada configurada
-            para cada dia da semana; quando um dia ativo não tem horário configurado, usa{' '}
-            <b className="text-foreground">{formatMinutes(Math.round(Math.max(0, dailyHours) * 60))}</b>{' '}
-            como referência geral.
+            Cada par de marcações é somado como tempo trabalhado. A referência da apuração é fixa:
+            <b className="text-foreground"> 08:00 de segunda a sexta, 04:00 no sábado e 00:00 no domingo</b>.
+            As batidas importadas nunca alteram essa referência.
           </p>
         </div>
         <p className="text-[10px] leading-4 text-muted-foreground">

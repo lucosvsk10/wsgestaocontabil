@@ -232,16 +232,21 @@ export function punchDayWeekdayKey(day: PunchDayInput): WeekdayKey | null {
 
 export function punchDayReferenceMinutes(
   day: PunchDayInput,
-  weeklySchedule: WeeklyDaySchedule[] = [],
+  _weeklySchedule: WeeklyDaySchedule[] = [],
   fallbackDailyHours = 8,
 ) {
   const key = punchDayWeekdayKey(day);
-  const scheduledDay = key ? (weeklySchedule || []).find(item => item?.key === key) : null;
 
-  if (scheduledDay) {
-    if (!scheduledDay.active) return 0;
-    const configuredMinutes = scheduleDayMinutes(scheduledDay);
-    if (configuredMinutes > 0) return configuredMinutes;
+  if (key === 'sunday') return 0;
+  if (key === 'saturday') return 4 * 60;
+  if (
+    key === 'monday' ||
+    key === 'tuesday' ||
+    key === 'wednesday' ||
+    key === 'thursday' ||
+    key === 'friday'
+  ) {
+    return 8 * 60;
   }
 
   return Math.max(0, Math.round(safeNumber(fallbackDailyHours, 8) * 60));

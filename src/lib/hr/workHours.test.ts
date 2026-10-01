@@ -155,30 +155,30 @@ describe('workHours', () => {
     expect(short.deficitMinutes).toBe(30);
   });
 
-  it('uses the configured weekly reference for Saturday and zero for a day off', () => {
-    const schedule = emptyWeeklySchedule().map(day => {
+  it('uses fixed 8h weekdays, 4h Saturday and 0h Sunday references', () => {
+    const misleadingInferredSchedule = emptyWeeklySchedule().map(day => {
+      if (day.key === 'monday') {
+        return { ...day, active: true, entry1: '08:04', exit1: '17:57', entry2: '', exit2: '' };
+      }
       if (day.key === 'saturday') {
-        return {
-          ...day,
-          active: true,
-          entry1: '08:00',
-          exit1: '12:00',
-          entry2: '',
-          exit2: '',
-        };
+        return { ...day, active: true, entry1: '08:02', exit1: '12:08', entry2: '', exit2: '' };
       }
-      if (day.key === 'sunday') {
-        return { ...day, active: false };
-      }
-      return {
-        ...day,
-        active: true,
-        entry1: '08:00',
-        exit1: '12:00',
-        entry2: '13:00',
-        exit2: '17:00',
-      };
+      return day;
     });
+
+    const monday = summarizePunchDay(
+      {
+        date: '2026-08-03',
+        weekdayLabel: 'Seg',
+        punches: ['08:01', '17:50'],
+      },
+      8,
+      misleadingInferredSchedule,
+    );
+
+    expect(monday.workedMinutes).toBe(589);
+    expect(monday.referenceMinutes).toBe(480);
+    expect(monday.balanceMinutes).toBe(109);
 
     const saturday = summarizePunchDay(
       {
@@ -187,7 +187,7 @@ describe('workHours', () => {
         punches: ['08:02', '12:14'],
       },
       8,
-      schedule,
+      misleadingInferredSchedule,
     );
 
     expect(saturday.workedMinutes).toBe(252);
@@ -201,7 +201,7 @@ describe('workHours', () => {
         punches: [],
       },
       8,
-      schedule,
+      misleadingInferredSchedule,
     );
 
     expect(sunday.referenceMinutes).toBe(0);
