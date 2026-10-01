@@ -2124,6 +2124,7 @@ export default function AdminWorkHoursCalculator() {
                         <DailyPunchSummary
                           punches={currentCalculation.imported_punches}
                           dailyHours={form.dailyHours}
+                          weeklySchedule={form.weeklySchedule}
                         />
                       )}
 

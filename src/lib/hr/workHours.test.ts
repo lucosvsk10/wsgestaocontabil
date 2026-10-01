@@ -155,6 +155,59 @@ describe('workHours', () => {
     expect(short.deficitMinutes).toBe(30);
   });
 
+  it('uses the configured weekly reference for Saturday and zero for a day off', () => {
+    const schedule = emptyWeeklySchedule().map(day => {
+      if (day.key === 'saturday') {
+        return {
+          ...day,
+          active: true,
+          entry1: '08:00',
+          exit1: '12:00',
+          entry2: '',
+          exit2: '',
+        };
+      }
+      if (day.key === 'sunday') {
+        return { ...day, active: false };
+      }
+      return {
+        ...day,
+        active: true,
+        entry1: '08:00',
+        exit1: '12:00',
+        entry2: '13:00',
+        exit2: '17:00',
+      };
+    });
+
+    const saturday = summarizePunchDay(
+      {
+        date: '2026-08-01',
+        weekdayLabel: 'Sab',
+        punches: ['08:02', '12:14'],
+      },
+      8,
+      schedule,
+    );
+
+    expect(saturday.workedMinutes).toBe(252);
+    expect(saturday.referenceMinutes).toBe(240);
+    expect(saturday.balanceMinutes).toBe(12);
+
+    const sunday = summarizePunchDay(
+      {
+        date: '2026-08-02',
+        weekdayLabel: 'Dom',
+        punches: [],
+      },
+      8,
+      schedule,
+    );
+
+    expect(sunday.referenceMinutes).toBe(0);
+    expect(sunday.status).toBe('no_punches');
+  });
+
   it('does not invent a missing punch when a day has an odd number of marks', () => {
     const incomplete = summarizePunchDay(
       {
