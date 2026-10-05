@@ -194,7 +194,7 @@ Deno.serve(async req => {
       }, { onConflict: "user_id,cnpj,environment,uf_code" });
       await admin.from("fiscal_purchase_sync_state").upsert({
         company_id: company.id, status: "idle", consecutive_failures: 0, last_error: null,
-        last_completed_at: now, next_scheduled_at: new Date(Date.now() + 10 * 60_000).toISOString(), updated_at: now,
+        last_completed_at: now, next_scheduled_at: new Date(Date.now() + 30 * 60_000).toISOString(), updated_at: now,
       });
       const { data: reconciliation } = await admin.from("fiscal_sales_reconciliation")
         .select("note_number,status,xml_status").eq("company_id", company.id).limit(10000);
@@ -217,7 +217,7 @@ Deno.serve(async req => {
         reconciliation_pending: pending, reconciliation_complete: rows.length > 0 && pending === 0,
         xml_expected: xmlRows.length, xml_saved: xmlSaved, xml_pending: xmlRows.length - xmlSaved,
         xml_complete: xmlRows.length > 0 && xmlSaved === xmlRows.length,
-        last_completed_at: now, next_scheduled_at: new Date(Date.now() + 5 * 60_000).toISOString(), updated_at: now,
+        last_completed_at: now, next_scheduled_at: new Date(Date.now() + 30 * 60_000).toISOString(), updated_at: now,
       });
       return json({ ok: true, documents, events, ult_nsu: ultNsu, max_nsu: maxNsu });
     }
