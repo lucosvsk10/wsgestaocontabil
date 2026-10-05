@@ -27,9 +27,9 @@ async function edge(token, body) {
   return result;
 }
 
-function downloadXml({ certificate, password, accessKey, model }) {
+function requestDownload({ certificate, password, accessKey, sistema }) {
   const form = new URLSearchParams({
-    sistema: model === '65' ? 'Nfce' : 'Nfe',
+    sistema,
     OrigemSite: 'SiteSefaz', Ambiente: '1', ChaveAcessoDfe: accessKey,
   }).toString();
   return new Promise((resolve, reject) => {
@@ -62,6 +62,20 @@ function downloadXml({ certificate, password, accessKey, model }) {
     request.on('error', reject);
     request.end(form);
   });
+}
+
+async function downloadXml(input) {
+  const systems = input.model === '65' ? ['Nfce'] : ['Nfe', 'Nfce'];
+  let lastError = null;
+  for (const sistema of systems) {
+    try {
+      return await requestDownload({ ...input, sistema });
+    } catch (error) {
+      lastError = error;
+      if (!(error instanceof Error) || error.message !== 'xml_not_released') throw error;
+    }
+  }
+  throw lastError || new Error('xml_not_released');
 }
 
 const token = await oidcToken();
