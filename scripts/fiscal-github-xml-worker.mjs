@@ -89,11 +89,11 @@ for (const cnpj of TARGETS) {
         certificate: lease.certificate_base64, password: lease.certificate_password,
         accessKey: task.access_key, model: task.model,
       });
-      await edge(token, { action: 'submit_xml', cnpj, kind: task.kind, access_key: task.access_key, xml });
+      await edge(token, { action: 'submit_xml', cnpj, kind: task.kind, access_key: task.access_key, xml_attempts: task.xml_attempts, xml });
       saved += 1;
     } catch (error) {
       failed += 1;
-      await edge(token, { action: 'submit_error', cnpj, kind: task.kind, access_key: task.access_key, error: error instanceof Error ? error.message : String(error) });
+      await edge(token, { action: 'submit_error', cnpj, kind: task.kind, access_key: task.access_key, xml_attempts: task.xml_attempts, error: error instanceof Error ? error.message : String(error) });
     }
     await new Promise(resolve => setTimeout(resolve, 300));
   }

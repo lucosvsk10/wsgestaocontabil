@@ -79,7 +79,7 @@ Deno.serve(async req => {
       const limit = Math.min(60, Math.max(1, Number(body.limit || 30)));
       const [{ data: sales, error: salesError }, { data: purchases, error: purchaseError }] = await Promise.all([
         admin.from("fiscal_sales_reconciliation")
-          .select("access_key,model,series,note_number,status,xml_status")
+          .select("access_key,model,series,note_number,status,xml_status,xml_attempts")
           .eq("company_id", company.id).in("status", ["found", "cancelled"])
           .neq("xml_status", "saved").not("access_key", "is", null)
           .order("xml_attempts", { ascending: true }).order("note_number", { ascending: false }).limit(limit),
@@ -93,7 +93,7 @@ Deno.serve(async req => {
       const tasks = [
         ...(sales || []).filter(row => digits(row.access_key).length === 44).map(row => ({
           kind: "sale", access_key: digits(row.access_key), model: String(row.model || "55"),
-          series: String(row.series || "1"), note_number: Number(row.note_number || 0),
+          series: String(row.series || "1"), note_number: Number(row.note_number || 0), xml_attempts: Number(row.xml_attempts || 0),
         })),
         ...(purchases || []).filter(row => digits(row.access_key).length === 44).map(row => ({
           kind: "purchase", id: row.id, access_key: digits(row.access_key), model: "55",
@@ -115,7 +115,8 @@ Deno.serve(async req => {
     if (action === "submit_error") {
       const reason = String(body.error || "xml_download_failed").slice(0, 300);
       if (kind === "sale") await admin.from("fiscal_sales_reconciliation").update({
-        xml_status: "retrying", xml_last_error: reason, xml_last_checked_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        xml_status: "retrying", xml_attempts: Number(body.xml_attempts || 0) + 1,
+        xml_last_error: reason, xml_last_checked_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       }).eq("company_id", company.id).eq("access_key", accessKey);
       else await admin.from("fiscal_dfe_documents").update({ parse_error: `xml_retry:${reason}`, updated_at: new Date().toISOString() })
         .eq("company_id", company.id).eq("access_key", accessKey);
@@ -144,7 +145,8 @@ Deno.serve(async req => {
       }).eq("company_id", company.id).eq("access_key", accessKey);
       if (salesDocumentError) throw salesDocumentError;
       const { error: reconciliationError } = await admin.from("fiscal_sales_reconciliation").update({
-        xml_status: "saved", xml_last_error: null, xml_last_checked_at: now, detail_status: "saved", detail_last_error: null, updated_at: now,
+        xml_status: "saved", xml_attempts: Number(body.xml_attempts || 0) + 1,
+        xml_last_error: null, xml_last_checked_at: now, detail_status: "saved", detail_last_error: null, updated_at: now,
       }).eq("company_id", company.id).eq("access_key", accessKey);
       if (reconciliationError) throw reconciliationError;
     }
