@@ -2,7 +2,7 @@ import https from 'node:https';
 import { Buffer } from 'node:buffer';
 
 const FUNCTION_URL = 'https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-github-xml-worker';
-const TARGETS = ['29880800000126', '32137785000135'];
+const PRIORITY = new Set(['29880800000126', '32137785000135']);
 
 async function oidcToken() {
   const url = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
@@ -105,11 +105,13 @@ function distribute({ certificate, password, cnpj, ufCode, ultNsu, environment }
 }
 
 const token = await oidcToken();
+const targetResponse = await edge(token, { action: 'targets' });
+const targets = (targetResponse.companies || []).map(company => company.cnpj);
 let saved = 0;
 let failed = 0;
-for (const cnpj of TARGETS) {
-  const lease = await edge(token, { action: 'lease', cnpj, limit: 40 });
-  try {
+for (const cnpj of targets) {
+  const lease = await edge(token, { action: 'lease', cnpj, limit: PRIORITY.has(cnpj) ? 40 : 8 });
+  if (lease.distribution?.due) try {
     const raw = await distribute({
       certificate: lease.certificate_base64, password: lease.certificate_password, cnpj,
       ufCode: lease.distribution.uf_code, ultNsu: lease.distribution.ult_nsu, environment: lease.distribution.environment,

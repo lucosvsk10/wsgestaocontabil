@@ -1,4 +1,4 @@
-name: Recover fiscal XML for priority companies
+name: Recover and sync fiscal NF-e 55
 
 on:
   push:

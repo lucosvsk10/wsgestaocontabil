@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
 
-const TARGET_CNPJS = new Set(["29880800000126", "32137785000135"]);
+const PRIORITY_CNPJS = new Set(["29880800000126", "32137785000135"]);
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const bytes = (value: string) => Uint8Array.from(atob(value), char => char.charCodeAt(0));
@@ -73,12 +73,34 @@ Deno.serve(async req => {
     });
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
     const action = String(body.action || "lease");
+    if (action === "targets") {
+      const [{ data: extractorLinks, error: linkError }, { data: certificates, error: certificateError }] = await Promise.all([
+        admin.from("extractor_companies").select("fiscal_company_id").eq("status", "active"),
+        admin.from("fiscal_certificates").select("company_id").eq("is_active", true),
+      ]);
+      if (linkError || certificateError) throw linkError || certificateError;
+      const linked = new Set((extractorLinks || []).map(row => String(row.fiscal_company_id || "")));
+      const certified = new Set((certificates || []).map(row => String(row.company_id || "")));
+      const ids = [...linked].filter(id => certified.has(id));
+      if (!ids.length) return json({ ok: true, companies: [] });
+      const { data: companies, error: companiesError } = await admin.from("fiscal_companies")
+        .select("id,cnpj,razao_social,uf").in("id", ids).eq("status", "ativa");
+      if (companiesError) throw companiesError;
+      const items = (companies || []).map(row => ({
+        cnpj: digits(row.cnpj), name: row.razao_social, uf: row.uf,
+        priority: PRIORITY_CNPJS.has(digits(row.cnpj)) ? 0 : 1,
+      })).filter(row => row.cnpj.length === 14).sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name));
+      return json({ ok: true, companies: items });
+    }
     const cnpj = digits(body.cnpj);
-    if (!TARGET_CNPJS.has(cnpj)) return json({ error: "company_not_allowed" }, 403);
+    if (cnpj.length !== 14) return json({ error: "company_invalid" }, 400);
     const { data: company, error: companyError } = await admin.from("fiscal_companies")
       .select("id,cnpj,razao_social,status,created_by,uf,ambiente_padrao")
       .eq("cnpj", cnpj).eq("status", "ativa").maybeSingle();
     if (companyError || !company) throw companyError || new Error("company_missing");
+    const { data: extractorLink } = await admin.from("extractor_companies").select("fiscal_company_id")
+      .eq("fiscal_company_id", company.id).eq("status", "active").maybeSingle();
+    if (!extractorLink) return json({ error: "company_not_allowed" }, 403);
 
     if (action === "lease") {
       const { data: certificate, error: certificateError } = await admin.from("fiscal_certificates")
@@ -98,7 +120,7 @@ Deno.serve(async req => {
           .eq("company_id", company.id).eq("direction", "entrada").eq("model", "55")
           .eq("full_xml", false).not("access_key", "is", null)
           .order("issue_date", { ascending: false }).limit(limit),
-        admin.from("fiscal_dfe_sync_state").select("ult_nsu,max_nsu")
+        admin.from("fiscal_dfe_sync_state").select("ult_nsu,max_nsu,last_synced_at")
           .eq("user_id", company.created_by).eq("cnpj", cnpj)
           .eq("environment", company.ambiente_padrao === "homologacao" ? "homologacao" : "producao")
           .eq("uf_code", String(company.uf || "AL").toUpperCase() === "SP" ? "35" : "27").maybeSingle(),
@@ -121,6 +143,9 @@ Deno.serve(async req => {
           uf_code: String(company.uf || "AL").toUpperCase() === "SP" ? "35" : "27",
           environment: company.ambiente_padrao === "homologacao" ? "homologacao" : "producao",
           ult_nsu: String(syncState?.ult_nsu || "0").replace(/\D/g, "").padStart(15, "0"),
+          due: !syncState?.last_synced_at ||
+            digits(syncState?.ult_nsu) < digits(syncState?.max_nsu) ||
+            Date.now() - new Date(syncState.last_synced_at).getTime() >= 55 * 60_000,
         },
         certificate_base64: await decrypt(certificate.certificate_ciphertext, certificate.certificate_iv),
         certificate_password: await decrypt(certificate.password_ciphertext, certificate.password_iv),
