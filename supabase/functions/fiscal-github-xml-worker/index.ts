@@ -54,6 +54,16 @@ function parsedXml(xml: string) {
   };
 }
 
+async function gunzip(value: string) {
+  const compressed = bytes(value.replace(/\s/g, ""));
+  const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return await new Response(stream).text();
+}
+
+function attr(value: string, name: string) {
+  return value.match(new RegExp(`\\b${name}=["']([^"']+)["']`, "i"))?.[1] || "";
+}
+
 Deno.serve(async req => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   try {
@@ -66,7 +76,7 @@ Deno.serve(async req => {
     const cnpj = digits(body.cnpj);
     if (!TARGET_CNPJS.has(cnpj)) return json({ error: "company_not_allowed" }, 403);
     const { data: company, error: companyError } = await admin.from("fiscal_companies")
-      .select("id,cnpj,razao_social,status")
+      .select("id,cnpj,razao_social,status,created_by,uf,ambiente_padrao")
       .eq("cnpj", cnpj).eq("status", "ativa").maybeSingle();
     if (companyError || !company) throw companyError || new Error("company_missing");
 
@@ -77,7 +87,7 @@ Deno.serve(async req => {
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (certificateError || !certificate) throw certificateError || new Error("certificate_missing");
       const limit = Math.min(60, Math.max(1, Number(body.limit || 30)));
-      const [{ data: sales, error: salesError }, { data: purchases, error: purchaseError }] = await Promise.all([
+      const [{ data: sales, error: salesError }, { data: purchases, error: purchaseError }, { data: syncState }] = await Promise.all([
         admin.from("fiscal_sales_reconciliation")
           .select("access_key,model,series,note_number,status,xml_status,xml_attempts")
           .eq("company_id", company.id).in("status", ["found", "cancelled"])
@@ -88,6 +98,10 @@ Deno.serve(async req => {
           .eq("company_id", company.id).eq("direction", "entrada").eq("model", "55")
           .eq("full_xml", false).not("access_key", "is", null)
           .order("issue_date", { ascending: false }).limit(limit),
+        admin.from("fiscal_dfe_sync_state").select("ult_nsu,max_nsu")
+          .eq("user_id", company.created_by).eq("cnpj", cnpj)
+          .eq("environment", company.ambiente_padrao === "homologacao" ? "homologacao" : "producao")
+          .eq("uf_code", String(company.uf || "AL").toUpperCase() === "SP" ? "35" : "27").maybeSingle(),
       ]);
       if (salesError || purchaseError) throw salesError || purchaseError;
       const tasks = [
@@ -103,10 +117,86 @@ Deno.serve(async req => {
       return json({
         ok: true,
         company: { id: company.id, cnpj, name: company.razao_social },
+        distribution: {
+          uf_code: String(company.uf || "AL").toUpperCase() === "SP" ? "35" : "27",
+          environment: company.ambiente_padrao === "homologacao" ? "homologacao" : "producao",
+          ult_nsu: String(syncState?.ult_nsu || "0").replace(/\D/g, "").padStart(15, "0"),
+        },
         certificate_base64: await decrypt(certificate.certificate_ciphertext, certificate.certificate_iv),
         certificate_password: await decrypt(certificate.password_ciphertext, certificate.password_iv),
         tasks,
       });
+    }
+
+    if (action === "submit_distribution") {
+      const raw = String(body.raw_xml || "");
+      if (!raw.includes("distDFeInt") && !raw.includes("retDistDFeInt")) return json({ error: "distribution_invalid" }, 400);
+      const now = new Date().toISOString();
+      const environment = company.ambiente_padrao === "homologacao" ? "homologacao" : "producao";
+      const ufCode = String(company.uf || "AL").toUpperCase() === "SP" ? "35" : "27";
+      let documents = 0, events = 0;
+      const expression = /<docZip\b([^>]*)>([\s\S]*?)<\/docZip>/gi;
+      let match: RegExpExecArray | null;
+      while ((match = expression.exec(raw))) {
+        const nsu = attr(match[1], "NSU");
+        const schema = attr(match[1], "schema");
+        let xml = "";
+        try { xml = await gunzip(match[2]); } catch { continue; }
+        const accessKey = digits(tag(xml, "chNFe") || xml.match(/\bId=["']NFe(\d{44})["']/i)?.[1] || "");
+        if (accessKey.length !== 44) continue;
+        if (/evento/i.test(schema) || /<\/?(?:\w+:)?(?:procEventoNFe|evento)/i.test(xml)) {
+          const eventType = tag(xml, "tpEvento") || "";
+          const eventAt = tag(xml, "dhRegEvento") || tag(xml, "dhEvento") || now;
+          await admin.from("fiscal_dfe_events").upsert({
+            user_id: company.created_by, company_id: company.id, cnpj, environment, uf_code: ufCode,
+            nsu, schema_name: schema, access_key: accessKey, event_type: eventType,
+            event_description: tag(xml, "xEvento"), status_code: tag(xml, "cStat"), event_at: eventAt,
+            xml, source: "github_national_distribution", updated_at: now,
+          }, { onConflict: "user_id,cnpj,environment,uf_code,nsu" });
+          if (accessKey.slice(6, 20) === cnpj) {
+            const model = accessKey.slice(20, 22), series = String(Number(accessKey.slice(22, 25))), note = Number(accessKey.slice(25, 34));
+            const cancelled = eventType === "110111";
+            await admin.from("fiscal_sales_documents").upsert({
+              company_id: company.id, uf: String(company.uf || ""), model, access_key: accessKey,
+              document_number: String(note), series, issue_date: eventAt, status: cancelled ? "Cancelada" : "Referenciada por evento oficial",
+              source: "github_national_dfe_issuer_event", source_reference: { event_nsu: nsu, event_type: eventType, xml_pending: true }, updated_at: now,
+            }, { onConflict: "company_id,access_key" });
+            await admin.from("fiscal_sales_reconciliation").upsert({
+              company_id: company.id, model, series, note_number: note, status: cancelled ? "cancelled" : "found",
+              access_key: accessKey, issue_date: eventAt, month_code: accessKey.slice(2, 6),
+              cstat: cancelled ? "101" : "100", xmotivo: cancelled ? "Cancelamento confirmado por evento oficial" : "Chave confirmada por evento oficial",
+              resolved_at: now, updated_at: now, xml_status: "pending",
+            }, { onConflict: "company_id,model,series,note_number" });
+          }
+          events += 1;
+          continue;
+        }
+        const issuer = digits(tag(xml, "CNPJ") || accessKey.slice(6, 20));
+        const direction = issuer === cnpj ? "saida" : "entrada";
+        const full = /<(?:\w+:)?NFe\b/i.test(xml);
+        const parsed = parsedXml(xml);
+        await admin.from("fiscal_dfe_documents").upsert({
+          user_id: company.created_by, company_id: company.id, cnpj, environment, uf_code: ufCode, nsu,
+          source: "github_national_distribution", source_id: nsu, schema_name: schema,
+          document_kind: full ? "nfe" : "resumo", direction, access_key: accessKey,
+          model: accessKey.slice(20, 22), issue_date: parsed.issue_date, value: parsed.value,
+          issuer_cnpj: issuer, issuer_name: parsed.issuer_name,
+          note_number: String(Number(accessKey.slice(25, 34))), series: String(Number(accessKey.slice(22, 25))),
+          status_code: tag(xml, "cSitNFe") || tag(xml, "cStat"), full_xml: full, xml, updated_at: now,
+        }, { onConflict: "user_id,cnpj,environment,uf_code,nsu" });
+        documents += 1;
+      }
+      const ultNsu = digits(tag(raw, "ultNSU") || body.ult_nsu || "0").padStart(15, "0");
+      const maxNsu = digits(tag(raw, "maxNSU") || ultNsu).padStart(15, "0");
+      await admin.from("fiscal_dfe_sync_state").upsert({
+        user_id: company.created_by, cnpj, environment, uf_code: ufCode, ult_nsu: ultNsu, max_nsu: maxNsu,
+        last_status_code: tag(raw, "cStat"), last_status_message: tag(raw, "xMotivo"), last_synced_at: now, updated_at: now,
+      }, { onConflict: "user_id,cnpj,environment,uf_code" });
+      await admin.from("fiscal_purchase_sync_state").upsert({
+        company_id: company.id, status: "idle", consecutive_failures: 0, last_error: null,
+        last_completed_at: now, next_scheduled_at: new Date(Date.now() + 10 * 60_000).toISOString(), updated_at: now,
+      });
+      return json({ ok: true, documents, events, ult_nsu: ultNsu, max_nsu: maxNsu });
     }
 
     const accessKey = digits(body.access_key);

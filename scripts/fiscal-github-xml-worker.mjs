@@ -78,11 +78,46 @@ async function downloadXml(input) {
   throw lastError || new Error('xml_not_released');
 }
 
+function distribute({ certificate, password, cnpj, ufCode, ultNsu, environment }) {
+  const tpAmb = environment === 'homologacao' ? '2' : '1';
+  const hostname = environment === 'homologacao' ? 'hom1.nfe.fazenda.gov.br' : 'www1.nfe.fazenda.gov.br';
+  const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDistDFeInteresse xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe"><nfeDadosMsg><distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01"><tpAmb>${tpAmb}</tpAmb><cUFAutor>${ufCode}</cUFAutor><CNPJ>${cnpj}</CNPJ><distNSU><ultNSU>${String(ultNsu || '0').padStart(15, '0')}</ultNSU></distNSU></distDFeInt></nfeDadosMsg></nfeDistDFeInteresse></soap12:Body></soap12:Envelope>`;
+  return new Promise((resolve, reject) => {
+    const request = https.request({
+      hostname, port: 443, path: '/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx', method: 'POST',
+      pfx: Buffer.from(certificate, 'base64'), passphrase: password,
+      minVersion: 'TLSv1.2', maxVersion: 'TLSv1.2', ALPNProtocols: ['http/1.1'], servername: hostname,
+      rejectUnauthorized: true, agent: false,
+      headers: { 'content-type': 'application/soap+xml; charset=utf-8', 'content-length': String(Buffer.byteLength(soap)), accept: 'application/soap+xml, text/xml, */*', connection: 'close', 'user-agent': 'WS-Gestao-GitHub-Fiscal-Worker/1.0' },
+    }, response => {
+      const chunks = [];
+      response.on('data', chunk => chunks.push(Buffer.from(chunk)));
+      response.on('end', () => {
+        const text = Buffer.concat(chunks).toString('utf8');
+        if ((response.statusCode || 0) < 200 || (response.statusCode || 0) >= 300) reject(new Error(`distribution_http_${response.statusCode || 0}`));
+        else resolve(text);
+      });
+    });
+    request.setTimeout(45000, () => request.destroy(new Error('distribution_timeout')));
+    request.on('error', reject);
+    request.end(soap);
+  });
+}
+
 const token = await oidcToken();
 let saved = 0;
 let failed = 0;
 for (const cnpj of TARGETS) {
   const lease = await edge(token, { action: 'lease', cnpj, limit: 40 });
+  try {
+    const raw = await distribute({
+      certificate: lease.certificate_base64, password: lease.certificate_password, cnpj,
+      ufCode: lease.distribution.uf_code, ultNsu: lease.distribution.ult_nsu, environment: lease.distribution.environment,
+    });
+    await edge(token, { action: 'submit_distribution', cnpj, raw_xml: raw, ult_nsu: lease.distribution.ult_nsu });
+  } catch (error) {
+    console.error(JSON.stringify({ cnpj, distribution_error: error instanceof Error ? error.message : String(error) }));
+  }
   for (const task of lease.tasks || []) {
     try {
       const xml = await downloadXml({
