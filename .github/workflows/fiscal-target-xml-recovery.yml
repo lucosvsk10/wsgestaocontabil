@@ -1,0 +1,32 @@
+name: Recover fiscal XML for priority companies
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/fiscal-github-xml-worker.mjs'
+      - '.github/workflows/fiscal-target-xml-recovery.yml'
+      - 'supabase/functions/fiscal-github-xml-worker/**'
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: fiscal-target-xml-recovery
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Recover known XMLs with A1 mTLS
+        run: node scripts/fiscal-github-xml-worker.mjs
