@@ -196,6 +196,29 @@ Deno.serve(async req => {
         company_id: company.id, status: "idle", consecutive_failures: 0, last_error: null,
         last_completed_at: now, next_scheduled_at: new Date(Date.now() + 10 * 60_000).toISOString(), updated_at: now,
       });
+      const { data: reconciliation } = await admin.from("fiscal_sales_reconciliation")
+        .select("note_number,status,xml_status").eq("company_id", company.id).limit(10000);
+      const rows = reconciliation || [];
+      const resolved = rows.filter(row => row.status !== "pending").length;
+      const found = rows.filter(row => row.status === "found").length;
+      const missing = rows.filter(row => row.status === "missing").length;
+      const cancelled = rows.filter(row => row.status === "cancelled").length;
+      const inutilized = rows.filter(row => row.status === "inutilized").length;
+      const pending = rows.filter(row => row.status === "pending").length;
+      const xmlRows = rows.filter(row => row.status === "found" || row.status === "cancelled");
+      const xmlSaved = xmlRows.filter(row => row.xml_status === "saved").length;
+      await admin.from("fiscal_sales_sync_state").upsert({
+        company_id: company.id, status: pending ? "running" : "idle", last_error: null,
+        latest_number: Math.max(0, ...rows.map(row => Number(row.note_number || 0))),
+        cursor_number: Math.max(0, ...rows.map(row => Number(row.note_number || 0))),
+        reconciliation_total: rows.length, reconciliation_resolved: resolved,
+        reconciliation_found: found, reconciliation_missing: missing,
+        reconciliation_cancelled: cancelled, reconciliation_inutilized: inutilized,
+        reconciliation_pending: pending, reconciliation_complete: rows.length > 0 && pending === 0,
+        xml_expected: xmlRows.length, xml_saved: xmlSaved, xml_pending: xmlRows.length - xmlSaved,
+        xml_complete: xmlRows.length > 0 && xmlSaved === xmlRows.length,
+        last_completed_at: now, next_scheduled_at: new Date(Date.now() + 5 * 60_000).toISOString(), updated_at: now,
+      });
       return json({ ok: true, documents, events, ult_nsu: ultNsu, max_nsu: maxNsu });
     }
 
