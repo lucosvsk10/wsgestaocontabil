@@ -2219,7 +2219,7 @@ function Documents({
     ['nfe55', 'nfce65', 'nfse'].includes(row.document_type) &&
     (row.coverage_status !== 'covered' || row.source_confirmed !== true)
   );
-  const documentsLocked = !preview && !effectiveCoverageGate?.ready;
+  const documentsNeedAttention = !preview && !effectiveCoverageGate?.ready;
 
   const filtered = docs.filter(d => {
     if (
@@ -2399,12 +2399,20 @@ function Documents({
         </div>
       </section>
 
-      <div className={`extractor-documents-coverage-shell ${documentsLocked ? 'is-locked' : ''}`}>
-      <div
-        className="extractor-documents-coverage-content"
-        aria-hidden={documentsLocked ? 'true' : undefined}
-        inert={documentsLocked ? true : undefined}
-      >
+      {documentsNeedAttention && (
+        <FiscalCoverageGate
+          company={company}
+          gate={effectiveCoverageGate}
+          blocker={coverageBlocker}
+          loading={coverageLoading}
+          busy={referenceBusy || xmlRetrying}
+          onRetry={() => void retrySalesXml()}
+          onSubmit={candidate => void submitSalesReference(candidate)}
+        />
+      )}
+
+      <div className="extractor-documents-coverage-shell">
+      <div className="extractor-documents-coverage-content">
       <section className="extractor-period-v2">
         <div className="extractor-period-year">
           <small>Ano</small>
@@ -2621,17 +2629,6 @@ function Documents({
         </div>
       </section>
       </div>
-      {documentsLocked && (
-        <FiscalCoverageGate
-          company={company}
-          gate={effectiveCoverageGate}
-          blocker={coverageBlocker}
-          loading={coverageLoading}
-          busy={referenceBusy || xmlRetrying}
-          onRetry={() => void retrySalesXml()}
-          onSubmit={candidate => void submitSalesReference(candidate)}
-        />
-      )}
       </div>
 
       <FiscalDownloadCenter
@@ -2694,8 +2691,8 @@ function FiscalEngineIndicator({
         <small>{gate.coverage_complete
           ? 'O período conferido está completo. Novas notas continuam sendo monitoradas.'
           : gate.ready
-            ? 'A página está liberada porque o motor comprovou funcionamento. A conferência integral continua em segundo plano.'
-            : 'O motor está avançando no histórico. A página será liberada assim que compras e a primeira sequência de vendas forem confirmadas.'}</small>
+            ? 'O motor comprovou funcionamento. A conferência integral continua em segundo plano.'
+            : 'O motor está avançando no histórico. Os documentos já ficam disponíveis durante a conferência.'}</small>
       </div>
     </div>
   );
@@ -2806,15 +2803,18 @@ export function FiscalCoverageGate({
     accepts_reference: false,
   };
   const showReference = current.accepts_reference || current.status === 'needs_reference';
+  const message = /página será liberada/i.test(current.message)
+    ? 'A busca segue conferindo o histórico em segundo plano. Os documentos já estão disponíveis para consulta.'
+    : current.message;
 
   return (
     <section className="extractor-coverage-gate" role="region" aria-live="polite" aria-label="Situação da cobertura fiscal">
       <span className={`extractor-coverage-gate-icon ${loading || current.automatic_discovery ? 'is-loading' : ''}`}>
         {loading || current.automatic_discovery ? <Loader2 /> : <AlertTriangle />}
       </span>
-      <small>{current.status === 'needs_reference' ? 'Só falta uma referência' : 'Proteção de cobertura fiscal'}</small>
+      <small>{current.status === 'needs_reference' ? 'Só falta uma referência' : 'Situação da busca fiscal'}</small>
       <h2>{current.title}</h2>
-      <p>{current.message}</p>
+      <p>{message}</p>
 
       {showReference ? (
         <div className="extractor-reference-box">
