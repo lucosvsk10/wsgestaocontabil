@@ -109,8 +109,16 @@ const targetResponse = await edge(token, { action: 'targets' });
 const targets = (targetResponse.companies || []).map(company => company.cnpj);
 let saved = 0;
 let failed = 0;
+let unreported = 0;
 for (const cnpj of targets) {
-  const lease = await edge(token, { action: 'lease', cnpj, limit: PRIORITY.has(cnpj) ? 40 : 8 });
+  let lease;
+  try {
+    lease = await edge(token, { action: 'lease', cnpj, limit: PRIORITY.has(cnpj) ? 40 : 8 });
+  } catch (error) {
+    failed += 1;
+    console.error(JSON.stringify({ cnpj, lease_error: error instanceof Error ? error.message : String(error) }));
+    continue;
+  }
   if (lease.distribution?.due) try {
     const raw = await distribute({
       certificate: lease.certificate_base64, password: lease.certificate_password, cnpj,
@@ -130,9 +138,20 @@ for (const cnpj of targets) {
       saved += 1;
     } catch (error) {
       failed += 1;
-      await edge(token, { action: 'submit_error', cnpj, kind: task.kind, access_key: task.access_key, xml_attempts: task.xml_attempts, error: error instanceof Error ? error.message : String(error) });
+      const reason = error instanceof Error ? error.message : String(error);
+      try {
+        await edge(token, { action: 'submit_error', cnpj, kind: task.kind, access_key: task.access_key, xml_attempts: task.xml_attempts, error: reason });
+      } catch (reportingError) {
+        unreported += 1;
+        console.error(JSON.stringify({
+          cnpj,
+          access_key: task.access_key,
+          task_error: reason,
+          reporting_error: reportingError instanceof Error ? reportingError.message : String(reportingError),
+        }));
+      }
     }
     await new Promise(resolve => setTimeout(resolve, 300));
   }
 }
-console.log(JSON.stringify({ ok: true, saved, failed }));
+console.log(JSON.stringify({ ok: true, saved, failed, unreported }));

@@ -247,9 +247,16 @@ Deno.serve(async req => {
       return json({ ok: true, documents, events, ult_nsu: ultNsu, max_nsu: maxNsu });
     }
 
-    const accessKey = digits(body.access_key);
-    if (accessKey.length !== 44 || accessKey.slice(6, 20) !== cnpj) return json({ error: "access_key_mismatch" }, 400);
     const kind = body.kind === "purchase" ? "purchase" : "sale";
+    const accessKey = digits(body.access_key);
+    if (accessKey.length !== 44) return json({ error: "access_key_invalid" }, 400);
+    if (kind === "sale" && accessKey.slice(6, 20) !== cnpj) return json({ error: "access_key_mismatch" }, 400);
+    const ownershipQuery = kind === "sale"
+      ? admin.from("fiscal_sales_reconciliation").select("id").eq("company_id", company.id).eq("access_key", accessKey).limit(1).maybeSingle()
+      : admin.from("fiscal_dfe_documents").select("id").eq("company_id", company.id).eq("access_key", accessKey).limit(1).maybeSingle();
+    const { data: ownedTask, error: ownershipError } = await ownershipQuery;
+    if (ownershipError) throw ownershipError;
+    if (!ownedTask) return json({ error: "task_not_owned_by_company" }, 400);
     if (action === "submit_error") {
       const reason = String(body.error || "xml_download_failed").slice(0, 300);
       if (kind === "sale") await admin.from("fiscal_sales_reconciliation").update({
