@@ -313,9 +313,16 @@ const HomePreview = () => {
                 <span className="preview-founder-name">WILSON SOUZA</span>
                 <span className="preview-founder-details">
                   <span>
-                    CONTADOR E CEO DA
+                    CONTADOR
                     <br />
-                    WS GESTÃO HÁ MAIS DE 25 ANOS
+                    PALESTRANTE
+                    <br />
+                    ADMINISTRADOR DE EMPRESAS
+                    <br />
+                    CEO DA WS GESTÃO CONTÁBIL
+                  </span>
+                  <span>
+                    MAIS DE 25 ANOS DE EXPERIÊNCIA
                   </span>
                   <span>
                     REFERÊNCIA <strong>#1</strong> EM
