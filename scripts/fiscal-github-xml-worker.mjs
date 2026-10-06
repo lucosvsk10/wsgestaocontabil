@@ -12,15 +12,25 @@ async function oidcToken() {
   const url = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
   const requestToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
   if (!url || !requestToken) throw new Error('github_oidc_unavailable');
-  const response = await fetch(`${url}${url.includes('?') ? '&' : '?'}audience=ws-fiscal-xml-worker`, {
-    headers: { authorization: `Bearer ${requestToken}` },
-  });
-  const body = await response.json();
-  if (!response.ok || !body.value) throw new Error(`github_oidc_${response.status}`);
-  const payload = JSON.parse(Buffer.from(body.value.split('.')[1], 'base64url').toString('utf8'));
-  cachedOidcToken = body.value;
-  cachedOidcExpiresAt = Number(payload.exp || 0) * 1000;
-  return cachedOidcToken;
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(`${url}${url.includes('?') ? '&' : '?'}audience=ws-fiscal-xml-worker`, {
+        headers: { authorization: `Bearer ${requestToken}` },
+      });
+      const rawBody = await response.text();
+      const body = JSON.parse(rawBody);
+      if (!response.ok || !body.value) throw new Error(`github_oidc_${response.status}`);
+      const payload = JSON.parse(Buffer.from(body.value.split('.')[1], 'base64url').toString('utf8'));
+      cachedOidcToken = body.value;
+      cachedOidcExpiresAt = Number(payload.exp || 0) * 1000;
+      return cachedOidcToken;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) await new Promise(resolve => setTimeout(resolve, attempt * 750));
+    }
+  }
+  throw lastError || new Error('github_oidc_failed');
 }
 
 async function edge(body) {
