@@ -4,7 +4,11 @@ import { Buffer } from 'node:buffer';
 const FUNCTION_URL = 'https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-github-xml-worker';
 const PRIORITY = new Set(['29880800000126', '32137785000135']);
 
+let cachedOidcToken = null;
+let cachedOidcExpiresAt = 0;
+
 async function oidcToken() {
+  if (cachedOidcToken && cachedOidcExpiresAt - Date.now() > 90_000) return cachedOidcToken;
   const url = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
   const requestToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
   if (!url || !requestToken) throw new Error('github_oidc_unavailable');
@@ -13,10 +17,14 @@ async function oidcToken() {
   });
   const body = await response.json();
   if (!response.ok || !body.value) throw new Error(`github_oidc_${response.status}`);
-  return body.value;
+  const payload = JSON.parse(Buffer.from(body.value.split('.')[1], 'base64url').toString('utf8'));
+  cachedOidcToken = body.value;
+  cachedOidcExpiresAt = Number(payload.exp || 0) * 1000;
+  return cachedOidcToken;
 }
 
-async function edge(token, body) {
+async function edge(body) {
+  const token = await oidcToken();
   const response = await fetch(FUNCTION_URL, {
     method: 'POST',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -104,8 +112,7 @@ function distribute({ certificate, password, cnpj, ufCode, ultNsu, environment }
   });
 }
 
-const token = await oidcToken();
-const targetResponse = await edge(token, { action: 'targets' });
+const targetResponse = await edge({ action: 'targets' });
 const targets = (targetResponse.companies || []).map(company => company.cnpj);
 let saved = 0;
 let failed = 0;
@@ -113,7 +120,7 @@ let unreported = 0;
 for (const cnpj of targets) {
   let lease;
   try {
-    lease = await edge(token, { action: 'lease', cnpj, limit: PRIORITY.has(cnpj) ? 40 : 8 });
+    lease = await edge({ action: 'lease', cnpj, limit: PRIORITY.has(cnpj) ? 40 : 8 });
   } catch (error) {
     failed += 1;
     console.error(JSON.stringify({ cnpj, lease_error: error instanceof Error ? error.message : String(error) }));
@@ -124,7 +131,7 @@ for (const cnpj of targets) {
       certificate: lease.certificate_base64, password: lease.certificate_password, cnpj,
       ufCode: lease.distribution.uf_code, ultNsu: lease.distribution.ult_nsu, environment: lease.distribution.environment,
     });
-    await edge(token, { action: 'submit_distribution', cnpj, raw_xml: raw, ult_nsu: lease.distribution.ult_nsu });
+    await edge({ action: 'submit_distribution', cnpj, raw_xml: raw, ult_nsu: lease.distribution.ult_nsu });
   } catch (error) {
     console.error(JSON.stringify({ cnpj, distribution_error: error instanceof Error ? error.message : String(error) }));
   }
@@ -134,13 +141,13 @@ for (const cnpj of targets) {
         certificate: lease.certificate_base64, password: lease.certificate_password,
         accessKey: task.access_key, model: task.model,
       });
-      await edge(token, { action: 'submit_xml', cnpj, kind: task.kind, access_key: task.access_key, xml_attempts: task.xml_attempts, xml });
+      await edge({ action: 'submit_xml', cnpj, kind: task.kind, access_key: task.access_key, xml_attempts: task.xml_attempts, xml });
       saved += 1;
     } catch (error) {
       failed += 1;
       const reason = error instanceof Error ? error.message : String(error);
       try {
-        await edge(token, { action: 'submit_error', cnpj, kind: task.kind, access_key: task.access_key, xml_attempts: task.xml_attempts, error: reason });
+        await edge({ action: 'submit_error', cnpj, kind: task.kind, access_key: task.access_key, xml_attempts: task.xml_attempts, error: reason });
       } catch (reportingError) {
         unreported += 1;
         console.error(JSON.stringify({
