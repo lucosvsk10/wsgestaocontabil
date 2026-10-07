@@ -3017,8 +3017,8 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
         checked_at: now.toISOString(),
         scope,
         period: { start, end: iso(now) },
-        purchases: { expected: company.entries, stored: company.entries },
-        sales: { expected: company.exits, stored: company.exits },
+        purchases: { expected: company.entries, stored: company.entries, evidence_level: 'external_complete', enumeration_complete: true, source_checked: true },
+        sales: { expected: company.exits, stored: company.exits, evidence_level: 'external_complete', enumeration_complete: true, source_complete: true },
         history: [{
           id: 'preview',
           scope,
@@ -3145,18 +3145,24 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
   const salesExpected = expected(health?.sales?.expected);
   const salesPresent = present(health?.sales?.stored ?? company.exits);
 
+  const evidenceText = (level: string | undefined) => {
+    if (level === 'external_complete') return 'Fonte externa independente';
+    if (level === 'official_cursor') return 'Cobertura do serviço oficial';
+    if (level === 'inferred') return 'Reconciliação inferida';
+    return 'Sem prova externa de completude';
+  };
   const compare = (exp: number | null, got: number, sourceComplete = true) => {
-    if (exp == null) return { state: 'attention' as const, label: 'Sem referência', delta: null as number | null };
+    if (exp == null) return { state: 'attention' as const, label: 'Sem total externo', delta: null as number | null };
     const delta = got - exp;
     if (delta === 0) return sourceComplete
-      ? { state: 'ok' as const, label: 'Conferido', delta: 0 }
-      : { state: 'attention' as const, label: 'Fonte em verificação', delta: 0 };
+      ? { state: 'ok' as const, label: '100% conferido', delta: 0 }
+      : { state: 'attention' as const, label: 'Sem prova de completude', delta: 0 };
     return delta < 0
       ? { state: 'error' as const, label: `Faltam ${integer.format(Math.abs(delta))}`, delta }
       : { state: 'attention' as const, label: `${integer.format(delta)} a mais`, delta };
   };
-  const purchaseCompare = compare(purchaseExpected, purchasePresent, health?.purchases?.source_checked === true);
-  const salesCompare = compare(salesExpected, salesPresent, health?.sales?.source_complete === true);
+  const purchaseCompare = compare(purchaseExpected, purchasePresent, health?.purchases?.enumeration_complete === true);
+  const salesCompare = compare(salesExpected, salesPresent, health?.sales?.enumeration_complete === true);
   const missingDocuments =
     (purchaseCompare.delta != null && purchaseCompare.delta < 0) ||
     (salesCompare.delta != null && salesCompare.delta < 0);
@@ -3171,8 +3177,12 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
     const pp = present(row.purchases_present);
     const se = expected(row.sales_expected);
     const sp = present(row.sales_present);
-    if (pe == null || se == null) return { label: 'Parcial', state: 'attention' as const };
-    if (pe === pp && se === sp) return { label: 'Conferido', state: 'ok' as const };
+    const purchasesExternal = row?.details?.purchases?.enumeration_complete === true;
+    const salesExternal = row?.details?.sales?.enumeration_complete === true;
+    if (!purchasesExternal || !salesExternal || pe == null || se == null) {
+      return { label: 'Sem prova externa', state: 'attention' as const };
+    }
+    if (pe === pp && se === sp) return { label: '100% conferido', state: 'ok' as const };
     return { label: 'Diferença', state: 'error' as const };
   };
   const periodText = health?.period?.start && health?.period?.end
@@ -3184,7 +3194,7 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
       <PageHeading
         title="Histórico"
         icon="history"
-        description="Cada conferência fica registrada para você comparar o que a fonte fiscal esperava com o que chegou ao Extrator."
+        description="Compara o Extrator com evidências fiscais externas. Só marcamos 100% quando a fonte enumera o período de forma independente."
       />
 
       <div className="extractor-history-periodbar">
@@ -3219,7 +3229,7 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
         <div className="extractor-history-current-status">
           <span>Entradas</span>
           <b>{purchaseExpected == null ? '—' : integer.format(purchaseExpected)} / {integer.format(purchasePresent)}</b>
-          <small className="extractor-history-count-caption">Fonte fiscal / Extrator</small>
+          <small className="extractor-history-count-caption">{evidenceText(health?.purchases?.evidence_level)} / Extrator</small>
           <div className="extractor-history-breakdown">
             <i>NF-e {integer.format(Number(health?.purchases?.models?.nfe55 || 0))}</i>
             {Number(health?.purchases?.models?.other || 0) > 0 && <i>Outras {integer.format(Number(health.purchases.models.other))}</i>}
@@ -3229,7 +3239,7 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
         <div className="extractor-history-current-status">
           <span>Saídas</span>
           <b>{salesExpected == null ? '—' : integer.format(salesExpected)} / {integer.format(salesPresent)}</b>
-          <small className="extractor-history-count-caption">Fonte fiscal / Extrator</small>
+          <small className="extractor-history-count-caption">{evidenceText(health?.sales?.evidence_level)} / Extrator</small>
           <div className="extractor-history-breakdown">
             <i>NF-e {integer.format(Number(health?.sales?.models?.nfe55 || 0))}</i>
             <i>NFC-e {integer.format(Number(health?.sales?.models?.nfce65 || 0))}</i>
@@ -3273,9 +3283,9 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
                 <th>Data / hora</th>
                 <th>Tipo</th>
                 <th>Período</th>
-                <th>Entradas na fonte</th>
+                <th>Referência externa entradas</th>
                 <th>Entradas no Extrator</th>
-                <th>Saídas na fonte</th>
+                <th>Referência externa saídas</th>
                 <th>Saídas no Extrator</th>
                 <th>Resultado</th>
               </tr>

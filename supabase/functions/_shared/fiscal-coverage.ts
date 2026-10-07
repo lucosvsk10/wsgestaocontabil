@@ -4,14 +4,22 @@ export type FiscalCoverageRow = {
   applicability?: string | null;
   coverage_status?: string | null;
   source_confirmed?: boolean | null;
+  evidence_level?: string | null;
+  enumeration_complete?: boolean | null;
 };
 
 const applicable = (row: FiscalCoverageRow) =>
   row.direction === 'saida' &&
   ['required', 'observed'].includes(String(row.applicability || ''));
 
-const confirmed = (row: FiscalCoverageRow) =>
-  row.coverage_status === 'covered' && row.source_confirmed === true;
+const independentlyConfirmed = (row: FiscalCoverageRow) =>
+  row.coverage_status === 'covered' &&
+  row.source_confirmed === true &&
+  row.evidence_level === 'external_complete' &&
+  row.enumeration_complete === true;
+
+const operationallyConfirmed = (row: FiscalCoverageRow) =>
+  row.source_confirmed === true;
 
 /**
  * A covered NFS-e source must never unlock the numbered NF-e/NFC-e sales engine.
@@ -27,8 +35,9 @@ export const fiscalSalesCoverage = (rows: FiscalCoverageRow[]) => {
   );
 
   return {
-    numberedReady: numberedSales.some(confirmed),
-    serviceReady: serviceSales.some(confirmed),
+    numberedReady: numberedSales.some(independentlyConfirmed),
+    numberedOperational: numberedSales.some(operationallyConfirmed),
+    serviceReady: serviceSales.some(operationallyConfirmed),
     numberedSales,
     serviceSales,
   };

@@ -281,7 +281,7 @@ Deno.serve(async req => {
     if (action === 'coverage_status') {
       const [coverageResult, salesStateResult, certificateResult, salesDocumentsResult, latestSalesDocumentResult, nfseStateResult, nfseDocumentsResult, nfseFullXmlResult, nfseEntriesResult, nfseExitsResult] = await Promise.all([
         admin.from('fiscal_extractor_coverage')
-          .select('document_type,direction,applicability,coverage_status,source_confirmed,source_name,last_error,last_verified_at,details')
+          .select('document_type,direction,applicability,coverage_status,source_confirmed,evidence_level,enumeration_complete,source_name,last_error,last_verified_at,details')
           .eq('company_id', companyId)
           .order('direction', { ascending: true })
           .order('document_type', { ascending: true }),
@@ -362,11 +362,15 @@ Deno.serve(async req => {
         ? new Date(certificateUntil.includes('T') ? certificateUntil : `${certificateUntil}T23:59:59-03:00`).getTime()
         : 0;
       const certReady = Boolean(certificate?.is_active && certificateUntilMs >= Date.now());
-      const purchaseReady = coverage.some((row: any) =>
-        row.direction === 'entrada' &&
-        row.document_type === 'nfe55' &&
-        row.coverage_status === 'covered' &&
-        row.source_confirmed === true
+      const purchaseRow = coverage.find((row: any) =>
+        row.direction === 'entrada' && row.document_type === 'nfe55'
+      );
+      const purchaseOperational = Boolean(purchaseRow?.source_confirmed);
+      const purchaseComplete = Boolean(
+        purchaseRow?.coverage_status === 'covered' &&
+        purchaseRow?.source_confirmed === true &&
+        purchaseRow?.evidence_level === 'external_complete' &&
+        purchaseRow?.enumeration_complete === true
       );
       // NFS-e has its own national source and no numbered 55/65 sequence. A
       // covered service-note source cannot prove that merchandise sales work.
@@ -386,13 +390,14 @@ Deno.serve(async req => {
           Number(salesState?.found_documents || 0) > 0 ||
           Number(salesState?.scanned_numbers || 0) > 0
         );
-      const salesOperational = salesReady || Boolean(
+      const salesOperational = salesCoverage.numberedOperational || salesReady || Boolean(
         !salesState?.paused &&
         referenceReady &&
         sequenceStatus &&
         sequenceEvidence
       );
-      const ready = certReady && purchaseReady && salesOperational;
+      const coverageComplete = purchaseComplete && salesReady;
+      const ready = certReady && purchaseOperational && salesOperational;
       const needsReference = !activeSync && (
         !salesState ||
         ['waiting_sales_reference', 'unsupported_source', 'error', 'failed'].some(value => salesStatus.includes(value)) ||
@@ -414,14 +419,14 @@ Deno.serve(async req => {
         ? {
             ready: true,
             status: 'ready',
-            title: salesReady ? 'Fontes fiscais confirmadas' : 'Busca fiscal funcionando',
-            message: salesReady
-              ? 'Compras e vendas estão sendo capturadas e conferidas.'
-              : 'Compras e vendas já estão sendo capturadas. A conferência completa da sequência continua automaticamente em segundo plano.',
+            title: coverageComplete ? 'Fontes externas confirmadas' : 'Busca fiscal funcionando',
+            message: coverageComplete
+              ? 'Compras e vendas foram comparadas com enumeração externa independente.'
+              : 'Compras e vendas estão sendo capturadas. A prova externa de completude ainda pode estar pendente.',
             automatic_discovery: !salesReady && activeSync,
             accepts_reference: false,
             last_checked_at: checkedAt,
-            coverage_complete: salesReady,
+            coverage_complete: coverageComplete,
             sales_operational: salesOperational,
             saved_sales_count: savedSalesCount,
             engine_state: engineState,
@@ -483,8 +488,10 @@ Deno.serve(async req => {
         coverage,
         gate,
         evidence: {
-          purchases_confirmed: purchaseReady,
-          sales_confirmed: salesReady,
+          purchases_confirmed: purchaseOperational,
+          purchases_complete: purchaseComplete,
+          sales_confirmed: salesCoverage.numberedOperational,
+          sales_complete: salesReady,
           service_sales_confirmed: salesCoverage.serviceReady,
           sales_operational: salesOperational,
           saved_sales_count: savedSalesCount,
@@ -628,7 +635,7 @@ Deno.serve(async req => {
       ? (fullStart > last30Start ? fullStart : last30Start)
       : fullStart;
 
-    const [docs, purchaseStateRes, salesStateRes, healthRes, certRes, reconciliation, syncHistoryRes, coverageRes] = await Promise.all([
+    const [docs, purchaseStateRes, salesStateRes, healthRes, certRes, reconciliation, syncHistoryRes, coverageRes, sourceReconRes] = await Promise.all([
       Promise.all([
         paged((from, to) => admin.from('fiscal_dfe_documents')
           .select('id,access_key,source_id,document_kind,direction,full_xml,xml,parse_error,issue_date,model,status_code,status_text')
@@ -692,8 +699,14 @@ Deno.serve(async req => {
         .order('created_at', { ascending: false })
         .limit(24),
       admin.from('fiscal_extractor_coverage')
-        .select('document_type,direction,applicability,coverage_status,source_confirmed,source_name,last_error,last_verified_at')
+        .select('document_type,direction,applicability,coverage_status,source_confirmed,evidence_level,enumeration_complete,source_name,last_error,last_verified_at')
         .eq('company_id', companyId),
+      admin.from('fiscal_source_reconciliation')
+        .select('document_type,status,source_name,source_confirmed,evidence_level,enumeration_complete,external_source_count,site_count,checked_at,reason,details')
+        .eq('company_id', companyId)
+        .gte('period_start', start)
+        .lte('period_end', end)
+        .order('checked_at', { ascending: false }),
     ]);
 
     const purchases = uniqueDocs(docs, 'entrada');
@@ -712,81 +725,42 @@ Deno.serve(async req => {
     const purchaseState = purchaseStateRes.data || {};
     const salesState = salesStateRes.data || {};
 
-    let purchaseExpected: number | null = null;
-    let purchaseSourceChecked = false;
-    let purchaseSourceError = '';
-    let purchaseSourceBasis = 'none';
-    let purchaseExpectedNfe: number | null = null;
-
-    if (String(company.uf || '').toUpperCase() === 'AL') {
-      try {
-        const { data: tokenRow } = await admin
-          .from('_fiscal_sales_debug_token')
-          .select('token')
-          .eq('id', true)
-          .maybeSingle();
-        const token = String(tokenRow?.token || '');
-        if (token) {
-          const response = await fetch(`${base}/functions/v1/fiscal-purchases-sefaz-al-report`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json', 'x-debug-token': token },
-            body: JSON.stringify({
-              company_id: companyId,
-              start,
-              end,
-              dry_run: true,
-              include_keys: false,
-              audit: true,
-            }),
-            signal: AbortSignal.timeout(scope === 'full' ? 90000 : 60000),
-          });
-          const result = await response.json().catch(() => ({})) as any;
-          if (response.ok) {
-            purchaseExpectedNfe = Number(result.purchase_all_unique_keys ?? result.purchase_unique_keys ?? 0);
-            purchaseExpected = purchaseExpectedNfe + purchaseOtherStored;
-            purchaseSourceChecked = true;
-            purchaseSourceBasis = 'sefaz_report_plus_other_models';
-          } else {
-            purchaseSourceError = String(result?.error || `HTTP ${response.status}`);
-          }
-        }
-      } catch (error) {
-        purchaseSourceError = error instanceof Error ? error.message : String(error);
+    const sourceReconRows = sourceReconRes.data || [];
+    const latestSourceRecon = new Map<string, any>();
+    for (const row of sourceReconRows) {
+      if (!latestSourceRecon.has(String(row.document_type || ''))) {
+        latestSourceRecon.set(String(row.document_type || ''), row);
       }
     }
 
-    if (
-      purchaseExpected == null &&
-      purchaseState.last_completed_at &&
-      !purchaseState.last_error &&
-      /idle|completed|success/i.test(String(purchaseState.status || ''))
-    ) {
-      purchaseExpected = purchaseStored;
-      purchaseExpectedNfe = purchaseNfeStored;
-      purchaseSourceChecked = true;
-      purchaseSourceBasis = 'completed_distribution';
-    }
-
-    const reconExpectedIdentities = new Set(
-      reconciliation
-        .filter((row: any) => ['found', 'cancelled'].includes(String(row.status || '').toLowerCase()))
-        .map((row: any) => String(row.access_key || `note:${row.note_number || ''}`))
-        .filter(Boolean)
-    );
-    const expectedNfce = new Set(
-      reconciliation
-        .filter((row: any) =>
-          String(row.model || '') === '65' &&
-          ['found', 'cancelled'].includes(String(row.status || '').toLowerCase())
-        )
-        .map((row: any) => String(row.access_key || `note:${row.note_number || ''}`))
-        .filter(Boolean)
-    ).size;
-    const hasNfceContext =
-      salesNfceStored > 0 ||
-      reconciliation.length > 0 ||
-      Number(salesState.reconciliation_total || 0) > 0 ||
-      Number(salesState.scanned_numbers || 0) > 0;
+    const purchaseRecon = latestSourceRecon.get('purchase_nfe55') || null;
+    const purchaseEvidenceLevel = String(purchaseRecon?.evidence_level || 'unconfirmed');
+    const purchaseIndependent =
+      purchaseRecon?.enumeration_complete === true &&
+      purchaseEvidenceLevel === 'external_complete' &&
+      Number.isFinite(Number(purchaseRecon?.external_source_count));
+    let purchaseExpectedNfe: number | null = purchaseIndependent
+      ? Number(purchaseRecon.external_source_count)
+      : null;
+    let purchaseExpected: number | null =
+      purchaseIndependent && purchaseOtherStored === 0
+        ? purchaseExpectedNfe
+        : null;
+    const purchaseSourceChecked = purchaseIndependent;
+    const purchaseSourceBasis = purchaseIndependent
+      ? 'external_complete'
+      : purchaseEvidenceLevel === 'official_cursor'
+        ? 'official_cursor'
+        : purchaseEvidenceLevel === 'inferred'
+          ? 'inferred'
+          : 'none';
+    const purchaseSourceError = purchaseIndependent
+      ? ''
+      : String(purchaseRecon?.reason || (
+          purchaseEvidenceLevel === 'official_cursor'
+            ? 'A distribuição oficial está em dia, mas não existe contagem externa independente do período.'
+            : 'Ainda não há prova externa independente da quantidade total de compras.'
+        ));
 
     const salesStatus = String(salesState.status || '').toLowerCase();
     const salesPipelineUnavailable =
@@ -795,17 +769,42 @@ Deno.serve(async req => {
       salesStatus === 'waiting_certificate' ||
       salesStatus === 'unsupported_source' ||
       (salesStatus === 'queued' && !salesState.last_started_at);
-    const salesSourceChecked = salesPipelineUnavailable
-      ? false
-      : hasNfceContext
-        ? expectedNfce > 0 || Boolean(salesState.reconciliation_complete)
-        : String(company.uf || '').toUpperCase() === 'SP' && Boolean(salesState.last_completed_at);
-    const salesExpectedIdentities = new Set(reconExpectedIdentities);
-    for (const row of sales) {
-      const identity = String(row.access_key || row.source_id || row.id || '');
-      if (identity) salesExpectedIdentities.add(identity);
-    }
-    const salesExpected = salesSourceChecked ? salesExpectedIdentities.size : null;
+
+    const sale55Recon = latestSourceRecon.get('sale_nfe55') || null;
+    const sale65Recon = latestSourceRecon.get('sale_nfce65') || null;
+    const requiredSalesRows = (coverageRes.data || []).filter((row: any) =>
+      row.direction === 'saida' &&
+      row.applicability === 'required' &&
+      ['nfe55', 'nfce65'].includes(String(row.document_type || ''))
+    );
+    const externalSalesByType = new Map<string, any>([
+      ['nfe55', sale55Recon],
+      ['nfce65', sale65Recon],
+    ]);
+    const requiredSalesExternal = requiredSalesRows.length > 0 && requiredSalesRows.every((row: any) => {
+      const rec = externalSalesByType.get(String(row.document_type || ''));
+      return rec?.evidence_level === 'external_complete' &&
+        rec?.enumeration_complete === true &&
+        Number.isFinite(Number(rec?.external_source_count));
+    });
+    const salesExpected = requiredSalesExternal
+      ? requiredSalesRows.reduce((sum: number, row: any) => {
+          const rec = externalSalesByType.get(String(row.document_type || ''));
+          return sum + Number(rec?.external_source_count || 0);
+        }, 0)
+      : null;
+    const salesSourceChecked = requiredSalesExternal;
+    const salesEvidenceLevel = requiredSalesExternal
+      ? 'external_complete'
+      : [sale55Recon, sale65Recon].some((row: any) => row?.evidence_level === 'inferred')
+        ? 'inferred'
+        : [sale55Recon, sale65Recon].some((row: any) => row?.evidence_level === 'official_cursor')
+          ? 'official_cursor'
+          : 'unconfirmed';
+    const expectedNfce = sale65Recon?.evidence_level === 'external_complete' &&
+      sale65Recon?.enumeration_complete === true
+      ? Number(sale65Recon?.external_source_count || 0)
+      : null;
 
     const purchaseMismatch = purchaseExpected != null && purchaseStored !== purchaseExpected;
     const salesMismatch = salesExpected != null && salesStored !== salesExpected;
@@ -829,7 +828,10 @@ Deno.serve(async req => {
       ['nfe55', 'nfce65', 'nfse'].includes(String(row.document_type || ''))
     );
     const salesSourceComplete = salesCoverageRows.length > 0 && salesCoverageRows.every((row: any) =>
-      row.coverage_status === 'covered' && row.source_confirmed === true
+      row.coverage_status === 'covered' &&
+      row.source_confirmed === true &&
+      row.evidence_level === 'external_complete' &&
+      row.enumeration_complete === true
     );
 
     const purchaseStatus = String(purchaseState.status || '').toLowerCase();
@@ -860,6 +862,9 @@ Deno.serve(async req => {
       purchases: {
         source_checked: purchaseSourceChecked,
         source_basis: purchaseSourceBasis,
+        evidence_level: purchaseEvidenceLevel,
+        enumeration_complete: purchaseIndependent,
+        external_source_count: purchaseExpectedNfe,
         source_error: purchaseSourceError || null,
         expected_nfe: purchaseExpectedNfe,
         present_nfe: purchaseNfeStored,
@@ -872,6 +877,9 @@ Deno.serve(async req => {
       },
       sales: {
         source_checked: salesSourceChecked,
+        evidence_level: salesEvidenceLevel,
+        enumeration_complete: requiredSalesExternal,
+        external_source_count: salesExpected,
         pipeline_status: salesStatus || null,
         pipeline_error: salesState.last_error || null,
         supported_uf: ['AL','SP'].includes(String(company.uf || '').toUpperCase()),
@@ -956,6 +964,8 @@ Deno.serve(async req => {
       purchases: {
         source_checked: purchaseSourceChecked,
         source_basis: purchaseSourceBasis,
+        evidence_level: purchaseEvidenceLevel,
+        enumeration_complete: purchaseIndependent,
         source_error: purchaseSourceError || null,
         expected: purchaseExpected,
         stored: purchaseStored,
@@ -983,6 +993,8 @@ Deno.serve(async req => {
       sales: {
         source_checked: salesSourceChecked,
         source_complete: salesSourceComplete,
+        evidence_level: salesEvidenceLevel,
+        enumeration_complete: requiredSalesExternal,
         expected: salesExpected,
         stored: salesStored,
         expected_nfce: expectedNfce,
