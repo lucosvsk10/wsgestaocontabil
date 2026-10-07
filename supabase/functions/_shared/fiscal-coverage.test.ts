@@ -10,6 +10,8 @@ describe('fiscalSalesCoverage', () => {
         applicability: 'observed',
         coverage_status: 'covered',
         source_confirmed: true,
+        evidence_level: 'official_cursor',
+        enumeration_complete: false,
       },
       {
         document_type: 'nfce65',
@@ -39,10 +41,29 @@ describe('fiscalSalesCoverage', () => {
         applicability: 'required',
         coverage_status: 'covered',
         source_confirmed: true,
+        evidence_level: 'external_complete',
+        enumeration_complete: true,
       },
     ]);
 
     expect(result.numberedReady).toBe(true);
+  });
+
+  it('keeps inferred numbered sales operational without calling them complete', () => {
+    const result = fiscalSalesCoverage([
+      {
+        document_type: 'nfe55',
+        direction: 'saida',
+        applicability: 'required',
+        coverage_status: 'partial',
+        source_confirmed: true,
+        evidence_level: 'inferred',
+        enumeration_complete: false,
+      },
+    ]);
+
+    expect(result.numberedOperational).toBe(true);
+    expect(result.numberedReady).toBe(false);
   });
 
   it('ignores covered service rows when no numbered source is applicable', () => {
@@ -53,6 +74,8 @@ describe('fiscalSalesCoverage', () => {
         applicability: 'observed',
         coverage_status: 'covered',
         source_confirmed: true,
+        evidence_level: 'official_cursor',
+        enumeration_complete: false,
       },
     ]);
 
