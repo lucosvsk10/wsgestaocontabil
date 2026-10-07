@@ -195,6 +195,18 @@ type CoverageRow = {
   last_verified_at?: string | null;
   details?: Record<string, unknown> | null;
 };
+type SimpleSideStatus = {
+  status: 'working' | 'incomplete' | 'not_working';
+  label: 'Funcionando' | 'Incompleto' | 'Não funcionando';
+  detail?: string;
+};
+type SimpleCompanyStatus = {
+  company_id: string;
+  purchases: SimpleSideStatus;
+  sales: SimpleSideStatus;
+  result: { status: 'working' | 'incomplete' | 'not_working'; label: string };
+};
+
 type CoverageGate = {
   ready: boolean;
   status: 'checking' | 'needs_certificate' | 'discovering' | 'needs_reference' | 'syncing' | 'ready' | 'error';
@@ -2983,15 +2995,64 @@ function HealthState({ label, state }: { label: string; state: 'ok' | 'attention
   return <span className={`extractor-health-state ${state}`}><i />{label}</span>;
 }
 
+const simpleHealthTone = (status?: string) =>
+  status === 'working' ? 'ok' as const : status === 'not_working' ? 'error' as const : 'attention' as const;
+
+
 function HistorySection({ companies, selectedCompanyId, preview, setNotice }: any) {
   const [scope, setScope] = useState<'last_30_days' | 'full'>('last_30_days');
   const [health, setHealth] = useState<any>(null);
+  const [companyStatuses, setCompanyStatuses] = useState<Record<string, SimpleCompanyStatus>>({});
+  const [statusesLoading, setStatusesLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
   const [repairing, setRepairing] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const company =
     companies.find((item: Company) => item.id === selectedCompanyId) || companies[0] || null;
+
+  const loadCompanyStatuses = useCallback(async () => {
+    if (preview) {
+      const mock: Record<string, SimpleCompanyStatus> = {};
+      for (const item of companies as Company[]) {
+        mock[item.id] = {
+          company_id: item.id,
+          purchases: { status: 'working', label: 'Funcionando' },
+          sales: { status: 'working', label: 'Funcionando' },
+          result: { status: 'working', label: '100%' },
+        };
+      }
+      setCompanyStatuses(mock);
+      return;
+    }
+
+    const ids = (companies as Company[]).map(item => item.id).filter(Boolean);
+    if (!ids.length) {
+      setCompanyStatuses({});
+      return;
+    }
+
+    setStatusesLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extractor-fiscal-health', {
+        body: { action: 'simple_statuses', company_ids: ids },
+      });
+      if (error) throw error;
+      const next: Record<string, SimpleCompanyStatus> = {};
+      for (const item of (data?.companies || []) as SimpleCompanyStatus[]) {
+        next[item.company_id] = item;
+      }
+      setCompanyStatuses(next);
+    } catch {
+      setCompanyStatuses({});
+    } finally {
+      setStatusesLoading(false);
+    }
+  }, [companies, preview]);
+
+  useEffect(() => {
+    void loadCompanyStatuses();
+  }, [loadCompanyStatuses]);
 
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
@@ -3086,8 +3147,8 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
       setNotice({
         tone: result.state === 'healthy' ? 'success' : 'warning',
         text: result.state === 'healthy'
-          ? 'Conferência concluída. As quantidades esperadas e presentes estão alinhadas.'
-          : 'Conferência registrada. Revise as diferenças indicadas na tabela.',
+          ? 'Conferência concluída.'
+          : 'Conferência registrada. Revise Compras e Vendas.',
       });
     }
   };
@@ -3145,18 +3206,12 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
   const salesExpected = expected(health?.sales?.expected);
   const salesPresent = present(health?.sales?.stored ?? company.exits);
 
-  const evidenceText = (level: string | undefined) => {
-    if (level === 'external_complete') return 'Fonte externa independente';
-    if (level === 'official_cursor') return 'Cobertura do serviço oficial';
-    if (level === 'inferred') return 'Reconciliação inferida';
-    return 'Sem prova externa de completude';
-  };
   const compare = (exp: number | null, got: number, sourceComplete = true) => {
-    if (exp == null) return { state: 'attention' as const, label: 'Sem total externo', delta: null as number | null };
+    if (exp == null) return { state: 'attention' as const, label: 'Incompleto', delta: null as number | null };
     const delta = got - exp;
     if (delta === 0) return sourceComplete
-      ? { state: 'ok' as const, label: '100% conferido', delta: 0 }
-      : { state: 'attention' as const, label: 'Sem prova de completude', delta: 0 };
+      ? { state: 'ok' as const, label: 'Funcionando', delta: 0 }
+      : { state: 'attention' as const, label: 'Incompleto', delta: 0 };
     return delta < 0
       ? { state: 'error' as const, label: `Faltam ${integer.format(Math.abs(delta))}`, delta }
       : { state: 'attention' as const, label: `${integer.format(delta)} a mais`, delta };
@@ -3180,9 +3235,9 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
     const purchasesExternal = row?.details?.purchases?.enumeration_complete === true;
     const salesExternal = row?.details?.sales?.enumeration_complete === true;
     if (!purchasesExternal || !salesExternal || pe == null || se == null) {
-      return { label: 'Sem prova externa', state: 'attention' as const };
+      return { label: 'Incompleto', state: 'attention' as const };
     }
-    if (pe === pp && se === sp) return { label: '100% conferido', state: 'ok' as const };
+    if (pe === pp && se === sp) return { label: '100%', state: 'ok' as const };
     return { label: 'Diferença', state: 'error' as const };
   };
   const periodText = health?.period?.start && health?.period?.end
@@ -3194,8 +3249,64 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
       <PageHeading
         title="Histórico"
         icon="history"
-        description="Compara o Extrator com evidências fiscais externas. Só marcamos 100% quando a fonte enumera o período de forma independente."
+        description="Veja, de forma simples, se Compras e Vendas estão completas em cada empresa."
       />
+
+      <section className="extractor-history-ledger extractor-history-company-status">
+        <header>
+          <div>
+            <small>Conferência geral</small>
+            <h3>Empresas · Compras e Vendas</h3>
+          </div>
+          <span>{statusesLoading ? 'Atualizando...' : `${companies.length} empresa${companies.length === 1 ? '' : 's'}`}</span>
+        </header>
+        <div className="extractor-history-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>Compras</th>
+                <th>Vendas</th>
+                <th>Resultado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(companies as Company[]).map(item => {
+                const itemStatus = companyStatuses[item.id];
+                const purchase = itemStatus?.purchases;
+                const sale = itemStatus?.sales;
+                const result = itemStatus?.result;
+                return (
+                  <tr key={item.id}>
+                    <td>
+                      <strong>{item.tradeName}</strong>
+                      <small style={{ display: 'block' }}>{formatCnpj(item.cnpj)}</small>
+                    </td>
+                    <td>
+                      <HealthState
+                        label={purchase?.label || 'Carregando'}
+                        state={purchase ? simpleHealthTone(purchase.status) : 'attention'}
+                      />
+                    </td>
+                    <td>
+                      <HealthState
+                        label={sale?.label || 'Carregando'}
+                        state={sale ? simpleHealthTone(sale.status) : 'attention'}
+                      />
+                    </td>
+                    <td>
+                      <HealthState
+                        label={result?.label || '—'}
+                        state={result ? simpleHealthTone(result.status) : 'attention'}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <div className="extractor-history-periodbar">
         <div>
@@ -3227,24 +3338,19 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
           <span>{company.name} · {formatCnpj(company.cnpj)}</span>
         </div>
         <div className="extractor-history-current-status">
-          <span>Entradas</span>
+          <span>Compras</span>
           <b>{purchaseExpected == null ? '—' : integer.format(purchaseExpected)} / {integer.format(purchasePresent)}</b>
-          <small className="extractor-history-count-caption">{evidenceText(health?.purchases?.evidence_level)} / Extrator</small>
-          <div className="extractor-history-breakdown">
-            <i>NF-e {integer.format(Number(health?.purchases?.models?.nfe55 || 0))}</i>
-            {Number(health?.purchases?.models?.other || 0) > 0 && <i>Outras {integer.format(Number(health.purchases.models.other))}</i>}
-          </div>
+          <small className="extractor-history-count-caption">
+            {purchaseCompare.label === 'Funcionando' ? 'Quantidade conferida' : 'Quantidade ainda em conferência'}
+          </small>
           <HealthState label={purchaseCompare.label} state={purchaseCompare.state} />
         </div>
         <div className="extractor-history-current-status">
-          <span>Saídas</span>
+          <span>Vendas</span>
           <b>{salesExpected == null ? '—' : integer.format(salesExpected)} / {integer.format(salesPresent)}</b>
-          <small className="extractor-history-count-caption">{evidenceText(health?.sales?.evidence_level)} / Extrator</small>
-          <div className="extractor-history-breakdown">
-            <i>NF-e {integer.format(Number(health?.sales?.models?.nfe55 || 0))}</i>
-            <i>NFC-e {integer.format(Number(health?.sales?.models?.nfce65 || 0))}</i>
-            {Number(health?.sales?.models?.other || 0) > 0 && <i>Outras {integer.format(Number(health.sales.models.other))}</i>}
-          </div>
+          <small className="extractor-history-count-caption">
+            {salesCompare.label === 'Funcionando' ? 'Quantidade conferida' : 'Quantidade ainda em conferência'}
+          </small>
           <HealthState label={salesCompare.label} state={salesCompare.state} />
         </div>
         <div className="extractor-history-actions">
@@ -3281,12 +3387,9 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
             <thead>
               <tr>
                 <th>Data / hora</th>
-                <th>Tipo</th>
                 <th>Período</th>
-                <th>Referência externa entradas</th>
-                <th>Entradas no Extrator</th>
-                <th>Referência externa saídas</th>
-                <th>Saídas no Extrator</th>
+                <th>Compras</th>
+                <th>Vendas</th>
                 <th>Resultado</th>
               </tr>
             </thead>
@@ -3296,18 +3399,41 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
                 return (
                   <tr key={row.id}>
                     <td>{formatDate(row.checked_at, true)}</td>
-                    <td>{originLabel(String(row.origin || 'manual_check'))}</td>
                     <td>{formatDate(row.period_start)} a {formatDate(row.period_end)}</td>
-                    <td>{row.purchases_expected == null ? '—' : integer.format(Number(row.purchases_expected))}</td>
-                    <td>{integer.format(Number(row.purchases_present || 0))}</td>
-                    <td>{row.sales_expected == null ? '—' : integer.format(Number(row.sales_expected))}</td>
-                    <td>{integer.format(Number(row.sales_present || 0))}</td>
+                    <td>
+                      <HealthState
+                        label={row?.details?.purchases?.enumeration_complete === true &&
+                          row.purchases_expected != null &&
+                          Number(row.purchases_expected) === Number(row.purchases_present || 0)
+                          ? 'Funcionando'
+                          : 'Incompleto'}
+                        state={row?.details?.purchases?.enumeration_complete === true &&
+                          row.purchases_expected != null &&
+                          Number(row.purchases_expected) === Number(row.purchases_present || 0)
+                          ? 'ok'
+                          : 'attention'}
+                      />
+                    </td>
+                    <td>
+                      <HealthState
+                        label={row?.details?.sales?.enumeration_complete === true &&
+                          row.sales_expected != null &&
+                          Number(row.sales_expected) === Number(row.sales_present || 0)
+                          ? 'Funcionando'
+                          : 'Incompleto'}
+                        state={row?.details?.sales?.enumeration_complete === true &&
+                          row.sales_expected != null &&
+                          Number(row.sales_expected) === Number(row.sales_present || 0)
+                          ? 'ok'
+                          : 'attention'}
+                      />
+                    </td>
                     <td><HealthState label={state.label} state={state.state} /></td>
                   </tr>
                 );
               }) : (
                 <tr>
-                  <td colSpan={8} className="empty">Nenhuma conferência registrada neste período.</td>
+                  <td colSpan={5} className="empty">Nenhuma conferência registrada neste período.</td>
                 </tr>
               )}
             </tbody>
@@ -3316,9 +3442,9 @@ function HistorySection({ companies, selectedCompanyId, preview, setNotice }: an
       </section>
 
       <p className="extractor-health-simple-note">
-        “Esperado” e “presente” sempre usam o mesmo período e o mesmo tipo de documento. A conferência soma
-        as NF-e/NFC-e verificáveis nas fontes fiscais e os demais modelos já confirmados no Extrator, evitando
-        comparar, por exemplo, apenas NFC-e esperada contra todas as vendas armazenadas.
+        <b>Funcionando</b> significa que a quantidade de Compras ou Vendas exibida no Extrator foi conferida por uma fonte externa completa.
+        <b> Incompleto</b> significa que a busca existe, mas ainda não temos prova suficiente do total.
+        <b> Não funcionando</b> significa que a busca daquele lado ainda está bloqueada ou indisponível.
       </p>
     </div>
   );
