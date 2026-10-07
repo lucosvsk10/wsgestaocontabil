@@ -146,6 +146,87 @@ Deno.serve(async req => {
     const action = String(body.action || 'health');
     const requestedScope = String(body.scope || 'full');
     const scope = requestedScope === 'last_30_days' ? 'last_30_days' : 'full';
+
+    if (action === 'simple_statuses') {
+      const requestedIds = Array.isArray(body.company_ids)
+        ? [...new Set(body.company_ids.map((value: unknown) => String(value || '')).filter(Boolean))].slice(0, 100)
+        : [];
+      if (!requestedIds.length) return J({ ok: true, companies: [] });
+
+      const authorized: string[] = [];
+      for (const id of requestedIds) {
+        try {
+          await documentAccess(admin, auth.user.id, id);
+          authorized.push(id);
+        } catch {
+          // Ignore companies outside this user's extractor account.
+        }
+      }
+      if (!authorized.length) return J({ ok: true, companies: [] });
+
+      const { data: coverageRows, error: coverageError } = await admin
+        .from('fiscal_extractor_coverage')
+        .select('company_id,direction,applicability,coverage_status,source_confirmed,evidence_level,enumeration_complete,last_error,last_verified_at')
+        .in('company_id', authorized);
+      if (coverageError) throw coverageError;
+
+      const classify = (rows: any[]) => {
+        const applicableRows = rows.filter((row: any) =>
+          ['required', 'observed'].includes(String(row.applicability || ''))
+        );
+        const complete = applicableRows.length > 0 && applicableRows.every((row: any) =>
+          row.coverage_status === 'covered' &&
+          row.source_confirmed === true &&
+          row.evidence_level === 'external_complete' &&
+          row.enumeration_complete === true
+        );
+        if (complete) {
+          return {
+            status: 'working',
+            label: 'Funcionando',
+            detail: 'Quantidade conferida por fonte externa.',
+          };
+        }
+
+        const operational = applicableRows.some((row: any) => row.source_confirmed === true);
+        const hardBlocked = applicableRows.length > 0 && applicableRows.every((row: any) =>
+          ['blocked', 'error', 'unknown'].includes(String(row.coverage_status || ''))
+        );
+
+        if (operational || !hardBlocked) {
+          return {
+            status: 'incomplete',
+            label: 'Incompleto',
+            detail: 'A busca existe, mas a quantidade total ainda não foi comprovada.',
+          };
+        }
+
+        return {
+          status: 'not_working',
+          label: 'Não funcionando',
+          detail: 'A busca ainda não está operacional para esta empresa.',
+        };
+      };
+
+      const companies = authorized.map(id => {
+        const rows = (coverageRows || []).filter((row: any) => String(row.company_id) === id);
+        const purchases = classify(rows.filter((row: any) => row.direction === 'entrada'));
+        const sales = classify(rows.filter((row: any) => row.direction === 'saida'));
+        return {
+          company_id: id,
+          purchases,
+          sales,
+          result: purchases.status === 'working' && sales.status === 'working'
+            ? { status: 'working', label: '100%' }
+            : purchases.status === 'not_working' || sales.status === 'not_working'
+              ? { status: 'not_working', label: 'Com problema' }
+              : { status: 'incomplete', label: 'Incompleto' },
+        };
+      });
+
+      return J({ ok: true, companies });
+    }
+
     if (!companyId) return J({ error: 'Empresa obrigatória' }, 400);
 
     const access = await documentAccess(admin, auth.user.id, companyId);
