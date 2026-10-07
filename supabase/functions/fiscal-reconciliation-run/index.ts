@@ -44,18 +44,27 @@ async function siteRows(admin:any,companyId:string,start:string,end:string){
 async function upsert(admin:any,companyId:string,start:string,end:string,type:DocType,input:any){
   const sourceKeys=input.sourceKeys instanceof Set?input.sourceKeys:new Set<string>();
   const siteKeys=input.siteKeys instanceof Set?input.siteKeys:new Set<string>();
-  const d=input.sourceConfirmed?diff(sourceKeys,siteKeys):{missing:[],extra:[]};
+  const evidenceLevel=["external_complete","official_cursor","inferred","unconfirmed"].includes(String(input.evidenceLevel||""))
+    ? String(input.evidenceLevel)
+    : "unconfirmed";
+  const enumerationComplete=evidenceLevel==="external_complete"&&input.enumerationComplete===true;
+  const d=enumerationComplete?diff(sourceKeys,siteKeys):{missing:[],extra:[]};
+  const observedDiff=input.sourceConfirmed?diff(sourceKeys,siteKeys):{missing:[],extra:[]};
   const xmlPending=Number(input.xmlPending||0);
   let status="pending";
-  if(!input.sourceConfirmed)status=input.blocked?"blocked":"pending";
-  else if(d.missing.length||d.extra.length||Number(input.duplicateCount||0)>0)status="error";
-  else if(xmlPending>0)status="pending";
-  else status="ok";
+  if(enumerationComplete){
+    if(d.missing.length||d.extra.length||Number(input.duplicateCount||0)>0)status="error";
+    else status="ok";
+  }else if(!input.sourceConfirmed&&input.blocked)status="blocked";
   const row={
     company_id:companyId,period_start:start,period_end:end,document_type:type,
     source_name:String(input.sourceName||"unknown"),
     source_confirmed:Boolean(input.sourceConfirmed),
-    source_count:input.sourceConfirmed?sourceKeys.size:null,
+    evidence_level:evidenceLevel,
+    enumeration_complete:enumerationComplete,
+    source_count:enumerationComplete?sourceKeys.size:null,
+    external_source_count:enumerationComplete?sourceKeys.size:null,
+    evidence_scope:String(input.evidenceScope||"")||null,
     site_count:siteKeys.size,
     missing_count:d.missing.length,
     extra_count:d.extra.length,
@@ -64,7 +73,14 @@ async function upsert(admin:any,companyId:string,start:string,end:string,type:Do
     extra_keys:d.extra,
     status,
     reason:input.reason||null,
-    details:{...(input.details||{}),duplicate_count:Number(input.duplicateCount||0)},
+    details:{
+      ...(input.details||{}),
+      duplicate_count:Number(input.duplicateCount||0),
+      observed_source_count:sourceKeys.size,
+      observed_missing_count:observedDiff.missing.length,
+      observed_extra_count:observedDiff.extra.length,
+      independent_enumeration:enumerationComplete,
+    },
     checked_at:new Date().toISOString(),
     updated_at:new Date().toISOString(),
   };
@@ -167,16 +183,19 @@ Deno.serve(async req=>{
               const key=dg(row.access_key);if(key.length===44)source.add(key);
             }
           }
-          // If no materialized official key set is available, a caught-up national
-          // distribution still proves the site snapshot it produced is current.
-          if(!source.size&&caughtUp)for(const key of site)source.add(key);
-          const confirmed=caughtUp&&(uf!=="AL"||Boolean(alReport?.ok));
+          const confirmed=caughtUp;
           await upsert(admin,companyId,start,end,"purchase_nfe55",{
             sourceName:uf==="AL"?"NFeDistribuicaoDFe + SEFAZ/AL relatório de entradas":"NFeDistribuicaoDFe",
-            sourceConfirmed:confirmed,sourceKeys:source,siteKeys:site,
+            sourceConfirmed:confirmed,
+            evidenceLevel:confirmed?"official_cursor":"unconfirmed",
+            enumerationComplete:false,
+            evidenceScope:"service_cursor",
+            sourceKeys:source,siteKeys:site,
             xmlPending:nfe55In.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfe55In.length-site.size,
             blocked:!confirmed,
-            reason:confirmed?null:(caughtUp?"Relatório estadual complementar de entradas indisponível.":"Distribuição nacional ainda não está comprovadamente em dia."),
+            reason:confirmed
+              ?"Distribuição oficial consumida até o cursor disponível, mas sem enumeração externa independente do total do período."
+              :"Distribuição nacional ainda não está comprovadamente em dia.",
             details:{
               ult_nsu:dfe?.ult_nsu||null,max_nsu:dfe?.max_nsu||null,cstat:dfe?.last_status_code||null,
               state_report_keys:uf==="AL"&&alReport?.ok?Number(alReport.purchase_all_unique_keys||0):null,
@@ -199,7 +218,11 @@ Deno.serve(async req=>{
           for(const key of directKeys)source55.add(key);
           await upsert(admin,companyId,start,end,"sale_nfe55",{
             sourceName:"SEFAZ/AL relatório NF-e emitidas + Consulta Protocolo",
-            sourceConfirmed:salesSourceConfirmed,sourceKeys:source55,siteKeys:keySet(nfe55Out),
+            sourceConfirmed:salesSourceConfirmed,
+            evidenceLevel:salesSourceConfirmed?"external_complete":"inferred",
+            enumerationComplete:salesSourceConfirmed,
+            evidenceScope:salesSourceConfirmed?"period":"observed_keys",
+            sourceKeys:source55,siteKeys:keySet(nfe55Out),
             xmlPending:nfe55Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfe55Out.length-keySet(nfe55Out).size,
             blocked:!salesSourceConfirmed,
             reason:salesSourceConfirmed?null:"A fonte dedicada de NF-e emitidas da SEFAZ/AL não confirmou o período. Chaves positivas confirmadas por protocolo/eventos são mantidas, mas a cobertura de NF-e 55 emitidas ainda não é exaustiva.",
@@ -233,7 +256,11 @@ Deno.serve(async req=>{
           const confirmed=false;
           await upsert(admin,companyId,start,end,"sale_nfe55",{
             sourceName:"SEFAZ/SP NF-e 55 — eventos oficiais + reconciliação de numeração",
-            sourceConfirmed:confirmed,sourceKeys:keySet(official55),siteKeys:keySet(nfe55Out),blocked:!confirmed,
+            sourceConfirmed:confirmed,
+            evidenceLevel:"inferred",
+            enumerationComplete:false,
+            evidenceScope:"observed_keys",
+            sourceKeys:keySet(official55),siteKeys:keySet(nfe55Out),blocked:!confirmed,
             xmlPending:nfe55Out.filter(r=>!r.full_xml||!r.xml).length,
             duplicateCount:nfe55Out.length-keySet(nfe55Out).size,
             reason:"As chaves capturadas foram validadas individualmente, mas a SEFAZ/SP ainda não forneceu enumeração exaustiva por período.",
@@ -242,7 +269,11 @@ Deno.serve(async req=>{
         }else{
           await upsert(admin,companyId,start,end,"sale_nfe55",{
             sourceName:uf==="AL"?"SEFAZ/AL relatório NF-e emitidas":"SEFAZ emitente NF-e",
-            sourceConfirmed:false,siteKeys:keySet(nfe55Out),blocked:true,
+            sourceConfirmed:false,
+            evidenceLevel:"unconfirmed",
+            enumerationComplete:false,
+            evidenceScope:"none",
+            siteKeys:keySet(nfe55Out),blocked:true,
             reason:uf==="AL"
               ?"Credencial estadual do contribuinte não cadastrada; A1 sozinho não fornece listagem completa de NF-e emitidas por período."
               :"Ainda não há conector oficial de listagem de NF-e 55 emitidas para esta UF.",
@@ -264,6 +295,9 @@ Deno.serve(async req=>{
           const confirmed=Boolean(sState?.nfce_source_status==="ok"&&sState?.nfce_source_confirmed_at&&periodCovered);
           await upsert(admin,companyId,start,end,"sale_nfce65",{
             sourceName:"SEFAZ/SP SAE-NFC-e",sourceConfirmed:confirmed,
+            evidenceLevel:confirmed?"external_complete":"unconfirmed",
+            enumerationComplete:confirmed,
+            evidenceScope:"period",
             sourceKeys:keySet(src),siteKeys:keySet(nfce65Out),
             xmlPending:nfce65Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfce65Out.length-keySet(nfce65Out).size,
             blocked:!confirmed,
@@ -280,6 +314,9 @@ Deno.serve(async req=>{
           const confirmed=Boolean(sState?.reconciliation_complete&&Number(sState?.reconciliation_pending||0)===0&&hasOfficialKeys);
           await upsert(admin,companyId,start,end,"sale_nfce65",{
             sourceName:"SVRS/SEFAZ NFC-e reconciliation",sourceConfirmed:confirmed,
+            evidenceLevel:"inferred",
+            enumerationComplete:false,
+            evidenceScope:"number_sequence",
             sourceKeys:keySet(rec),siteKeys:keySet(nfce65Out),
             xmlPending:nfce65Out.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfce65Out.length-keySet(nfce65Out).size,
             blocked:!confirmed,
@@ -304,6 +341,9 @@ Deno.serve(async req=>{
         const adnOut=keySet(nfseOut.filter(r=>r.source==="national_nfse_adn"));
         await upsert(admin,companyId,start,end,"purchase_nfse",{
           sourceName:"ADN NFS-e Nacional",sourceConfirmed:adnConfirmed,
+          evidenceLevel:adnConfirmed?"official_cursor":"unconfirmed",
+          enumerationComplete:false,
+          evidenceScope:"service_cursor",
           sourceKeys:adnIn,siteKeys:keySet(nfseIn),
           xmlPending:nfseIn.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfseIn.length-keySet(nfseIn).size,
           blocked:!adnConfirmed,reason:adnConfirmed?null:(nState?.last_error||"Sincronização ADN não concluída."),
@@ -311,6 +351,9 @@ Deno.serve(async req=>{
         });
         await upsert(admin,companyId,start,end,"sale_nfse",{
           sourceName:"ADN NFS-e Nacional",sourceConfirmed:adnConfirmed,
+          evidenceLevel:adnConfirmed?"official_cursor":"unconfirmed",
+          enumerationComplete:false,
+          evidenceScope:"service_cursor",
           sourceKeys:adnOut,siteKeys:keySet(nfseOut),
           xmlPending:nfseOut.filter(r=>!r.full_xml||!r.xml).length,duplicateCount:nfseOut.length-keySet(nfseOut).size,
           blocked:!adnConfirmed,reason:adnConfirmed?null:(nState?.last_error||"Sincronização ADN não concluída."),
