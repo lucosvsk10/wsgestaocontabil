@@ -59,23 +59,37 @@ update public.fiscal_source_reconciliation
 set source_count = null
 where enumeration_complete = false;
 
+with latest_reconciliation as (
+  select distinct on (company_id, document_type)
+    company_id,
+    document_type,
+    evidence_level,
+    enumeration_complete
+  from public.fiscal_source_reconciliation
+  where document_type in ('purchase_nfe55','sale_nfe55','sale_nfce65')
+  order by company_id, document_type, checked_at desc
+),
+mapped as (
+  select
+    company_id,
+    case
+      when document_type='purchase_nfe55' then 'nfe55'
+      when document_type='sale_nfe55' then 'nfe55'
+      when document_type='sale_nfce65' then 'nfce65'
+    end as coverage_document_type,
+    case when document_type='purchase_nfe55' then 'entrada' else 'saida' end as coverage_direction,
+    evidence_level,
+    enumeration_complete
+  from latest_reconciliation
+)
 update public.fiscal_extractor_coverage c
 set
-  evidence_level = coalesce(r.evidence_level, 'unconfirmed'),
-  enumeration_complete = coalesce(r.enumeration_complete, false)
-from lateral (
-  select evidence_level, enumeration_complete
-  from public.fiscal_source_reconciliation r
-  where r.company_id = c.company_id
-    and (
-      (c.document_type='nfe55' and c.direction='entrada' and r.document_type='purchase_nfe55')
-      or (c.document_type='nfe55' and c.direction='saida' and r.document_type='sale_nfe55')
-      or (c.document_type='nfce65' and c.direction='saida' and r.document_type='sale_nfce65')
-    )
-  order by r.checked_at desc
-  limit 1
-) r
-where c.document_type in ('nfe55','nfce65');
+  evidence_level = coalesce(m.evidence_level, 'unconfirmed'),
+  enumeration_complete = coalesce(m.enumeration_complete, false)
+from mapped m
+where c.company_id=m.company_id
+  and c.document_type=m.coverage_document_type
+  and c.direction=m.coverage_direction;
 
 -- Historical check rows may contain circular expected counts. Preserve history, but mark it.
 update public.extractor_fiscal_check_runs
