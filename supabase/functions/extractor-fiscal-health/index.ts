@@ -362,11 +362,15 @@ Deno.serve(async req => {
         ? new Date(certificateUntil.includes('T') ? certificateUntil : `${certificateUntil}T23:59:59-03:00`).getTime()
         : 0;
       const certReady = Boolean(certificate?.is_active && certificateUntilMs >= Date.now());
-      const purchaseReady = coverage.some((row: any) =>
-        row.direction === 'entrada' &&
-        row.document_type === 'nfe55' &&
-        row.coverage_status === 'covered' &&
-        row.source_confirmed === true
+      const purchaseRow = coverage.find((row: any) =>
+        row.direction === 'entrada' && row.document_type === 'nfe55'
+      );
+      const purchaseOperational = Boolean(purchaseRow?.source_confirmed);
+      const purchaseComplete = Boolean(
+        purchaseRow?.coverage_status === 'covered' &&
+        purchaseRow?.source_confirmed === true &&
+        purchaseRow?.evidence_level === 'external_complete' &&
+        purchaseRow?.enumeration_complete === true
       );
       // NFS-e has its own national source and no numbered 55/65 sequence. A
       // covered service-note source cannot prove that merchandise sales work.
@@ -386,13 +390,14 @@ Deno.serve(async req => {
           Number(salesState?.found_documents || 0) > 0 ||
           Number(salesState?.scanned_numbers || 0) > 0
         );
-      const salesOperational = salesReady || Boolean(
+      const salesOperational = salesCoverage.numberedOperational || salesReady || Boolean(
         !salesState?.paused &&
         referenceReady &&
         sequenceStatus &&
         sequenceEvidence
       );
-      const ready = certReady && purchaseReady && salesOperational;
+      const coverageComplete = purchaseComplete && salesReady;
+      const ready = certReady && purchaseOperational && salesOperational;
       const needsReference = !activeSync && (
         !salesState ||
         ['waiting_sales_reference', 'unsupported_source', 'error', 'failed'].some(value => salesStatus.includes(value)) ||
@@ -414,14 +419,14 @@ Deno.serve(async req => {
         ? {
             ready: true,
             status: 'ready',
-            title: salesReady ? 'Fontes fiscais confirmadas' : 'Busca fiscal funcionando',
-            message: salesReady
-              ? 'Compras e vendas estão sendo capturadas e conferidas.'
-              : 'Compras e vendas já estão sendo capturadas. A conferência completa da sequência continua automaticamente em segundo plano.',
+            title: coverageComplete ? 'Fontes externas confirmadas' : 'Busca fiscal funcionando',
+            message: coverageComplete
+              ? 'Compras e vendas foram comparadas com enumeração externa independente.'
+              : 'Compras e vendas estão sendo capturadas. A prova externa de completude ainda pode estar pendente.',
             automatic_discovery: !salesReady && activeSync,
             accepts_reference: false,
             last_checked_at: checkedAt,
-            coverage_complete: salesReady,
+            coverage_complete: coverageComplete,
             sales_operational: salesOperational,
             saved_sales_count: savedSalesCount,
             engine_state: engineState,
@@ -483,8 +488,10 @@ Deno.serve(async req => {
         coverage,
         gate,
         evidence: {
-          purchases_confirmed: purchaseReady,
-          sales_confirmed: salesReady,
+          purchases_confirmed: purchaseOperational,
+          purchases_complete: purchaseComplete,
+          sales_confirmed: salesCoverage.numberedOperational,
+          sales_complete: salesReady,
           service_sales_confirmed: salesCoverage.serviceReady,
           sales_operational: salesOperational,
           saved_sales_count: savedSalesCount,
