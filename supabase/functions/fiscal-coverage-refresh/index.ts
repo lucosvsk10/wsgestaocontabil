@@ -13,6 +13,8 @@ type Row={
   source_mode:string|null;
   coverage_status:"covered"|"partial"|"blocked"|"error"|"unknown"|"not_applicable";
   source_confirmed:boolean;
+  evidence_level:"external_complete"|"official_cursor"|"inferred"|"unconfirmed";
+  enumeration_complete:boolean;
   last_verified_at:string|null;
   last_success_at:string|null;
   last_error:string|null;
@@ -38,7 +40,7 @@ Deno.serve(async req=>{
 
     for(const company of companies||[]){
       const companyId=String(company.id),uf=String(company.uf||"").toUpperCase(),cnpj=dg(company.cnpj);
-      const [purchaseState,salesState,nfseState,stateCred,dfeState,cteState,mdfeState,observed,nfseInCount,nfseOutCount,sale55Rec,sale65Rec,sp55Rows]=await Promise.all([
+      const [purchaseState,salesState,nfseState,stateCred,dfeState,cteState,mdfeState,observed,nfseInCount,nfseOutCount,purchaseRec,sale55Rec,sale65Rec,sp55Rows]=await Promise.all([
         admin.from("fiscal_purchase_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
         admin.from("fiscal_sales_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
         admin.from("fiscal_nfse_sync_state").select("*").eq("company_id",companyId).maybeSingle(),
@@ -49,11 +51,12 @@ Deno.serve(async req=>{
         admin.from("fiscal_dfe_documents").select("model,direction,document_kind").eq("company_id",companyId).limit(1000),
         admin.from("fiscal_dfe_documents").select("id",{count:"exact",head:true}).eq("company_id",companyId).eq("model","NFS-e").eq("direction","entrada").neq("document_kind","evento"),
         admin.from("fiscal_dfe_documents").select("id",{count:"exact",head:true}).eq("company_id",companyId).eq("model","NFS-e").eq("direction","saida").neq("document_kind","evento"),
-        admin.from("fiscal_source_reconciliation").select("status,source_confirmed,source_count,site_count,xml_pending_count,checked_at,reason,details").eq("company_id",companyId).eq("document_type","sale_nfe55").order("checked_at",{ascending:false}).limit(1).maybeSingle(),
-        admin.from("fiscal_source_reconciliation").select("status,source_confirmed,source_count,site_count,xml_pending_count,checked_at,reason,details").eq("company_id",companyId).eq("document_type","sale_nfce65").order("checked_at",{ascending:false}).limit(1).maybeSingle(),
+        admin.from("fiscal_source_reconciliation").select("status,source_confirmed,source_count,external_source_count,evidence_level,enumeration_complete,site_count,xml_pending_count,checked_at,reason,details").eq("company_id",companyId).eq("document_type","purchase_nfe55").order("checked_at",{ascending:false}).limit(1).maybeSingle(),
+        admin.from("fiscal_source_reconciliation").select("status,source_confirmed,source_count,external_source_count,evidence_level,enumeration_complete,site_count,xml_pending_count,checked_at,reason,details").eq("company_id",companyId).eq("document_type","sale_nfe55").order("checked_at",{ascending:false}).limit(1).maybeSingle(),
+        admin.from("fiscal_source_reconciliation").select("status,source_confirmed,source_count,external_source_count,evidence_level,enumeration_complete,site_count,xml_pending_count,checked_at,reason,details").eq("company_id",companyId).eq("document_type","sale_nfce65").order("checked_at",{ascending:false}).limit(1).maybeSingle(),
         uf==="SP"?admin.from("fiscal_sales_documents").select("access_key,xml,source,source_reference,updated_at").eq("company_id",companyId).eq("model","55").limit(5000):Promise.resolve({data:[],error:null}),
       ]);
-      const ps=purchaseState.data||null,ss=salesState.data||null,ns=nfseState.data||null,cred=stateCred.data||null,ds=dfeState.data||null,cts=cteState.data||null,mds=mdfeState.data||null,s55=sale55Rec.data||null,s65=sale65Rec.data||null;
+      const ps=purchaseState.data||null,ss=salesState.data||null,ns=nfseState.data||null,cred=stateCred.data||null,ds=dfeState.data||null,cts=cteState.data||null,mds=mdfeState.data||null,purchaseR=purchaseRec.data||null,s55=sale55Rec.data||null,s65=sale65Rec.data||null;
       const sp55=(sp55Rows.data||[]).filter((row:any)=>
         ["sefaz_sp_nfe55_issuer_event","sefaz_sp_nfe55_direct_consult","sefaz_sp_nfe55_distribution_xml","national_dfe_issuer_event"].includes(String(row.source||"")) ||
         row.source_reference?.direct_consult_confirmed===true
@@ -65,14 +68,24 @@ Deno.serve(async req=>{
       const rows:Row[]=[];
 
       const purchaseCaughtUp=Boolean(ds?.max_nsu!==null&&String(ds?.ult_nsu||"")===String(ds?.max_nsu||"")&&ps?.status==="idle"&&!ps?.last_error);
+      const purchaseExternalComplete=Boolean(purchaseR?.evidence_level==="external_complete"&&purchaseR?.enumeration_complete===true&&purchaseR?.status==="ok");
       rows.push({
         document_type:"nfe55",direction:"entrada",applicability:"required",
         source_name:"NFeDistribuicaoDFe",source_mode:"national_dfe",
-        coverage_status:purchaseCaughtUp?"covered":ps?.last_error?"error":"partial",
-        source_confirmed:purchaseCaughtUp,last_verified_at:ds?.last_synced_at||ps?.last_completed_at||null,
+        coverage_status:purchaseExternalComplete?"covered":ps?.last_error?"error":"partial",
+        source_confirmed:purchaseCaughtUp,evidence_level:purchaseCaughtUp?"official_cursor":"unconfirmed",enumeration_complete:false,
+        evidence_level:purchaseExternalComplete?"external_complete":purchaseCaughtUp?"official_cursor":"unconfirmed",
+        enumeration_complete:purchaseExternalComplete,
+        last_verified_at:purchaseR?.checked_at||ds?.last_synced_at||ps?.last_completed_at||null,
         last_success_at:purchaseCaughtUp?(ps?.last_completed_at||ds?.last_synced_at||null):null,
-        last_error:purchaseCaughtUp?null:(ps?.last_error||"Distribuição nacional ainda não comprovadamente em dia."),
-        details:{ult_nsu:ds?.ult_nsu||null,max_nsu:ds?.max_nsu||null,cstat:ds?.last_status_code||null},
+        last_error:purchaseExternalComplete?null:purchaseCaughtUp
+          ?"Distribuição oficial em dia, mas sem enumeração externa independente do total do período."
+          :(ps?.last_error||"Distribuição nacional ainda não comprovadamente em dia."),
+        details:{
+          ult_nsu:ds?.ult_nsu||null,max_nsu:ds?.max_nsu||null,cstat:ds?.last_status_code||null,
+          external_source_count:purchaseR?.external_source_count??null,
+          reconciliation_status:purchaseR?.status||null,
+        },
       });
 
       const credStatus=String(cred?.last_verification_status||"not_configured");
@@ -88,24 +101,29 @@ Deno.serve(async req=>{
           .sort()
           .at(-1)||null;
         const nfe55StateError=nfe55SeriesStates.find((state:any)=>Boolean(state?.last_error)) as any;
-        const sale55Ok=Boolean(s55?.status==="ok"&&s55?.source_confirmed);
+        const sale55Ok=Boolean(s55?.status==="ok"&&s55?.evidence_level==="external_complete"&&s55?.enumeration_complete===true);
         rows.push({
           document_type:"nfe55",direction:"saida",applicability:"required",
           source_name:"SEFAZ/SVRS Consulta Protocolo + eventos do emitente",source_mode:"a1_sequence",
-          coverage_status:sale55Ok?"covered":nfe55StateError?"error":"partial",source_confirmed:sale55Ok,
+          coverage_status:sale55Ok?"covered":nfe55StateError?"error":"partial",
+          source_confirmed:Boolean(s55?.source_confirmed),
+          evidence_level:sale55Ok?"external_complete":Boolean(s55?.source_confirmed)?"inferred":"unconfirmed",
+          enumeration_complete:sale55Ok,
           last_verified_at:nfe55LastVerified,last_success_at:sale55Ok?nfe55LastVerified:nfe55LastCompleted,
           last_error:sale55Ok?null:nfe55StateError?.last_error
             ||(nfe55SeriesStates.length
               ?"Enumeração automática por série em andamento; nenhuma ação é necessária do usuário."
               :"Varredura automática das NF-e emitidas está agendada; nenhuma ação é necessária do usuário."),
-          details:{credential_status:credStatus,portal_required:false,reconciliation_status:s55?.status||null,source_count:s55?.source_count??null,site_count:s55?.site_count??null,xml_pending_count:s55?.xml_pending_count??null,series_states:ss?.nfe55_series_states||{}},
+          details:{credential_status:credStatus,portal_required:false,reconciliation_status:s55?.status||null,external_source_count:s55?.external_source_count??null,site_count:s55?.site_count??null,xml_pending_count:s55?.xml_pending_count??null,series_states:ss?.nfe55_series_states||{}},
         });
-        const nfceComplete=Boolean(s65?.status==="ok"&&s65?.source_confirmed===true);
+        const nfceComplete=Boolean(s65?.status==="ok"&&s65?.evidence_level==="external_complete"&&s65?.enumeration_complete===true);
         rows.push({
           document_type:"nfce65",direction:"saida",applicability:"required",
           source_name:"SVRS/SEFAZ NFC-e reconciliation",source_mode:"a1_sequence",
-          coverage_status:nfceComplete?"covered":ss?.last_error?"partial":"partial",
-          source_confirmed:nfceComplete,
+          coverage_status:nfceComplete?"covered":"partial",
+          source_confirmed:Boolean(s65?.source_confirmed),
+          evidence_level:nfceComplete?"external_complete":Boolean(s65?.source_confirmed)?"inferred":"unconfirmed",
+          enumeration_complete:nfceComplete,
           last_verified_at:s65?.checked_at||ss?.last_completed_at||null,
           last_success_at:nfceComplete?(s65?.checked_at||ss?.last_completed_at||null):null,
           last_error:nfceComplete?null:(s65?.reason||ss?.last_error||"Reconciliação NFC-e ainda não concluída."),
@@ -116,8 +134,10 @@ Deno.serve(async req=>{
         rows.push({
           document_type:"nfe55",direction:"saida",applicability:"required",
           source_name:"NFeDistribuicaoDFe eventos do emitente + SEFAZ/SP Consulta Protocolo",source_mode:"national_events_and_state_status",
-          coverage_status:s55?.status==="ok"&&s55?.source_confirmed?"covered":"partial",
-          source_confirmed:Boolean(s55?.status==="ok"&&s55?.source_confirmed),
+          coverage_status:"partial",
+          source_confirmed:Boolean(s55?.source_confirmed),
+          evidence_level:"inferred",
+          enumeration_complete:false,
           last_verified_at:s55?.checked_at||ss?.last_completed_at||null,
           last_success_at:s55?.status==="ok"&&s55?.source_confirmed?(s55?.checked_at||null):null,
           last_error:s55?.status==="ok"&&s55?.source_confirmed?null:"As chaves oficiais encontradas são capturadas e validadas, mas a enumeração exaustiva por período ainda não foi comprovada.",
@@ -129,6 +149,8 @@ Deno.serve(async req=>{
           source_name:"SEFAZ/SP SAE-NFC-e",source_mode:"state_webservice",
           coverage_status:spNfceOk?"covered":ss?.nfce_source_error?"error":"partial",
           source_confirmed:spNfceOk,
+          evidence_level:spNfceOk?"external_complete":"unconfirmed",
+          enumeration_complete:spNfceOk,
           last_verified_at:ss?.nfce_source_confirmed_at||null,
           last_success_at:spNfceOk?(ss?.nfce_source_confirmed_at||null):null,
           last_error:spNfceOk?null:(ss?.nfce_source_error||"SAE-NFC-e ainda não concluído."),
@@ -142,12 +164,12 @@ Deno.serve(async req=>{
       }else{
         rows.push({
           document_type:"nfe55",direction:"saida",applicability:"required",source_name:"Conector estadual de emitidas",source_mode:"state_specific",
-          coverage_status:"blocked",source_confirmed:false,last_verified_at:null,last_success_at:null,
+          coverage_status:"blocked",source_confirmed:false,evidence_level:"unconfirmed",enumeration_complete:false,last_verified_at:null,last_success_at:null,
           last_error:`Conector de NF-e 55 emitidas ainda não implementado para ${uf||"UF não informada"}.`,details:{uf},
         });
         rows.push({
           document_type:"nfce65",direction:"saida",applicability:"unknown",source_name:"Conector estadual NFC-e",source_mode:"state_specific",
-          coverage_status:"unknown",source_confirmed:false,last_verified_at:null,last_success_at:null,
+          coverage_status:"unknown",source_confirmed:false,evidence_level:"unconfirmed",enumeration_complete:false,last_verified_at:null,last_success_at:null,
           last_error:"Aplicabilidade e fonte NFC-e ainda não mapeadas para esta UF.",details:{uf},
         });
       }
@@ -168,7 +190,7 @@ Deno.serve(async req=>{
           document_type:"nfse",direction,applicability:directionSeen?"observed":"unknown",
           source_name:"ADN NFS-e Nacional",source_mode:"national_nfse",
           coverage_status:nfseOk?"covered":ns?.last_error?"error":"partial",
-          source_confirmed:nfseOk,last_verified_at:nfseCaughtUpAt,last_success_at:nfseOk?nfseCaughtUpAt:null,
+          source_confirmed:nfseOk,evidence_level:nfseOk?"official_cursor":"unconfirmed",enumeration_complete:false,last_verified_at:nfseCaughtUpAt,last_success_at:nfseOk?nfseCaughtUpAt:null,
           last_error:nfseOk?null:nfseError,
           details:{
             last_nsu:ns?.last_nsu||null,
@@ -191,21 +213,21 @@ Deno.serve(async req=>{
       rows.push({
         document_type:"cte57",direction:"entrada",applicability:seen("57","entrada")?"observed":"unknown",
         source_name:"CTeDistribuicaoDFe",source_mode:"national_cte",
-        coverage_status:cteCaughtUp?"covered":cts?.last_error?"error":"partial",source_confirmed:cteCaughtUp,
+        coverage_status:cteCaughtUp?"covered":cts?.last_error?"error":"partial",source_confirmed:cteCaughtUp,evidence_level:cteCaughtUp?"official_cursor":"unconfirmed",enumeration_complete:false,
         last_verified_at:cts?.last_synced_at||null,last_success_at:cteCaughtUp?(cts?.last_completed_at||cts?.last_synced_at||null):null,
         last_error:cteCaughtUp?null:(cts?.last_error||"Distribuição nacional de CT-e ainda não comprovadamente em dia."),
         details:{ult_nsu:cts?.ult_nsu||null,max_nsu:cts?.max_nsu||null,cstat:cts?.last_status_code||null,scope:"documentos de interesse do ator; CT-e próprios do emitente não são enumerados por este serviço"},
       });
       rows.push({
         document_type:"cte57",direction:"saida",applicability:seen("57","saida")?"observed":"unknown",
-        source_name:"CT-e emitidos",source_mode:"issuer_cte",coverage_status:"blocked",source_confirmed:false,
+        source_name:"CT-e emitidos",source_mode:"issuer_cte",coverage_status:"blocked",source_confirmed:false,evidence_level:"unconfirmed",enumeration_complete:false,
         last_verified_at:cts?.last_synced_at||null,last_success_at:null,
         last_error:"CTeDistribuicaoDFe não enumera os CT-e gerados pelo próprio emitente; falta fonte oficial exaustiva de emitidos.",
         details:{national_distribution_caught_up:cteCaughtUp,reason:"issuer_cte_exhaustive_enumeration_not_available"},
       });
       rows.push({
         document_type:"mdfe58",direction:"saida",applicability:seen("58","saida")?"observed":"unknown",
-        source_name:"MDF-e emitidos",source_mode:"issuer_mdfe",coverage_status:"blocked",source_confirmed:false,
+        source_name:"MDF-e emitidos",source_mode:"issuer_mdfe",coverage_status:"blocked",source_confirmed:false,evidence_level:"unconfirmed",enumeration_complete:false,
         last_verified_at:mds?.last_synced_at||null,last_success_at:null,
         last_error:"MDFeDistribuicaoDFe não enumera os MDF-e gerados pelo próprio emitente; falta fonte oficial exaustiva de emitidos.",
         details:{national_distribution_caught_up:mdfeCaughtUp,reason:"issuer_mdfe_exhaustive_enumeration_not_available"},
@@ -213,7 +235,7 @@ Deno.serve(async req=>{
       rows.push({
         document_type:"nfe_event",direction:"eventos",applicability:"required",
         source_name:"NFeDistribuicaoDFe eventos",source_mode:"national_dfe",
-        coverage_status:purchaseCaughtUp?"covered":"partial",source_confirmed:purchaseCaughtUp,
+        coverage_status:purchaseCaughtUp?"covered":"partial",source_confirmed:purchaseCaughtUp,evidence_level:purchaseCaughtUp?"official_cursor":"unconfirmed",enumeration_complete:false,
         last_verified_at:ds?.last_synced_at||null,last_success_at:purchaseCaughtUp?(ds?.last_synced_at||null):null,
         last_error:purchaseCaughtUp?null:"Eventos NF-e acompanham a distribuição nacional ainda pendente.",
         details:{},
@@ -221,7 +243,7 @@ Deno.serve(async req=>{
       rows.push({
         document_type:"cte_event",direction:"eventos",applicability:obs.some((r:any)=>String(r.model||"")==="57")?"observed":"unknown",
         source_name:"CTeDistribuicaoDFe eventos",source_mode:"national_cte",
-        coverage_status:cteCaughtUp?"covered":cts?.last_error?"error":"partial",source_confirmed:cteCaughtUp,
+        coverage_status:cteCaughtUp?"covered":cts?.last_error?"error":"partial",source_confirmed:cteCaughtUp,evidence_level:cteCaughtUp?"official_cursor":"unconfirmed",enumeration_complete:false,
         last_verified_at:cts?.last_synced_at||null,last_success_at:cteCaughtUp?(cts?.last_completed_at||cts?.last_synced_at||null):null,
         last_error:cteCaughtUp?null:(cts?.last_error||"Eventos de interesse do CT-e ainda não estão em dia."),
         details:{scope:"eventos distribuídos ao ator pelo Ambiente Nacional"},
@@ -229,7 +251,7 @@ Deno.serve(async req=>{
       rows.push({
         document_type:"mdfe_event",direction:"eventos",applicability:"unknown",
         source_name:"MDFeDistribuicaoDFe eventos",source_mode:"national_mdfe",
-        coverage_status:mdfeCaughtUp?"covered":mds?.last_error?"error":"partial",source_confirmed:mdfeCaughtUp,
+        coverage_status:mdfeCaughtUp?"covered":mds?.last_error?"error":"partial",source_confirmed:mdfeCaughtUp,evidence_level:mdfeCaughtUp?"official_cursor":"unconfirmed",enumeration_complete:false,
         last_verified_at:mds?.last_synced_at||null,last_success_at:mdfeCaughtUp?(mds?.last_completed_at||mds?.last_synced_at||null):null,
         last_error:mdfeCaughtUp?null:(mds?.last_error||"Eventos MDF-e distribuídos ao ator ainda não estão em dia."),
         details:{scope:"eventos/documentos de interesse; emissão própria continua em fonte separada"},
@@ -242,7 +264,9 @@ Deno.serve(async req=>{
         if(error)throw error;
       }
       const blocking=rows.filter(r=>r.applicability!=="not_applicable"&&r.coverage_status!=="covered");
-      out.push({company_id:companyId,name:company.razao_social,uf,complete:blocking.length===0,blocking:blocking.map(r=>({document_type:r.document_type,direction:r.direction,status:r.coverage_status,reason:r.last_error}))});
+      const requiredFiscalRows=rows.filter(r=>(r.applicability==="required"||r.applicability==="observed")&&["nfe55","nfce65"].includes(r.document_type));
+      const independentlyComplete=requiredFiscalRows.length>0&&requiredFiscalRows.every(r=>r.evidence_level==="external_complete"&&r.enumeration_complete===true&&r.coverage_status==="covered");
+      out.push({company_id:companyId,name:company.razao_social,uf,complete:independentlyComplete,blocking:blocking.map(r=>({document_type:r.document_type,direction:r.direction,status:r.coverage_status,evidence_level:r.evidence_level,reason:r.last_error}))});
     }
 
     return J({ok:true,companies:out});
