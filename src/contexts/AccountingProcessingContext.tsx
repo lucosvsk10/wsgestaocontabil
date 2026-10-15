@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { PayrollComparison, PayrollDocumentTotal, PayrollEntry, PayrollProcessingMeta } from "@/lib/lancamentos/payrollWorkbook";
-import { consolidatePurchaseEntriesByMapping, PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
+import { consolidatePurchaseEntriesByMapping, hasCompletePurchaseMapping, PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
 import { RevenueComparison, RevenueEntry, RevenueProcessingMeta, RevenueReference } from "@/lib/lancamentos/revenueWorkbook";
 
 export type AccountingOperation = "import" | "reprocess";
@@ -191,7 +191,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
           reviewModel: data.reviewModel,
           routing: `${data.routing || data.primaryModel} · ${mapping.routing}`,
         },
-        mappingSummary: mapping.summary,
+        mappingSummary: adjustedSummary,
         detectedCompetence: detected,
       };
 
@@ -226,18 +226,75 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
 
       const baseEntries: PurchaseEntry[] = data.entries.map((row: PurchaseEntry, index: number) => ({ ...row, id: row.id || `purchase-${Date.now()}-${index}` }));
       const mapping = await resolveMappings("compras", company, competence, baseEntries, [], accounts);
-      const consolidatedEntries = consolidatePurchaseEntriesByMapping(mapping.entries as PurchaseEntry[]);
-      const validationIssues: string[] = [...(data.validationIssues ?? [])];
+      const mappedEntries = mapping.entries as PurchaseEntry[];
+      const launchableEntries = mappedEntries.filter(hasCompletePurchaseMapping);
+      const excludedEntries = mappedEntries.filter(row => !hasCompletePurchaseMapping(row));
+      const consolidatedEntries = consolidatePurchaseEntriesByMapping(launchableEntries);
+
+      const mappedByReference = new Map(mappedEntries.map(row => [String(row.rubricCode || "").trim(), row]));
+      const items: PurchaseItem[] = (data.items ?? []).map((item: PurchaseItem) => {
+        const referenceCode = String(item.cfop || item.entryNumber || "").replace(/^CFOP\s+/i, "").trim();
+        const mapped = mappedByReference.get(referenceCode) || mappedByReference.get(String(item.entryNumber || "").trim());
+        const launchable = Boolean(mapped && hasCompletePurchaseMapping(mapped));
+        return {
+          ...item,
+          launchStatus: launchable ? "launchable" : "not_launchable",
+          launchReason: launchable
+            ? "Classificação contábil completa; segue para agrupamento e Calima."
+            : mapped?.mappingReason || "Sem débito/crédito completos; permanece somente na transcrição.",
+        };
+      });
+
+      const excludedTotal = excludedEntries.reduce((sum, row) => sum + row.amountInCents, 0);
+      const launchTotal = consolidatedEntries.reduce((sum, row) => sum + row.amountInCents, 0);
+      const documentTotal = Number(data.reference?.totalAmountInCents || 0);
+      const expectedLaunchTotal = Math.max(0, documentTotal - excludedTotal);
+
+      const validationIssues: string[] = [...(data.validationIssues ?? [])].filter((issue: string) =>
+        !/lançamento\(s\).*sem débito\/crédito completo/i.test(issue)
+      );
       if (mapping.failure) validationIssues.push(`Falha na resolução adaptativa de contas: ${mapping.failure}`);
-      if (mapping.summary.unresolvedCount > 0) validationIssues.push(`${mapping.summary.unresolvedCount} lançamento(s) continuam sem débito/crédito completo.`);
 
       const warnings = data.warnings ?? [];
-      const comparisons: PurchaseComparison[] = data.comparisons ?? [];
+      const baseComparisons: PurchaseComparison[] = (data.comparisons ?? []).filter((row: PurchaseComparison) => row.key !== "launch_total");
+      const comparisons: PurchaseComparison[] = [
+        ...baseComparisons,
+        {
+          key: "excluded_total",
+          label: "Não lançável / fora do Calima",
+          documentValue: excludedTotal,
+          extractedValue: excludedTotal,
+          difference: 0,
+          format: "currency",
+          source: "Linhas transcritas sem classificação contábil completa",
+          blocking: false,
+          note: excludedEntries.length
+            ? `${excludedEntries.length} linha(s) permanecem somente na Transcrição e não entram no agrupamento/exportação.`
+            : "Nenhuma linha foi excluída dos lançamentos.",
+        },
+        {
+          key: "launch_total",
+          label: "Total enviado ao Calima",
+          documentValue: expectedLaunchTotal,
+          extractedValue: launchTotal,
+          difference: launchTotal - expectedLaunchTotal,
+          format: "currency",
+          source: "Somente linhas com débito e crédito completos",
+          blocking: true,
+          note: "Documento contábil menos as linhas identificadas como não lançáveis.",
+        },
+      ];
       const hasDifference = comparisons.some(row => row.blocking !== false && row.difference !== 0);
-      const validated = Boolean(data.referenceVerified) && !hasDifference && warnings.length === 0 && validationIssues.length === 0 && mapping.summary.needsApprovalCount === 0;
+      const launchableNeedsApproval = launchableEntries.filter(row => row.mappingNeedsApproval).length;
+      const adjustedSummary = {
+        ...mapping.summary,
+        needsApprovalCount: launchableNeedsApproval,
+        unresolvedCount: excludedEntries.length,
+      };
+      const validated = Boolean(data.referenceVerified) && !hasDifference && warnings.length === 0 && validationIssues.length === 0 && launchableNeedsApproval === 0;
 
       const result: PurchaseProcessingResult = {
-        items: data.items,
+        items,
         reference: data.reference ?? null,
         entries: consolidatedEntries,
         comparisons,
