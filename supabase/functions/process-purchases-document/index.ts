@@ -51,17 +51,22 @@ type PurchaseItem = {
   situation: string;
   source: string;
   confidence: number;
+  rowType: "entry" | "cfop_summary";
+  cfop: string;
+  description: string;
+  classification: string;
 };
 
 type Reference = {
   competence: string;
   quantity: number;
+  quantityIsExplicit: boolean;
   totalAmountInCents: number;
   source: string;
   warnings: string[];
 };
 
-type ItemsResult = { items: PurchaseItem[]; warnings: string[] };
+type ItemsResult = { reportMode: "detailed" | "cfop_summary"; items: PurchaseItem[]; warnings: string[] };
 
 const referenceSchema = {
   type: "object",
@@ -69,17 +74,19 @@ const referenceSchema = {
   properties: {
     competence: { type: "string" },
     quantity: { type: "integer" },
+    quantityIsExplicit: { type: "boolean" },
     totalAmountInCents: { type: "integer" },
     source: { type: "string" },
     warnings: { type: "array", items: { type: "string" } },
   },
-  required: ["competence", "quantity", "totalAmountInCents", "source", "warnings"],
+  required: ["competence", "quantity", "quantityIsExplicit", "totalAmountInCents", "source", "warnings"],
 };
 
 const itemsSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
+    reportMode: { type: "string", enum: ["detailed", "cfop_summary"] },
     items: {
       type: "array",
       items: {
@@ -94,13 +101,17 @@ const itemsSchema = {
           situation: { type: "string" },
           source: { type: "string" },
           confidence: { type: "number" },
+          rowType: { type: "string", enum: ["entry", "cfop_summary"] },
+          cfop: { type: "string" },
+          description: { type: "string" },
+          classification: { type: "string" },
         },
-        required: ["entryNumber", "supplier", "amountInCents", "entryDate", "emissionDate", "situation", "source", "confidence"],
+        required: ["entryNumber", "supplier", "amountInCents", "entryDate", "emissionDate", "situation", "source", "confidence", "rowType", "cfop", "description", "classification"],
       },
     },
     warnings: { type: "array", items: { type: "string" } },
   },
-  required: ["items", "warnings"],
+  required: ["reportMode", "items", "warnings"],
 };
 
 serve(async (req) => {
@@ -182,18 +193,42 @@ serve(async (req) => {
       return { parsed: JSON.parse(outputText), raw };
     };
 
-    const referenceInstructions = `Você é um auditor documental de relatórios brasileiros de Entrada de Mercadoria. Leia SOMENTE as referências explícitas do documento da competência ${competence}.
-Extraia a linha/cabeçalho "Quantidade de entradas" e "Valor Total" exatamente como impressos. Preserve centavos literalmente. competence deve representar o mês/ano das DATAS DE EMISSÃO dos documentos, nunca a data em que o relatório foi gerado e nunca uma coluna "Data da entrada" que esteja preenchida com uma data operacional posterior.
+    const referenceInstructions = `Você é um auditor documental de relatórios brasileiros de compras/entradas da competência ${competence}.
+Leia SOMENTE referências explícitas do documento. Extraia "Valor Total" exatamente como impresso, preservando centavos.
+Se o documento trouxer explicitamente uma quantidade total de entradas/notas, copie em quantity e marque quantityIsExplicit=true. Se NÃO houver uma quantidade explícita, use quantity=0 e quantityIsExplicit=false; nunca transforme número de linhas, CFOPs ou subtotais em "quantidade de entradas".
+competence deve representar o mês/ano das DATAS DE EMISSÃO ou a competência explicitamente indicada no relatório, nunca a data em que o relatório foi gerado.
 Não gere lançamentos, não escolha contas e não faça contas para ajustar valores. source deve identificar a área do relatório usada. warnings somente para ambiguidade real.`;
 
-    const itemsInstructions = `Você é um TRANSCRITOR FACTUAL de um Relatório de Entrada de Mercadoria da competência ${competence}. Copie UMA linha por entrada do relatório.
-Para cada linha, copie literalmente: número/Entrada, Fornecedor, Valor Total, Data da entrada, Data Emissão e Situação. amountInCents é o valor literal daquela MESMA linha. Não some, não agrupe, não corrija e não altere centavos.
-A competência contábil é determinada pela Data Emissão. A coluna Data da entrada pode conter uma data operacional posterior e deve ser apenas transcrita, nunca usada para mover a competência.
-Não gere débito, crédito, C.R., histórico contábil, pagamento ou fornecedor contábil individual. source deve indicar a linha/entrada. confidence de 0 a 1; warning se uma linha não puder ser lida com segurança.`;
+    const itemsInstructions = `Você é um TRANSCRITOR FACTUAL de relatórios brasileiros de compras/entradas da competência ${competence}. Sua obrigação é preservar o conteúdo que existe no PDF, sem inventar detalhes.
+
+Existem dois formatos aceitos:
+1. RELATÓRIO DETALHADO: há linhas individuais de notas/entradas. Nesse caso use reportMode="detailed" e gere UMA linha por entrada real.
+2. RELATÓRIO RESUMIDO POR CFOP, como "Registro de Entradas Por CFOP": não existem notas individuais, mas existem linhas/subtotais por CFOP. Nesse caso use reportMode="cfop_summary" e gere UMA linha por CFOP/subtotal que componha o total do relatório. Não invente fornecedor, número de nota ou datas individuais.
+
+Para linha detalhada:
+- rowType="entry";
+- copie literalmente número/Entrada, Fornecedor, Valor Total, Data da entrada, Data Emissão e Situação;
+- cfop deve ser copiado quando existir;
+- description deve preservar a descrição/natureza explicitamente impressa;
+- classification deve usar somente a natureza evidenciada pelo documento/CFOP; se não houver evidência suficiente, use "NÃO IDENTIFICADA".
+
+Para resumo por CFOP:
+- rowType="cfop_summary";
+- entryNumber deve ser "CFOP " + código;
+- cfop deve conter somente o código;
+- supplier deve ficar vazio, pois não há fornecedor individual;
+- description deve copiar a descrição do CFOP/natureza exatamente como consta no relatório;
+- amountInCents deve ser o subtotal/valor daquela linha de CFOP que compõe o total;
+- entryDate e emissionDate devem ficar vazios se o relatório não trouxer data para aquela linha;
+- situation pode ser "Resumo por CFOP";
+- classification deve refletir a natureza explícita do CFOP/descrição (ex.: comercialização, uso/consumo, ativo, devolução); se houver dúvida, "NÃO IDENTIFICADA".
+
+Nunca some linhas diferentes, nunca agrupe CFOPs diferentes, nunca force tudo para "mercadoria para revenda" e nunca use uma classificação como fallback.
+Não gere débito, crédito, C.R. ou histórico contábil. source deve identificar a linha/área usada. confidence de 0 a 1; warning se uma linha não puder ser lida com segurança.`;
 
     const [referenceAttempt, itemsAttempt] = await Promise.all([
-      callOpenAI(referenceInstructions, "Extraia somente Quantidade de entradas, Valor Total e competência documental.", referenceSchema, "purchase_reference", 2200, "reference"),
-      callOpenAI(itemsInstructions, "Transcreva todas as entradas do relatório sem contabilizá-las.", itemsSchema, "purchase_items", 8000, "items"),
+      callOpenAI(referenceInstructions, "Extraia somente as referências documentais explícitas.", referenceSchema, "purchase_reference", 2200, "reference"),
+      callOpenAI(itemsInstructions, "Transcreva todas as linhas de entrada ou, se o relatório for resumido, todos os subtotais por CFOP sem contabilizá-los.", itemsSchema, "purchase_items", 10000, "items"),
     ]);
 
     const reference = referenceAttempt.parsed as Reference;
@@ -216,33 +251,42 @@ Não gere débito, crédito, C.R., histórico contábil, pagamento ou fornecedor
 
     const extractedQuantity = items.length;
     const extractedTotal = items.reduce((sum, item) => sum + item.amountInCents, 0);
-    const quantityDifference = extractedQuantity - reference.quantity;
+    const quantityDifference = reference.quantityIsExplicit ? extractedQuantity - reference.quantity : 0;
     const totalDifference = extractedTotal - reference.totalAmountInCents;
-    if (quantityDifference !== 0) issues.push(`Quantidade de entradas: diferença de ${quantityDifference}.`);
+    if (reference.quantityIsExplicit && quantityDifference !== 0) issues.push(`Quantidade de entradas: diferença de ${quantityDifference}.`);
     if (totalDifference !== 0) issues.push(`Valor Total: diferença de ${(totalDifference / 100).toFixed(2)}.`);
+    if (reference.totalAmountInCents > 0 && items.length === 0) {
+      issues.push("O relatório possui valor total, mas nenhuma linha de transcrição foi identificada. Nenhum lançamento contábil foi criado para evitar classificação genérica.");
+    }
 
-    const entries = reference.quantity === 0 && reference.totalAmountInCents === 0 ? [] : [{
-      id: crypto.randomUUID(),
-      date: lastDayOfCompetence(competence),
-      history: "MERCADORIA PRA REVENDA (COMPRAS)",
-      eventType: "merchandise_purchase",
-      rubricCode: "COMPRAS_MERCADORIA_REVENDA",
-      rubricDescription: "MERCADORIA PRA REVENDA (COMPRAS)",
-      kind: "compra",
-      section: "compras",
-      debitCode: "",
-      debitDescription: "",
-      debitCostCenter: "",
-      creditCode: "",
-      creditDescription: "",
-      creditCostCenter: "",
-      amountInCents: reference.totalAmountInCents,
-      source: reference.source,
-      confidence: 1,
-    }];
+    const entries = items.map((item, index) => {
+      const code = String(item.cfop || "").trim();
+      const evidence = String(item.classification || item.description || item.supplier || "").trim();
+      const description = evidence && evidence !== "NÃO IDENTIFICADA" ? evidence : "COMPRA SEM CLASSIFICAÇÃO";
+      const referenceLabel = code ? `CFOP ${code}` : item.entryNumber || `Linha ${index + 1}`;
+      return {
+        id: crypto.randomUUID(),
+        date: lastDayOfCompetence(competence),
+        history: `COMPRAS - ${referenceLabel} - ${description}`,
+        eventType: item.rowType === "cfop_summary" ? "purchase_cfop" : "purchase_entry",
+        rubricCode: code || item.entryNumber || `COMPRA_${index + 1}`,
+        rubricDescription: description,
+        kind: "compra",
+        section: "compras",
+        debitCode: "",
+        debitDescription: "",
+        debitCostCenter: "",
+        creditCode: "",
+        creditDescription: "",
+        creditCostCenter: "",
+        amountInCents: item.amountInCents,
+        source: item.source,
+        confidence: item.confidence,
+      };
+    });
 
     const comparisons = [
-      {
+      ...(reference.quantityIsExplicit ? [{
         key: "quantity",
         label: "Quantidade de entradas",
         documentValue: reference.quantity,
@@ -251,7 +295,7 @@ Não gere débito, crédito, C.R., histórico contábil, pagamento ou fornecedor
         format: "number",
         source: reference.source,
         blocking: true,
-      },
+      }] : []),
       {
         key: "document_total",
         label: "Valor Total",
@@ -271,13 +315,13 @@ Não gere débito, crédito, C.R., histórico contábil, pagamento ou fornecedor
         format: "currency",
         source: "Consolidação mensal das entradas",
         blocking: true,
-        note: "Um único lançamento no último dia da competência, somando todas as entradas do mês.",
+        note: "Os lançamentos são consolidados por conta somente depois da classificação contábil de cada linha/CFOP.",
       },
     ];
 
     return json({
       items,
-      reference: { competence, quantity: reference.quantity, totalAmountInCents: reference.totalAmountInCents, source: reference.source },
+      reference: { competence, quantity: reference.quantity, quantityIsExplicit: reference.quantityIsExplicit, totalAmountInCents: reference.totalAmountInCents, source: reference.source },
       entries,
       comparisons,
       warnings,
@@ -288,7 +332,7 @@ Não gere débito, crédito, C.R., histórico contábil, pagamento ou fornecedor
       primaryModel: model,
       reviewed: false,
       reviewModel: null,
-      routing: "terra-reference + terra-purchase-items-literal + deterministic-monthly-consolidation",
+      routing: `terra-reference + terra-purchase-transcription(${itemsResult.reportMode}) + classification-by-evidence + post-mapping-consolidation`,
       reference_response_id: referenceAttempt.raw.id,
       items_response_id: itemsAttempt.raw.id,
     });

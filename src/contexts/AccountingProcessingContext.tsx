@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { PayrollComparison, PayrollDocumentTotal, PayrollEntry, PayrollProcessingMeta } from "@/lib/lancamentos/payrollWorkbook";
-import { PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
+import { consolidatePurchaseEntriesByMapping, PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
 import { RevenueComparison, RevenueEntry, RevenueProcessingMeta, RevenueReference } from "@/lib/lancamentos/revenueWorkbook";
 
 export type AccountingOperation = "import" | "reprocess";
@@ -226,6 +226,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
 
       const baseEntries: PurchaseEntry[] = data.entries.map((row: PurchaseEntry, index: number) => ({ ...row, id: row.id || `purchase-${Date.now()}-${index}` }));
       const mapping = await resolveMappings("compras", company, competence, baseEntries, [], accounts);
+      const consolidatedEntries = consolidatePurchaseEntriesByMapping(mapping.entries as PurchaseEntry[]);
       const validationIssues: string[] = [...(data.validationIssues ?? [])];
       if (mapping.failure) validationIssues.push(`Falha na resolução adaptativa de contas: ${mapping.failure}`);
       if (mapping.summary.unresolvedCount > 0) validationIssues.push(`${mapping.summary.unresolvedCount} lançamento(s) continuam sem débito/crédito completo.`);
@@ -238,7 +239,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
       const result: PurchaseProcessingResult = {
         items: data.items,
         reference: data.reference ?? null,
-        entries: mapping.entries as PurchaseEntry[],
+        entries: consolidatedEntries,
         comparisons,
         warnings,
         validationIssues: [...new Set(validationIssues)],

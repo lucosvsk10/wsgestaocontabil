@@ -290,6 +290,20 @@ serve(async (req) => {
         creditoAtual: item.entry.creditCode || "",
       }));
 
+      const moduleRule = module === "compras"
+        ? `REGRAS ESPECÍFICAS DE COMPRAS:
+- Classifique cada linha pela evidência disponível na rubrica/CFOP/descrição.
+- Nunca use MERCADORIA PARA REVENDA como fallback genérico.
+- CFOPs, descrições de uso/consumo, ativo, devolução, industrialização, combustível, frete ou outras naturezas devem permanecer distintas quando a evidência apontar naturezas diferentes.
+- Se a natureza não puder ser sustentada pela linha e pelo plano de contas, deixe a conta correspondente vazia em vez de forçar uma classificação.
+- O agrupamento das compras ocorrerá depois, somente entre linhas que terminarem na mesma combinação de contas.`
+        : module === "faturamento"
+          ? `REGRAS ESPECÍFICAS DE FATURAMENTO:
+- Preserve a natureza da receita indicada pela rubrica/descrição.
+- Não invente recebimento, banco ou caixa.`
+          : `REGRAS ESPECÍFICAS DE FOLHA:
+- Não invente banco, caixa ou pagamento. Estamos classificando o lançamento de folha, não registrando quitação.`;
+
       const instructions = `Você é um classificador contábil assistido por humano. Sua tarefa é preencher SOMENTE débito e crédito das linhas pendentes usando exclusivamente o plano de contas fornecido desta empresa.
 
 REGRAS OBRIGATÓRIAS:
@@ -298,8 +312,8 @@ REGRAS OBRIGATÓRIAS:
 3. Use os exemplos APROVADOS_DA_EMPRESA como conhecimento prioritário quando forem semanticamente compatíveis.
 4. Se houver uma conta já preenchida na linha, preserve-a a menos que seja claramente incompatível.
 5. Escolha a combinação mais plausível segundo a natureza da rubrica, seção e tipo. A decisão ainda será revisada por um contador.
-6. Não invente banco, caixa ou pagamento. Estamos classificando o lançamento de folha, não registrando quitação.
-7. Retorne string vazia apenas quando realmente não existir conta plausível no plano. Caso haja uma opção plausível, escolha-a e reduza confidence se necessário.
+6. ${moduleRule}
+7. Não use uma categoria genérica apenas para evitar campo vazio.
 8. confidence vai de 0 a 1. reason deve ser curta e objetiva.
 9. Não altere valores, rubrica, seção, histórico ou competência.`;
 
