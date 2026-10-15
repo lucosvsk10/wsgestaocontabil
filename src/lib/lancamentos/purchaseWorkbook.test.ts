@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { consolidatePurchaseEntriesByMapping, type PurchaseEntry } from './purchaseWorkbook';
+import { consolidatePurchaseEntriesByMapping, hasCompletePurchaseMapping, type PurchaseEntry } from './purchaseWorkbook';
 
 const row = (overrides: Partial<PurchaseEntry> = {}): PurchaseEntry => ({
   id: crypto.randomUUID(),
@@ -48,6 +48,12 @@ describe('consolidatePurchaseEntriesByMapping', () => {
     expect(resale?.rubricCode).toContain('1102');
     expect(resale?.rubricCode).toContain('2102');
     expect(consumption?.amountInCents).toBe(5000);
+  });
+
+  it('identifies rows without complete debit and credit mapping as non-launchable', () => {
+    expect(hasCompletePurchaseMapping(row())).toBe(true);
+    expect(hasCompletePurchaseMapping(row({ debitCode: '', debitDescription: '' }))).toBe(false);
+    expect(hasCompletePurchaseMapping(row({ creditCode: '', creditDescription: '' }))).toBe(false);
   });
 
   it('never collapses unresolved purchases into one generic line', () => {

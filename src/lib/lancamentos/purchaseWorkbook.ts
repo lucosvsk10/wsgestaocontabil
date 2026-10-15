@@ -12,6 +12,8 @@ export interface PurchaseItem {
   cfop?: string;
   description?: string;
   classification?: string;
+  launchStatus?: "launchable" | "not_launchable";
+  launchReason?: string;
 }
 
 export interface PurchaseReference {
@@ -48,7 +50,7 @@ export interface PurchaseEntry {
 }
 
 export interface PurchaseComparison {
-  key: "quantity" | "document_total" | "launch_total";
+  key: "quantity" | "document_total" | "excluded_total" | "launch_total";
   label: string;
   documentValue: number;
   extractedValue: number;
@@ -67,7 +69,7 @@ export interface PurchaseProcessingMeta {
   routing?: string | null;
 }
 
-const hasMapping = (row: PurchaseEntry) =>
+export const hasCompletePurchaseMapping = (row: PurchaseEntry) =>
   Boolean(row.debitCode && row.creditCode && row.debitDescription && row.creditDescription);
 
 const uniqueText = (values: string[]) =>
@@ -77,7 +79,7 @@ export function consolidatePurchaseEntriesByMapping(rows: PurchaseEntry[]) {
   const groups = new Map<string, PurchaseEntry[]>();
 
   for (const row of rows) {
-    const key = hasMapping(row)
+    const key = hasCompletePurchaseMapping(row)
       ? [
           row.debitCode,
           row.creditCode,

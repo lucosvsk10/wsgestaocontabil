@@ -68,18 +68,23 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
   const competence = `${month}/${year}`;
   const tabKey = `ws:compras:last-tab:${company}`;
 
+  const nonLaunchableItems = useMemo(() => items.filter(item => item.launchStatus === "not_launchable"), [items]);
+  const nonLaunchableTotal = useMemo(() => nonLaunchableItems.reduce((sum, item) => sum + item.amountInCents, 0), [nonLaunchableItems]);
+
   const comparisons = useMemo<PurchaseComparison[]>(() => {
     if (!reference) return [];
     const itemTotal = items.reduce((sum, item) => sum + item.amountInCents, 0);
     const launchTotal = entries.reduce((sum, entry) => sum + entry.amountInCents, 0);
+    const expectedLaunchTotal = Math.max(0, reference.totalAmountInCents - nonLaunchableTotal);
     return [
       ...(reference.quantityIsExplicit !== false
         ? [{ key: "quantity" as const, label: "Quantidade de entradas", documentValue: reference.quantity, extractedValue: items.length, difference: items.length - reference.quantity, format: "number" as const, source: reference.source, blocking: true }]
         : []),
-      { key: "document_total", label: "Valor contábil", documentValue: reference.totalAmountInCents, extractedValue: itemTotal, difference: itemTotal - reference.totalAmountInCents, format: "currency", source: reference.source, blocking: true },
-      { key: "launch_total", label: "Lançamentos classificados", documentValue: reference.totalAmountInCents, extractedValue: launchTotal, difference: launchTotal - reference.totalAmountInCents, format: "currency", source: "Classificação contábil das entradas", blocking: true, note: "No Registro de Entradas por CFOP, a conferência usa Vr. Contábil por CFOP e o Total Líquido · Vr. Contábil do documento." },
+      { key: "document_total", label: "Valor contábil do documento", documentValue: reference.totalAmountInCents, extractedValue: itemTotal, difference: itemTotal - reference.totalAmountInCents, format: "currency", source: reference.source, blocking: true },
+      { key: "excluded_total", label: "Não lançável / fora do Calima", documentValue: nonLaunchableTotal, extractedValue: nonLaunchableTotal, difference: 0, format: "currency", source: "Transcrição preservada", blocking: false, note: nonLaunchableItems.length ? `${nonLaunchableItems.length} linha(s) identificada(s) na transcrição e excluída(s) do agrupamento/exportação.` : "Nenhuma linha ficou fora dos lançamentos." },
+      { key: "launch_total", label: "Total enviado ao Calima", documentValue: expectedLaunchTotal, extractedValue: launchTotal, difference: launchTotal - expectedLaunchTotal, format: "currency", source: "Somente linhas com débito e crédito completos", blocking: true, note: "O agrupamento e o arquivo final usam apenas linhas lançáveis. As demais permanecem exclusivamente na Transcrição." },
     ];
-  }, [entries, items, reference]);
+  }, [entries, items, nonLaunchableItems.length, nonLaunchableTotal, reference]);
 
   const blockingDifferences = comparisons.filter(row => row.blocking && row.difference !== 0);
   const missing = entries.filter(row => !isCompleteMapping(row)).length;
@@ -90,11 +95,32 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
   const conferenceCount = blockingDifferences.length + missing + mappingsToApprove + warnings.length + validationIssues.length + (referenceVerified ? 0 : 1);
 
   const hydrateSaved = (saved: SavedPurchases | PurchaseProcessingResult) => {
-    setItems(saved.items ?? []);
-    setEntries(saved.entries ?? []);
+    const savedEntries = saved.entries ?? [];
+    const launchableCodes = new Set(
+      savedEntries
+        .filter(isCompleteMapping)
+        .flatMap(row => String(row.rubricCode || "").split("+"))
+        .map(code => code.trim())
+        .filter(Boolean)
+    );
+    const unresolvedCodes = new Set(
+      savedEntries
+        .filter(row => !isCompleteMapping(row))
+        .flatMap(row => String(row.rubricCode || "").split("+"))
+        .map(code => code.trim())
+        .filter(Boolean)
+    );
+    setItems((saved.items ?? []).map(item => {
+      if (item.launchStatus) return item;
+      const code = String(item.cfop || item.entryNumber || "").replace(/^CFOP\s+/i, "").trim();
+      if (launchableCodes.has(code)) return { ...item, launchStatus: "launchable" as const, launchReason: "Classificação contábil completa; segue para o Calima." };
+      if (unresolvedCodes.has(code)) return { ...item, launchStatus: "not_launchable" as const, launchReason: "Sem classificação contábil completa; permanece somente na transcrição." };
+      return item;
+    }));
+    setEntries(savedEntries.filter(isCompleteMapping));
     setReference(saved.reference ?? null);
     setWarnings(saved.warnings ?? []);
-    setValidationIssues(saved.validationIssues ?? []);
+    setValidationIssues((saved.validationIssues ?? []).filter(issue => !/lançamento\(s\).*sem débito\/crédito completo/i.test(issue)));
     setProcessingMeta(saved.processingMeta ?? null);
     setReferenceVerified(Boolean(saved.referenceVerified));
   };
@@ -284,7 +310,7 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
       blocking: row.blocking,
       note: row.format === "number" ? `Quantidade: documento ${row.documentValue} · transcrição ${row.extractedValue}` : row.note,
     })),
-    note: "Compras são classificadas por natureza/CFOP e consolidadas apenas quando usam a mesma combinação de contas.",
+    note: "Somente compras com débito e crédito completos seguem para agrupamento e Calima. Linhas não lançáveis permanecem apenas na Transcrição.",
   });
 
   return <>
@@ -311,13 +337,13 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
         ]} />
 
         <TabsContent value="transcricao" className="mt-7">
-          <Header title="Compras · Transcrição" subtitle="Cada entrada do relatório permanece individual para conferência; a consolidação acontece só no lançamento contábil." />
+          <Header title="Compras · Transcrição" subtitle="Tudo que existe no documento permanece aqui. Linhas sem classificação lançável são identificadas e não seguem para o agrupamento/Calima." />
           {reference && <div className="mb-4 grid gap-3 sm:grid-cols-2"><ReferenceCard label="Quantidade de entradas" value={reference.quantityIsExplicit === false ? "Não informada no PDF" : String(reference.quantity)} /><ReferenceCard label="Valor contábil do PDF" value={money(reference.totalAmountInCents)} /></div>}
           <PurchaseItemsTable rows={items} title={`Transcrição de compras · ${competence}`} />
         </TabsContent>
 
         <TabsContent value="lancamentos" className="mt-7">
-          <Header title="Compras · Lançamentos" subtitle="Cada natureza é classificada no plano de contas; só depois linhas com a mesma combinação de contas são consolidadas." />
+          <Header title="Compras · Lançamentos" subtitle="Somente linhas lançáveis entram aqui. Depois elas são agrupadas por combinação de débito e crédito para formar o arquivo do Calima." />
           <div className="rounded-md border border-border bg-background">
             <div className="flex items-center justify-between border-b border-border p-5"><span className="text-sm text-muted-foreground">{entries.length ? `${entries.length} lançamento(s) classificado(s) · ${money(entries.reduce((sum, row) => sum + row.amountInCents, 0))}` : "Sem lançamento nesta competência"}</span><Button disabled={!canFinalize || !entries.length} onClick={exportToCalima}>Exportar para o Calima</Button></div>
             <PurchaseLedger rows={entries} editable update={updateEntry} title={`Lançamentos de compras · ${competence}`} />
@@ -326,16 +352,16 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
         </TabsContent>
 
         <TabsContent value="conferencia" className="mt-7">
-          <Header title="Compras · Conferência" subtitle="Quantidade e valor do documento original precisam fechar com a transcrição e com o lançamento consolidado." />
+          <Header title="Compras · Conferência" subtitle="O documento precisa fechar com a transcrição; o Calima recebe apenas a parcela efetivamente lançável." />
           <div className="rounded-md border border-border bg-background">
             <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div><p className="text-sm font-semibold text-foreground">Fechar conferência de compras</p><p className="mt-1 text-xs text-muted-foreground">Confirme o mês aqui depois de revisar quantidade, valor consolidado e mapeamento.</p></div>
               <Button className="shrink-0" disabled={!canReviewApprove || !entries.length} onClick={() => void approveAndFinalize()}>{learning ? "Salvando conhecimento..." : mappingsToApprove > 0 ? "Confirmar e aprender" : "Marcar compras como OK"}</Button>
             </div>
             <div className="space-y-6 p-6">
-              <div className="grid gap-5 sm:grid-cols-5"><Stat label="Entradas PDF" value={reference?.quantity ?? 0} /><Stat label="Entradas transcritas" value={items.length} /><Stat label="Diferenças" value={blockingDifferences.length} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Conhecimento reutilizado" value={learnedMappings} /></div>
+              <div className="grid gap-5 sm:grid-cols-3 xl:grid-cols-6"><Stat label="Entradas PDF" value={reference?.quantityIsExplicit === false ? "—" : (reference?.quantity ?? 0)} /><Stat label="Transcritas" value={items.length} /><Stat label="Não lançáveis" value={nonLaunchableItems.length} /><Stat label="Fora do Calima" value={money(nonLaunchableTotal)} /><Stat label="Aguardando aprovação" value={mappingsToApprove} /><Stat label="Diferenças" value={blockingDifferences.length} /></div>
               {!referenceVerified && <div className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A conferência independente do relatório ainda não fechou. A exportação permanece bloqueada.</div>}
-              {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-sm font-medium text-foreground">Mapeamento novo aguardando sua conferência</p><p className="mt-1 text-xs text-muted-foreground">Depois de aprovado, Mercadoria para Revenda → Fornecedores será reaproveitado automaticamente para esta empresa.</p></div>}
+              {mappingsToApprove > 0 && <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4"><p className="text-sm font-medium text-foreground">Mapeamento novo aguardando sua conferência</p><p className="mt-1 text-xs text-muted-foreground">Depois de aprovado, cada combinação lançável de natureza/conta será reaproveitada automaticamente para esta empresa.</p></div>}
               <PurchaseComparisonTable rows={comparisons} referenceVerified={referenceVerified} />
               {(warnings.length > 0 || validationIssues.length > 0) && <div className="rounded-md bg-muted/50 p-4"><p className="text-sm font-medium text-foreground">Pontos que exigem decisão</p>{[...new Set([...warnings, ...validationIssues])].map(issue => <p key={issue} className="mt-2 flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{issue}</p>)}</div>}
               {processingMeta && <p className="text-xs text-muted-foreground">Fluxo: {processingMeta.routing || processingMeta.primaryModel}</p>}
@@ -364,7 +390,7 @@ function Stat({ label, value }: { label: string; value: string | number }) { ret
 
 function PurchaseItemsTable({ rows, title }: { rows: PurchaseItem[]; title: string }) {
   const [expanded, setExpanded] = useState(false);
-  const table = <table className="w-full min-w-[1040px] table-fixed text-xs"><thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr><th className="w-[12%] border-b border-r border-border px-2 py-2">Referência</th><th className="w-[29%] border-b border-r border-border px-2 py-2">Fornecedor / natureza</th><th className="w-[18%] border-b border-r border-border px-2 py-2">Classificação</th><th className="w-[13%] border-b border-r border-border px-2 py-2 text-right">Valor</th><th className="w-[11%] border-b border-r border-border px-2 py-2">Data emissão</th><th className="w-[10%] border-b border-r border-border px-2 py-2">Data entrada</th><th className="w-[7%] border-b border-border px-2 py-2">Situação</th></tr></thead><tbody>{rows.map(row => { const nature = row.description || row.supplier; return <tr key={row.id} className="h-7 border-b border-border"><td className="border-r border-border px-2 py-1.5 tabular-nums">{row.entryNumber || (row.cfop ? `CFOP ${row.cfop}` : "—")}</td><td className="border-r border-border px-2 py-1.5"><span className="block truncate" title={nature}>{nature || "—"}</span></td><td className="border-r border-border px-2 py-1.5"><span className="block truncate" title={row.classification || ""}>{row.classification || "—"}</span></td><td className="border-r border-border px-2 py-1.5 text-right tabular-nums">{money(row.amountInCents)}</td><td className="border-r border-border px-2 py-1.5 tabular-nums">{row.emissionDate || "—"}</td><td className="border-r border-border px-2 py-1.5 tabular-nums">{row.entryDate || "—"}</td><td className="px-2 py-1.5">{row.situation || (row.rowType === "cfop_summary" ? "Resumo CFOP" : "—")}</td></tr>; })}{!rows.length && <tr><td colSpan={7} className="h-40 text-center text-muted-foreground">Nenhuma linha foi transcrita. Reprocesse o documento; o sistema não criará lançamento genérico sem transcrição.</td></tr>}</tbody></table>;
+  const table = <table className="w-full min-w-[1140px] table-fixed text-xs"><thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr><th className="w-[11%] border-b border-r border-border px-2 py-2">Referência</th><th className="w-[27%] border-b border-r border-border px-2 py-2">Fornecedor / natureza</th><th className="w-[17%] border-b border-r border-border px-2 py-2">Classificação</th><th className="w-[13%] border-b border-r border-border px-2 py-2">Destino</th><th className="w-[12%] border-b border-r border-border px-2 py-2 text-right">Valor</th><th className="w-[10%] border-b border-r border-border px-2 py-2">Data emissão</th><th className="w-[10%] border-b border-border px-2 py-2">Situação</th></tr></thead><tbody>{rows.map(row => { const nature = row.description || row.supplier; const notLaunchable = row.launchStatus === "not_launchable"; return <tr key={row.id} className={cn("h-7 border-b border-border", notLaunchable && "bg-amber-500/[0.035]")}><td className="border-r border-border px-2 py-1.5 tabular-nums">{row.entryNumber || (row.cfop ? `CFOP ${row.cfop}` : "—")}</td><td className="border-r border-border px-2 py-1.5"><span className="block truncate" title={nature}>{nature || "—"}</span></td><td className="border-r border-border px-2 py-1.5"><span className="block truncate" title={row.classification || ""}>{row.classification || "—"}</span></td><td className="border-r border-border px-2 py-1.5"><span title={row.launchReason || ""} className={cn("font-medium", notLaunchable ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-400")}>{notLaunchable ? "Não lançável" : row.launchStatus === "launchable" ? "Vai para o Calima" : "A classificar"}</span></td><td className="border-r border-border px-2 py-1.5 text-right tabular-nums">{money(row.amountInCents)}</td><td className="border-r border-border px-2 py-1.5 tabular-nums">{row.emissionDate || "—"}</td><td className="px-2 py-1.5">{row.situation || (row.rowType === "cfop_summary" ? "Resumo CFOP" : "—")}</td></tr>; })}{!rows.length && <tr><td colSpan={7} className="h-40 text-center text-muted-foreground">Nenhuma linha foi transcrita. Reprocesse o documento; o sistema não criará lançamento genérico sem transcrição.</td></tr>}</tbody></table>;
   return <><div className="rounded-md border border-border bg-background"><TableExpandButton onClick={() => setExpanded(true)} /><div className="overflow-x-auto">{table}</div></div><Dialog open={expanded} onOpenChange={setExpanded}><DialogContent className="max-h-[88vh] w-[96vw] max-w-[1580px] overflow-hidden border-border bg-background p-0"><DialogHeader className="border-b border-border px-6 py-5 text-left"><DialogTitle>{title}</DialogTitle></DialogHeader><div className="max-h-[76vh] overflow-auto">{table}</div></DialogContent></Dialog></>;
 }
 
