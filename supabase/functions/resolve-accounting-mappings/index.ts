@@ -302,8 +302,11 @@ serve(async (req) => {
 - O agrupamento das compras ocorrerá depois, somente entre linhas que terminarem na mesma combinação de contas.`
         : module === "faturamento"
           ? `REGRAS ESPECÍFICAS DE FATURAMENTO:
-- Preserve a natureza da receita indicada pela rubrica/descrição.
-- Não invente recebimento, banco ou caixa.`
+- Existe somente uma rubrica por competência: FATURAMENTO.
+- Nunca divida o faturamento em serviços, mercadorias, PGDAS, impostos ou outras receitas.
+- Nunca crie novas linhas ou naturezas; você só escolhe débito e crédito para a única linha recebida.
+- Use primeiro regra já aprovada da empresa. Sem regra aprovada, escolha somente uma combinação plausível existente no plano e marque para revisão.
+- Não invente recebimento, banco, caixa, imposto, cliente individual ou composição do faturamento.`
           : `REGRAS ESPECÍFICAS DE FOLHA:
 - Não invente banco, caixa ou pagamento. Estamos classificando o lançamento de folha, não registrando quitação.`;
 

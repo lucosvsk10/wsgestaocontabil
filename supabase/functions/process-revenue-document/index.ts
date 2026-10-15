@@ -107,80 +107,66 @@ function sortPeriods(periods: Period[]) {
 function buildPeriodResult(reference: Period, facts: Period, model: string, inheritedWarnings: string[]) {
   const issues: string[] = [];
   const warnings = [...inheritedWarnings];
+
   if (!validCompetence(reference.competence) || !validCompetence(facts.competence)) {
     issues.push("Competência inválida identificada no documento.");
   }
   if (reference.competence !== facts.competence) {
     issues.push("As duas leituras independentes divergiram sobre a competência.");
   }
-
-  const numericKeys = ["serviceAmountInCents", "merchandiseAmountInCents", "totalAmountInCents", "pgdasAmountInCents"] as const;
-  for (const key of numericKeys) {
-    if (Number(reference[key]) !== Number(facts[key])) {
-      issues.push(`${key}: as duas leituras independentes divergiram.`);
-    }
+  if (Number(reference.totalAmountInCents) !== Number(facts.totalAmountInCents)) {
+    issues.push("As duas leituras independentes divergiram sobre o faturamento bruto da competência.");
   }
-  const boolKeys = ["hasService", "hasMerchandise", "hasPgdas"] as const;
-  for (const key of boolKeys) {
-    if (Boolean(reference[key]) !== Boolean(facts[key])) issues.push(`${key}: as duas leituras independentes divergiram.`);
-  }
-  if (facts.serviceAmountInCents + facts.merchandiseAmountInCents !== facts.totalAmountInCents) {
-    issues.push("NFS + NF-e não fecha com o Total Faturado do documento.");
-  }
-  if (!facts.hasService && facts.serviceAmountInCents !== 0) issues.push("Serviços marcado como ausente, mas há valor informado.");
-  if (!facts.hasMerchandise && facts.merchandiseAmountInCents !== 0) issues.push("NF-e marcada como ausente, mas há valor informado.");
-  if (!facts.hasPgdas && facts.pgdasAmountInCents !== 0) issues.push("PGDAS marcado como ausente, mas há valor informado.");
 
   const competence = facts.competence;
   const date = validCompetence(competence) ? lastDay(competence) : "";
-  const entries: any[] = [];
-  if (facts.hasService && facts.serviceAmountInCents > 0) {
-    entries.push({
-      id: crypto.randomUUID(), date, history: "FATURAMENTO PRESTAÇÃO DE SERVIÇOS", eventType: "service_revenue",
-      rubricCode: "FATURAMENTO_SERVICOS", rubricDescription: "FATURAMENTO PRESTAÇÃO DE SERVIÇOS", kind: "receita", section: "faturamento",
-      debitCode: "", debitDescription: "", debitCostCenter: "", creditCode: "", creditDescription: "", creditCostCenter: "",
-      amountInCents: facts.serviceAmountInCents, source: facts.source, confidence: 1,
-    });
-  }
-  if (facts.hasMerchandise && facts.merchandiseAmountInCents > 0) {
-    entries.push({
-      id: crypto.randomUUID(), date, history: "FATURAMENTO REVENDA DE MERCADORIAS", eventType: "merchandise_revenue",
-      rubricCode: "FATURAMENTO_REVENDA", rubricDescription: "FATURAMENTO REVENDA DE MERCADORIAS", kind: "receita", section: "faturamento",
-      debitCode: "", debitDescription: "", debitCostCenter: "", creditCode: "", creditDescription: "", creditCostCenter: "",
-      amountInCents: facts.merchandiseAmountInCents, source: facts.source, confidence: 1,
-    });
-  }
-  if (facts.hasPgdas && facts.pgdasAmountInCents > 0) {
-    entries.push({
-      id: crypto.randomUUID(), date, history: "APURAÇÃO PGDAS", eventType: "pgdas",
-      rubricCode: "APURACAO_PGDAS", rubricDescription: "APURAÇÃO PGDAS", kind: "tributo", section: "faturamento",
-      debitCode: "", debitDescription: "", debitCostCenter: "", creditCode: "", creditDescription: "", creditCostCenter: "",
-      amountInCents: facts.pgdasAmountInCents, source: facts.source, confidence: 1,
-    });
-  }
+  const total = Number(facts.totalAmountInCents || 0);
+  const entries = total > 0 ? [{
+    id: crypto.randomUUID(),
+    date,
+    history: "FATURAMENTO",
+    eventType: "revenue",
+    rubricCode: "FATURAMENTO",
+    rubricDescription: "FATURAMENTO",
+    kind: "receita",
+    section: "faturamento",
+    debitCode: "",
+    debitDescription: "",
+    debitCostCenter: "",
+    creditCode: "",
+    creditDescription: "",
+    creditCostCenter: "",
+    amountInCents: total,
+    source: facts.source,
+    confidence: 1,
+  }] : [];
 
-  const byType = (eventType: string) => entries.filter(entry => entry.eventType === eventType).reduce((sum, entry) => sum + entry.amountInCents, 0);
-  const comparisons = [
-    { key: "services", label: "NFS · Prestação de serviços", documentAmountInCents: reference.serviceAmountInCents, entriesAmountInCents: byType("service_revenue"), differenceInCents: byType("service_revenue") - reference.serviceAmountInCents, source: reference.source, blocking: true },
-    { key: "merchandise", label: "NF-e · Revenda de mercadorias", documentAmountInCents: reference.merchandiseAmountInCents, entriesAmountInCents: byType("merchandise_revenue"), differenceInCents: byType("merchandise_revenue") - reference.merchandiseAmountInCents, source: reference.source, blocking: true },
-    { key: "total", label: "Total faturado", documentAmountInCents: reference.totalAmountInCents, entriesAmountInCents: byType("service_revenue") + byType("merchandise_revenue"), differenceInCents: byType("service_revenue") + byType("merchandise_revenue") - reference.totalAmountInCents, source: reference.source, blocking: true },
-    { key: "pgdas", label: "DAS / PGDAS", documentAmountInCents: reference.pgdasAmountInCents, entriesAmountInCents: byType("pgdas"), differenceInCents: byType("pgdas") - reference.pgdasAmountInCents, source: reference.source, blocking: reference.hasPgdas, note: reference.hasPgdas ? undefined : "Documento sem PGDAS nesta competência; nenhum lançamento tributário deve ser criado." },
-  ];
-  if (comparisons.some(comparison => comparison.blocking && comparison.differenceInCents !== 0)) {
-    issues.push("Os lançamentos não reconciliaram com as referências independentes do documento.");
+  const launchTotal = entries.reduce((sum, entry) => sum + entry.amountInCents, 0);
+  const comparisons = [{
+    key: "total",
+    label: "Faturamento bruto",
+    documentAmountInCents: reference.totalAmountInCents,
+    entriesAmountInCents: launchTotal,
+    differenceInCents: launchTotal - reference.totalAmountInCents,
+    source: reference.source,
+    blocking: true,
+  }];
+
+  if (launchTotal !== reference.totalAmountInCents) {
+    issues.push("O lançamento de faturamento não reconciliou com o valor mensal do documento.");
   }
 
   return {
     competence,
     reference: {
       competence,
-      serviceAmountInCents: reference.serviceAmountInCents,
-      merchandiseAmountInCents: reference.merchandiseAmountInCents,
+      serviceAmountInCents: 0,
+      merchandiseAmountInCents: 0,
       totalAmountInCents: reference.totalAmountInCents,
-      pgdasAmountInCents: reference.pgdasAmountInCents,
-      hasService: reference.hasService,
-      hasMerchandise: reference.hasMerchandise,
-      hasPgdas: reference.hasPgdas,
+      pgdasAmountInCents: 0,
+      hasService: false,
+      hasMerchandise: false,
+      hasPgdas: false,
       source: reference.source,
     },
     entries,
@@ -193,7 +179,7 @@ function buildPeriodResult(reference: Period, facts: Period, model: string, inhe
     primaryModel: model,
     reviewed: false,
     reviewModel: null,
-    routing: "terra-reference + terra-full-document-facts + deterministic-period-distribution",
+    routing: "terra-reference + terra-full-document-faturamento-total + deterministic-single-revenue-entry",
   };
 }
 
@@ -226,19 +212,23 @@ serve(async (req) => {
       file_data: `data:${document.mime_type};base64,${document.data}`,
     }));
 
-    const instructions = `Você é um auditor documental de faturamento brasileiro. Leia o CONTEÚDO do documento inteiro e identifique TODAS as competências mensais existentes nele.
+    const instructions = `Você é um transcritor documental de faturamento brasileiro. Leia o CONTEÚDO do documento inteiro e identifique TODAS as competências mensais existentes nele.
+
+REGRA CENTRAL: este módulo cria SOMENTE UM lançamento de FATURAMENTO por competência. Não separe serviços, mercadorias, PGDAS, impostos, recebimentos, clientes, banco, caixa ou qualquer outra natureza que o documento não peça explicitamente.
 
 REGRAS ABSOLUTAS:
-1. IGNORE o nome do arquivo para determinar ano ou mês. Nomes podem estar codificados, renomeados ou conter sequências como %202024. Ano e mês só podem vir do conteúdo visível do documento.
+1. IGNORE o nome do arquivo para determinar ano ou mês.
 2. Cada competência deve usar formato MM/AAAA e aparecer uma única vez em periods.
-3. Para cada mês, copie literalmente NFS/Prestação de Serviços, NF-e PJ Mod.55/Revenda, TOTAL FATURADO e DAS/PGDAS, sempre em centavos inteiros.
-4. Campo vazio NÃO é zero inventado: represente amount=0 e has*=false. Isso se aplica a NF-e, serviços e PGDAS.
-5. Nunca use o TOTAL ANUAL como se fosse um mês. annualTotals deve conter apenas os totais anuais explícitos, quando existirem.
-6. Se houver um relatório anual com exatamente 12 linhas mensais em ordem cronológica e um único ano claramente impresso, mas os rótulos dos meses não forem preservados na camada de texto, você pode associar as 12 linhas de detalhe, de cima para baixo, a janeiro até dezembro SOMENTE se conseguir distinguir claramente essas 12 linhas do total anual. Registre isso em source.
-7. NFS + NF-e deve ser igual ao TOTAL FATURADO da mesma linha. Não corrija valores para fazê-los fechar; transcreva literalmente e use warnings se o documento estiver realmente ambíguo.
-8. Preserve dezembro sem PGDAS quando a célula estiver vazia. Preserve meses sem NF-e sem criar revenda.
-9. source deve identificar de forma curta a linha/mês/ano usada.
-10. warnings só para ambiguidade real. Não gere lançamentos nem contas contábeis.`;
+3. Para cada mês, copie SOMENTE o valor mensal de faturamento bruto/total faturado que o documento informa.
+4. Grave esse valor em totalAmountInCents.
+5. Para compatibilidade do schema, serviceAmountInCents=0, merchandiseAmountInCents=0, pgdasAmountInCents=0 e hasService=false, hasMerchandise=false, hasPgdas=false SEM tentar inferir composição.
+6. Campo não existente não deve ser inventado.
+7. annualTotals deve conter somente totais anuais explícitos, usando totalAmountInCents; os demais campos ficam 0.
+8. Nunca transforme um total anual em competência mensal.
+9. source deve identificar de forma curta a linha/mês usada.
+10. Não gere lançamentos, contas contábeis, impostos ou classificações. O sistema criará deterministicamente uma única linha chamada FATURAMENTO para o valor total mensal.
+11. Se o documento disser apenas "Julho/2026 404.579,29" e "TOTAL 404.579,29", o valor da competência é exatamente 404.579,29 e nada mais deve ser criado.
+12. warnings apenas para ambiguidade documental real.`;
 
     const call = async (pass: string) => {
       const startedAt = Date.now();
