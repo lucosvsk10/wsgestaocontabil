@@ -191,7 +191,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
           reviewModel: data.reviewModel,
           routing: `${data.routing || data.primaryModel} · ${mapping.routing}`,
         },
-        mappingSummary: adjustedSummary,
+        mappingSummary: mapping.summary,
         detectedCompetence: detected,
       };
 
@@ -309,11 +309,11 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
           reviewModel: data.reviewModel,
           routing: `${data.routing || data.primaryModel} · ${mapping.routing}`,
         },
-        mappingSummary: mapping.summary,
+        mappingSummary: adjustedSummary,
         detectedCompetence: detected,
       };
 
-      finishJob(id, completionMessage(result.validated, mapping.summary));
+      finishJob(id, completionMessage(result.validated, adjustedSummary));
       return result;
     } catch (error) {
       failJob(id, error, "Falha ao processar Compras.");
