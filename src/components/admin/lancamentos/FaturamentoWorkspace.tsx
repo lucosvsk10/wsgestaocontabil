@@ -82,13 +82,17 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
 
   const comparisons = useMemo<RevenueComparison[]>(() => {
     if (!reference) return [];
-    const byType = (type: string) => entries.filter(row => row.eventType === type).reduce((sum, row) => sum + row.amountInCents, 0);
-    return [
-      { key: "services", label: "NFS · Prestação de serviços", documentAmountInCents: reference.serviceAmountInCents, entriesAmountInCents: byType("service_revenue"), differenceInCents: byType("service_revenue") - reference.serviceAmountInCents, source: reference.source, blocking: true },
-      { key: "merchandise", label: "NF-e · Revenda de mercadorias", documentAmountInCents: reference.merchandiseAmountInCents, entriesAmountInCents: byType("merchandise_revenue"), differenceInCents: byType("merchandise_revenue") - reference.merchandiseAmountInCents, source: reference.source, blocking: true },
-      { key: "total", label: "Total faturado", documentAmountInCents: reference.totalAmountInCents, entriesAmountInCents: byType("service_revenue") + byType("merchandise_revenue"), differenceInCents: byType("service_revenue") + byType("merchandise_revenue") - reference.totalAmountInCents, source: reference.source, blocking: true },
-      { key: "pgdas", label: "DAS / PGDAS", documentAmountInCents: reference.pgdasAmountInCents, entriesAmountInCents: byType("pgdas"), differenceInCents: byType("pgdas") - reference.pgdasAmountInCents, source: reference.source, blocking: reference.hasPgdas, note: reference.hasPgdas ? undefined : "Documento sem PGDAS nesta competência; nenhum lançamento tributário deve ser criado." },
-    ];
+    const launchTotal = entries.reduce((sum, row) => sum + row.amountInCents, 0);
+    return [{
+      key: "total",
+      label: "Faturamento bruto",
+      documentAmountInCents: reference.totalAmountInCents,
+      entriesAmountInCents: launchTotal,
+      differenceInCents: launchTotal - reference.totalAmountInCents,
+      source: reference.source,
+      blocking: true,
+      note: "Este módulo gera uma única conta/linha de faturamento por competência.",
+    }];
   }, [entries, reference]);
 
   const blockingDifferences = comparisons.filter(row => row.blocking && row.differenceInCents !== 0);
@@ -377,7 +381,7 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
       mappingReason: row.mappingReason,
     })),
     comparisons,
-    note: "Faturamento gera no máximo três lançamentos por competência: prestação de serviços, revenda de mercadorias e PGDAS, apenas quando houver valor no documento original.",
+    note: "Faturamento gera somente um lançamento por competência, pelo valor bruto mensal informado no documento.",
   });
 
   const openSummaryCompetence = (target: string) => {
@@ -389,7 +393,7 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
   return <section className="mt-8 space-y-8">
     <div className="rounded-md border border-border bg-background p-6">
       <div className="flex items-center justify-between gap-5">
-        <div><h3 className="font-semibold">Faturamento de {competence}</h3><p className="mt-1 text-xs text-muted-foreground">NFS + NF-e + DAS/PGDAS → até 3 lançamentos por competência. Relatórios anuais são separados automaticamente por mês.</p></div>
+        <div><h3 className="font-semibold">Faturamento de {competence}</h3><p className="mt-1 text-xs text-muted-foreground">O documento informa o faturamento mensal; o sistema gera somente uma linha de FATURAMENTO por competência.</p></div>
         <div className="flex flex-wrap justify-end gap-2">
           {files.length > 0 && <Button variant="outline" disabled={busy} onClick={() => void process(files, "reprocess")}>{processing ? "Processando..." : "Reprocessar com IA"}</Button>}
           <Button variant="outline" disabled={busy} onClick={() => input.current?.click()}>{batchProcessing ? "Analisando documento..." : "Importar faturamento"}</Button>
@@ -403,18 +407,18 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
 
     <Tabs value={activeTab} onValueChange={setActiveTab}>
       <AccountingWorkflowSteps steps={[
-        { value: "transcricao", label: "Transcrição", count: reference ? 4 : 0 },
+        { value: "transcricao", label: "Transcrição", count: reference ? 1 : 0 },
         { value: "lancamentos", label: "Lançamentos", count: entries.length },
         { value: "conferencia", label: "Conferência", count: conferenceCount },
       ]} />
 
       <TabsContent value="transcricao" className="mt-7">
-        <Header title="Faturamento · Transcrição" subtitle="Valores literais da competência identificada no documento." />
+        <Header title="Faturamento · Transcrição" subtitle="Valor mensal de faturamento exatamente como informado no documento." />
         {reference ? <RevenueReferenceTable reference={reference} title={`Transcrição de faturamento · ${competence}`} /> : <Empty text="Importe um relatório de faturamento para iniciar." />}
       </TabsContent>
 
       <TabsContent value="lancamentos" className="mt-7">
-        <Header title="Faturamento · Lançamentos" subtitle="No máximo três lançamentos no último dia do mês." />
+        <Header title="Faturamento · Lançamentos" subtitle="Uma única linha de faturamento no último dia da competência." />
         <div className="rounded-md border border-border bg-background">
           <div className="flex items-center justify-between border-b border-border p-5"><span className="text-sm text-muted-foreground">{entries.length} lançamento(s) · {money(entries.reduce((sum, row) => sum + row.amountInCents, 0))}</span><Button disabled={!canExport || !entries.length} onClick={exportCalima}>Exportar para o Calima</Button></div>
           <RevenueLedger rows={entries} update={updateEntry} onDelete={deleteEntry} title={`Lançamentos de faturamento · ${competence}`} />
@@ -423,10 +427,10 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
       </TabsContent>
 
       <TabsContent value="conferencia" className="mt-7">
-        <Header title="Faturamento · Conferência" subtitle="NFS, NF-e, total faturado e PGDAS comparados diretamente com os lançamentos." />
+        <Header title="Faturamento · Conferência" subtitle="O valor de faturamento do documento é comparado diretamente com a única linha gerada." />
         <div className="rounded-md border border-border bg-background">
           <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="text-sm font-semibold text-foreground">Fechar conferência de faturamento</p><p className="mt-1 text-xs text-muted-foreground">Confirme o mês aqui depois de revisar NFS, NF-e, total faturado, PGDAS e mapeamentos.</p></div>
+            <div><p className="text-sm font-semibold text-foreground">Fechar conferência de faturamento</p><p className="mt-1 text-xs text-muted-foreground">Confirme o mês depois de revisar o valor faturado e o mapeamento da única conta de faturamento.</p></div>
             <Button className="shrink-0" disabled={!canApprove || !entries.length} onClick={() => void approve()}>{learning ? "Salvando conhecimento..." : mappingsToApprove ? "Confirmar e aprender" : "Marcar faturamento como OK"}</Button>
           </div>
           <div className="space-y-6 p-6">
@@ -461,13 +465,7 @@ function Empty({ text }: { text: string }) { return <div className="grid h-40 pl
 
 function RevenueReferenceTable({ reference, title }: { reference: RevenueReference; title: string }) {
   const [expanded, setExpanded] = useState(false);
-  const rows = [
-    ["NFS · Prestação de serviços", reference.serviceAmountInCents, reference.hasService],
-    ["NF-e · Revenda de mercadorias", reference.merchandiseAmountInCents, reference.hasMerchandise],
-    ["TOTAL FATURADO", reference.totalAmountInCents, true],
-    ["DAS / PGDAS", reference.pgdasAmountInCents, reference.hasPgdas],
-  ] as const;
-  const table = <table className="w-full min-w-[720px] table-fixed text-xs"><thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr><th className="w-[48%] border-b border-r border-border px-3 py-2">Referência</th><th className="w-[26%] border-b border-r border-border px-3 py-2 text-right">Valor</th><th className="w-[26%] border-b border-border px-3 py-2">Situação</th></tr></thead><tbody>{rows.map(([label, value, present]) => <tr key={label} className="h-8 border-b border-border"><td className="border-r border-border px-3 py-2 font-medium">{label}</td><td className="border-r border-border px-3 py-2 text-right tabular-nums">{money(value)}</td><td className="px-3 py-2 text-muted-foreground">{present ? "Informado no documento" : "Sem valor nesta competência"}</td></tr>)}</tbody></table>;
+  const table = <table className="w-full min-w-[620px] table-fixed text-xs"><thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr><th className="w-[52%] border-b border-r border-border px-3 py-2">Referência</th><th className="w-[28%] border-b border-r border-border px-3 py-2 text-right">Valor</th><th className="w-[20%] border-b border-border px-3 py-2">Situação</th></tr></thead><tbody><tr className="h-8 border-b border-border"><td className="border-r border-border px-3 py-2 font-medium">Faturamento bruto</td><td className="border-r border-border px-3 py-2 text-right tabular-nums">{money(reference.totalAmountInCents)}</td><td className="px-3 py-2 text-muted-foreground">Informado no documento</td></tr></tbody></table>;
   return <><TableBox onExpand={() => setExpanded(true)}>{table}</TableBox><Dialog open={expanded} onOpenChange={setExpanded}><DialogContent className="max-h-[88vh] w-[94vw] max-w-[1380px] overflow-hidden p-0"><DialogHeader className="border-b border-border px-6 py-5"><DialogTitle>{title}</DialogTitle></DialogHeader><div className="overflow-auto">{table}</div></DialogContent></Dialog></>;
 }
 
