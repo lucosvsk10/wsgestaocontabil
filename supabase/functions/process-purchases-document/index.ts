@@ -224,7 +224,7 @@ Para resumo por CFOP:
 - preserve separadamente a natureza: 1101/2101 industrialização/produção; 1253 energia elétrica; 1407/1556/2556 uso ou consumo; 1653 combustível/lubrificante; 2551 ativo imobilizado; 2922 simples faturamento para recebimento futuro;
 - entryDate e emissionDate devem ficar vazios se o relatório não trouxer data para aquela linha;
 - situation pode ser "Resumo por CFOP";
-- classification deve refletir a natureza explícita do CFOP/descrição (ex.: comercialização, uso/consumo, ativo, devolução); se houver dúvida, "NÃO IDENTIFICADA".
+- classification deve refletir a natureza explícita do CFOP/descrição e manter categorias distintas. Para este tipo de relatório: 1101/2101 = "industrialização/produção"; 1253 = "energia elétrica"; 1407/1556/2556 = "uso/consumo"; 1653 = "combustível/lubrificante"; 2551 = "ativo imobilizado"; 2922 = "simples faturamento/recebimento futuro". Não reduza energia ou combustível a uso/consumo; se houver outra natureza ou dúvida, descreva a evidência ou use "NÃO IDENTIFICADA".
 
 Nunca some linhas diferentes, nunca agrupe CFOPs diferentes, nunca force tudo para "mercadoria para revenda" e nunca use uma classificação como fallback.
 Não gere débito, crédito, C.R. ou histórico contábil. source deve identificar a linha/área usada. confidence de 0 a 1; warning se uma linha não puder ser lida com segurança.`;
