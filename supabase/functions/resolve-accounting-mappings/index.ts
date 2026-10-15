@@ -294,7 +294,10 @@ serve(async (req) => {
         ? `REGRAS ESPECÍFICAS DE COMPRAS:
 - Classifique cada linha pela evidência disponível na rubrica/CFOP/descrição.
 - Nunca use MERCADORIA PARA REVENDA como fallback genérico.
-- CFOPs, descrições de uso/consumo, ativo, devolução, industrialização, combustível, frete ou outras naturezas devem permanecer distintas quando a evidência apontar naturezas diferentes.
+- CFOPs, descrições de uso/consumo, ativo, devolução, industrialização, energia elétrica, combustível/lubrificante, frete ou outras naturezas devem permanecer distintas quando a evidência apontar naturezas diferentes.
+- Não agrupe energia elétrica (ex.: CFOP 1253) nem combustível/lubrificante (ex.: CFOP 1653) em uma conta genérica de material de uso e consumo se o plano da empresa tiver conta plausível específica.
+- Ativo imobilizado (ex.: CFOP 2551) deve permanecer separado de despesas e estoques.
+- Simples faturamento/recebimento futuro (ex.: CFOP 2922) não deve ser convertido em compra/despesa definitiva sem regra aprovada da empresa.
 - Se a natureza não puder ser sustentada pela linha e pelo plano de contas, deixe a conta correspondente vazia em vez de forçar uma classificação.
 - O agrupamento das compras ocorrerá depois, somente entre linhas que terminarem na mesma combinação de contas.`
         : module === "faturamento"

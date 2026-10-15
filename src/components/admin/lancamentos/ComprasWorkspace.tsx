@@ -76,8 +76,8 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
       ...(reference.quantityIsExplicit !== false
         ? [{ key: "quantity" as const, label: "Quantidade de entradas", documentValue: reference.quantity, extractedValue: items.length, difference: items.length - reference.quantity, format: "number" as const, source: reference.source, blocking: true }]
         : []),
-      { key: "document_total", label: "Valor Total", documentValue: reference.totalAmountInCents, extractedValue: itemTotal, difference: itemTotal - reference.totalAmountInCents, format: "currency", source: reference.source, blocking: true },
-      { key: "launch_total", label: "Lançamentos classificados", documentValue: reference.totalAmountInCents, extractedValue: launchTotal, difference: launchTotal - reference.totalAmountInCents, format: "currency", source: "Classificação contábil das entradas", blocking: true, note: "As linhas são classificadas primeiro e consolidadas somente quando usam a mesma combinação de contas." },
+      { key: "document_total", label: "Valor contábil", documentValue: reference.totalAmountInCents, extractedValue: itemTotal, difference: itemTotal - reference.totalAmountInCents, format: "currency", source: reference.source, blocking: true },
+      { key: "launch_total", label: "Lançamentos classificados", documentValue: reference.totalAmountInCents, extractedValue: launchTotal, difference: launchTotal - reference.totalAmountInCents, format: "currency", source: "Classificação contábil das entradas", blocking: true, note: "No Registro de Entradas por CFOP, a conferência usa Vr. Contábil por CFOP e o Total Líquido · Vr. Contábil do documento." },
     ];
   }, [entries, items, reference]);
 
@@ -312,7 +312,7 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
 
         <TabsContent value="transcricao" className="mt-7">
           <Header title="Compras · Transcrição" subtitle="Cada entrada do relatório permanece individual para conferência; a consolidação acontece só no lançamento contábil." />
-          {reference && <div className="mb-4 grid gap-3 sm:grid-cols-2"><ReferenceCard label="Quantidade de entradas" value={reference.quantityIsExplicit === false ? "Não informada no PDF" : String(reference.quantity)} /><ReferenceCard label="Valor Total do PDF" value={money(reference.totalAmountInCents)} /></div>}
+          {reference && <div className="mb-4 grid gap-3 sm:grid-cols-2"><ReferenceCard label="Quantidade de entradas" value={reference.quantityIsExplicit === false ? "Não informada no PDF" : String(reference.quantity)} /><ReferenceCard label="Valor contábil do PDF" value={money(reference.totalAmountInCents)} /></div>}
           <PurchaseItemsTable rows={items} title={`Transcrição de compras · ${competence}`} />
         </TabsContent>
 

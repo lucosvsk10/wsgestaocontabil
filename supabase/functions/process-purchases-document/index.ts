@@ -194,7 +194,9 @@ serve(async (req) => {
     };
 
     const referenceInstructions = `Você é um auditor documental de relatórios brasileiros de compras/entradas da competência ${competence}.
-Leia SOMENTE referências explícitas do documento. Extraia "Valor Total" exatamente como impresso, preservando centavos.
+Leia SOMENTE referências explícitas do documento.
+Se for um relatório resumido "Registro de Entradas Por CFOP", use como valor contábil de referência o "Total Líquido" → "Vr. Contábil", nunca "Vr. Total". Preserve centavos exatamente como impressos.
+Se for um relatório detalhado sem coluna "Vr. Contábil", use o valor documental que represente contabilmente a entrada sem inventar ajustes.
 Se o documento trouxer explicitamente uma quantidade total de entradas/notas, copie em quantity e marque quantityIsExplicit=true. Se NÃO houver uma quantidade explícita, use quantity=0 e quantityIsExplicit=false; nunca transforme número de linhas, CFOPs ou subtotais em "quantidade de entradas".
 competence deve representar o mês/ano das DATAS DE EMISSÃO ou a competência explicitamente indicada no relatório, nunca a data em que o relatório foi gerado.
 Não gere lançamentos, não escolha contas e não faça contas para ajustar valores. source deve identificar a área do relatório usada. warnings somente para ambiguidade real.`;
@@ -218,10 +220,11 @@ Para resumo por CFOP:
 - cfop deve conter somente o código;
 - supplier deve ficar vazio, pois não há fornecedor individual;
 - description deve copiar a descrição do CFOP/natureza exatamente como consta no relatório;
-- amountInCents deve ser o subtotal/valor daquela linha de CFOP que compõe o total;
+- amountInCents deve ser o "Vr. Contábil" daquele CFOP/subtotal; NÃO use "Vr. Total" quando ambos existirem;
+- preserve separadamente a natureza: 1101/2101 industrialização/produção; 1253 energia elétrica; 1407/1556/2556 uso ou consumo; 1653 combustível/lubrificante; 2551 ativo imobilizado; 2922 simples faturamento para recebimento futuro;
 - entryDate e emissionDate devem ficar vazios se o relatório não trouxer data para aquela linha;
 - situation pode ser "Resumo por CFOP";
-- classification deve refletir a natureza explícita do CFOP/descrição (ex.: comercialização, uso/consumo, ativo, devolução); se houver dúvida, "NÃO IDENTIFICADA".
+- classification deve refletir a natureza explícita do CFOP/descrição e manter categorias distintas. Para este tipo de relatório: 1101/2101 = "industrialização/produção"; 1253 = "energia elétrica"; 1407/1556/2556 = "uso/consumo"; 1653 = "combustível/lubrificante"; 2551 = "ativo imobilizado"; 2922 = "simples faturamento/recebimento futuro". Não reduza energia ou combustível a uso/consumo; se houver outra natureza ou dúvida, descreva a evidência ou use "NÃO IDENTIFICADA".
 
 Nunca some linhas diferentes, nunca agrupe CFOPs diferentes, nunca force tudo para "mercadoria para revenda" e nunca use uma classificação como fallback.
 Não gere débito, crédito, C.R. ou histórico contábil. source deve identificar a linha/área usada. confidence de 0 a 1; warning se uma linha não puder ser lida com segurança.`;
@@ -254,7 +257,7 @@ Não gere débito, crédito, C.R. ou histórico contábil. source deve identific
     const quantityDifference = reference.quantityIsExplicit ? extractedQuantity - reference.quantity : 0;
     const totalDifference = extractedTotal - reference.totalAmountInCents;
     if (reference.quantityIsExplicit && quantityDifference !== 0) issues.push(`Quantidade de entradas: diferença de ${quantityDifference}.`);
-    if (totalDifference !== 0) issues.push(`Valor Total: diferença de ${(totalDifference / 100).toFixed(2)}.`);
+    if (totalDifference !== 0) issues.push(`Valor contábil: diferença de ${(totalDifference / 100).toFixed(2)}.`);
     if (reference.totalAmountInCents > 0 && items.length === 0) {
       issues.push("O relatório possui valor total, mas nenhuma linha de transcrição foi identificada. Nenhum lançamento contábil foi criado para evitar classificação genérica.");
     }
@@ -298,7 +301,7 @@ Não gere débito, crédito, C.R. ou histórico contábil. source deve identific
       }] : []),
       {
         key: "document_total",
-        label: "Valor Total",
+        label: "Valor contábil",
         documentValue: reference.totalAmountInCents,
         extractedValue: extractedTotal,
         difference: totalDifference,
@@ -308,7 +311,7 @@ Não gere débito, crédito, C.R. ou histórico contábil. source deve identific
       },
       {
         key: "launch_total",
-        label: "Lançamento consolidado",
+        label: "Lançamentos classificados",
         documentValue: reference.totalAmountInCents,
         extractedValue: entries.reduce((sum, entry) => sum + entry.amountInCents, 0),
         difference: entries.reduce((sum, entry) => sum + entry.amountInCents, 0) - reference.totalAmountInCents,
