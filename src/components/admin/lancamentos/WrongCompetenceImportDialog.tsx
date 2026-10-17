@@ -15,8 +15,11 @@ interface Props {
 
 export function WrongCompetenceImportDialog({ open, currentCompetence, detectedCompetence, fileNames, keeping = false, removing = false, onKeep, onRemove }: Props) {
   const busy = keeping || removing;
-  return <Dialog open={open} onOpenChange={() => undefined}>
-    <DialogContent className="max-w-lg border-border bg-background" onEscapeKeyDown={event => event.preventDefault()} onPointerDownOutside={event => event.preventDefault()}>
+  const requestClose = () => {
+    if (!busy) void onRemove();
+  };
+  return <Dialog open={open} onOpenChange={next => { if (!next) requestClose(); }}>
+    <DialogContent className="max-w-lg border-border bg-background">
       <DialogHeader className="text-left">
         <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-300">
           <AlertTriangle className="h-5 w-5" />
