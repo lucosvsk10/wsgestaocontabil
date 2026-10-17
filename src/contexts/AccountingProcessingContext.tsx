@@ -518,8 +518,9 @@ function ProcessingPopup({ job, onDismiss }: { job: ProcessingJob | null; onDism
   if (!job) return null;
   const moduleLabel = job.module === "folha" ? "Folha" : job.module === "compras" ? "Compras" : "Faturamento";
   const actionLabel = job.operation === "reprocess" ? `Reprocessando ${moduleLabel.toLowerCase()}` : `Importando ${moduleLabel.toLowerCase()}`;
-  return <div className="fixed bottom-5 right-5 z-[100] w-[min(390px,calc(100vw-2rem))] rounded-lg border border-border bg-background p-4 shadow-2xl">
-    <div className="flex items-start gap-3">
+  return <div className="pointer-events-none fixed bottom-5 right-5 z-[100] w-[min(390px,calc(100vw-2rem))]">
+    <div className="pointer-events-auto rounded-lg border border-border bg-background p-4 shadow-2xl">
+      <div className="flex items-start gap-3">
       <div className="mt-0.5">{job.status === "running" ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : job.status === "success" ? <CheckCircle2 className="h-5 w-5 text-emerald-500" /> : <AlertTriangle className="h-5 w-5 text-destructive" />}</div>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
@@ -530,6 +531,7 @@ function ProcessingPopup({ job, onDismiss }: { job: ProcessingJob | null; onDism
         {job.status === "running" ? <><p className="mt-2 text-xs text-muted-foreground">Você pode continuar navegando pelo site enquanto processamos.</p><Elapsed startedAt={job.startedAt} /></> : <><p className="mt-2 text-xs text-muted-foreground">{job.message}</p><p className="mt-2 text-xs tabular-nums text-muted-foreground">Duração: {formatDuration((job.finishedAt ?? Date.now()) - job.startedAt)}</p>{job.status === "success" && <Button type="button" variant="outline" size="sm" className="mt-3 h-8" onClick={() => openProcessedCompetence(job)}>Ir para {job.competence}</Button>}</>}
       </div>
     </div>
+  </div>
   </div>;
 }
 
