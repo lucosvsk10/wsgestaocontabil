@@ -237,6 +237,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
       setPendingWrongImport(null);
       onCompetenceChange(targetMonth, targetYear);
     } catch (error) {
+      setPendingWrongImport(null);
       setValidationIssues([error instanceof Error ? error.message : "Não foi possível mover a folha para a competência detectada."]);
     } finally {
       setResolvingWrongImport(false);

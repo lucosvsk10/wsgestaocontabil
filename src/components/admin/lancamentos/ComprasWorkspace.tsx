@@ -243,6 +243,7 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
       setPendingWrongImport(null);
       onCompetenceChange(targetMonth, targetYear);
     } catch (error) {
+      setPendingWrongImport(null);
       setValidationIssues([error instanceof Error ? error.message : "Não foi possível mover Compras para a competência detectada."]);
     } finally {
       setResolvingWrongImport(false);
