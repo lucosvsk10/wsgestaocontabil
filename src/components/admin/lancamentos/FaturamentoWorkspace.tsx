@@ -251,6 +251,10 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
       setPendingWrongBatch(null);
       setPendingWrongFiles([]);
       onCompetenceChange(targetMonth, targetYear);
+    } catch (error) {
+      setPendingWrongBatch(null);
+      setPendingWrongFiles([]);
+      setValidationIssues([error instanceof Error ? error.message : "Não foi possível mover o faturamento para a competência detectada."]);
     } finally {
       setBatchProcessing(false);
       setBatchStartedAt(null);
