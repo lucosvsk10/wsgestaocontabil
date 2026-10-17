@@ -113,6 +113,23 @@ export function detectedCompetenceFromIssues(issues: string[] | undefined) {
 export function AccountingProcessingProvider({ children }: { children: ReactNode }) {
   const [job, setJob] = useState<ProcessingJob | null>(null);
 
+  useEffect(() => {
+    if (!job || job.status !== "running") return;
+    const elapsed = Date.now() - job.startedAt;
+    const remaining = Math.max(0, 240000 - elapsed);
+    const timeout = window.setTimeout(() => {
+      setJob(current => current?.id === job.id && current.status === "running"
+        ? {
+            ...current,
+            status: "error",
+            finishedAt: Date.now(),
+            message: "O processamento excedeu o tempo limite. A interface foi liberada; você pode tentar novamente ou continuar trabalhando.",
+          }
+        : current);
+    }, remaining);
+    return () => window.clearTimeout(timeout);
+  }, [job]);
+
   const dismiss = useCallback(() => {
     setJob(current => current?.status === "running" ? current : null);
   }, []);
