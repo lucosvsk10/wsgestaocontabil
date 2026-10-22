@@ -50,7 +50,7 @@ function LedgerTable({
     <tbody>{rows.map(row => {
       const editing = editable && editingId === row.id;
       const recentlyImported = Boolean(row.importedWithoutReferenceAt);
-      const highlight = recentlyImported ? recentImportClass(row.importBatchId || row.id) : "";
+      const highlight = recentlyImported ? recentImportClass(`${row.importBatchId || row.id}:${row.date.slice(3)}`) : "";
       return <tr key={row.id} className={cn("h-8 border-b border-border last:border-b-0", highlight)}>
         <td className="border-r border-border">{editing ? <Input className="h-7 rounded-none border-0 bg-transparent px-2 text-xs" value={row.date} onChange={event => onUpdate?.(row.id, "date", event.target.value)} /> : <span className={cn(displayClass, "tabular-nums")}>{row.date || "—"}</span>}</td>
         <td className="border-r border-border">{editing ? <Input className="h-7 rounded-none border-0 bg-transparent px-2 text-xs" value={row.history} onChange={event => onUpdate?.(row.id, "history", event.target.value)} /> : <span className={cn(displayClass, "truncate")} title={row.history}>{row.history || "—"}</span>}</td>
@@ -221,6 +221,35 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
     onStatusChange?.("review");
   };
 
+  const updateAlignedEntry = (id: string, field: keyof ExpenseEntry, value: string) => {
+    setAlignedEntries(current => current.map(row => {
+      if (row.id !== id) return row;
+      if (field === "amountInCents") {
+        const raw = String(value).replace(/R\$/gi, "").replace(/\s/g, "");
+        const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) && parsed >= 0 ? { ...row, amountInCents: Math.round(parsed * 100) } : row;
+      }
+      if (field === "debitCode" || field === "creditCode") {
+        const code = String(value).trim();
+        const account = accounts.find(item => item.reducedCode === code);
+        return field === "debitCode"
+          ? { ...row, debitCode: code, debitDescription: account?.description || "" }
+          : { ...row, creditCode: code, creditDescription: account?.description || "" };
+      }
+      return { ...row, [field]: value };
+    }));
+    setAlignmentMessage("Lançamento agrupado editado manualmente. Revise a conferência antes de exportar.");
+    onStatusChange?.("review");
+  };
+
+  const deleteAlignedEntry = (id: string) => {
+    setAlignedEntries(current => current.filter(row => row.id !== id));
+    setEditingEntryId(current => current === id ? null : current);
+    setAlignmentMessage("Lançamento agrupado excluído manualmente. O total de exportação foi atualizado.");
+    onStatusChange?.("review");
+  };
+
   const alignWithAI = async () => {
     if (!entries.length || aligning) return;
     const paymentRows = entries.filter(row => isPaymentHistory(row.history));
@@ -290,7 +319,7 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
         <div className="rounded-md border border-border bg-background">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4"><div><h3 className="font-semibold">Lançamentos para o Calima</h3><p className="mt-1 text-xs text-muted-foreground">Sem agrupamento, exporta exatamente os lançamentos importados. O agrupamento é opcional e só roda quando você solicitar.</p></div><div className="flex gap-2"><Button variant="outline" disabled={!entries.length || aligning} onClick={() => void alignWithAI()}>{aligning ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Agrupando...</> : <>Agrupar lançamentos</>}</Button>{alignedEntries.length > 0 && <Button variant="outline" onClick={() => { setAlignedEntries([]); setAlignmentUsedAI(false); setAlignmentMessage("Versão agrupada descartada. O original do Calima voltou a ser usado."); }}>Usar original</Button>}<Button disabled={!canExport} onClick={() => exportGroupedExpenses(exportRows, competence)}>Exportar para o Calima</Button></div></div>
           {alignmentMessage && <div className="border-b border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">{alignmentMessage}</div>}
-          <LedgerTable rows={exportRows} editable={!alignedEntries.length} editingId={editingEntryId} onEdit={setEditingEntryId} onCancelEdit={() => setEditingEntryId(null)} onUpdate={updateEntry} onDelete={alignedEntries.length ? undefined : deleteEntry}/>
+          <LedgerTable rows={exportRows} editable editingId={editingEntryId} onEdit={setEditingEntryId} onCancelEdit={() => setEditingEntryId(null)} onUpdate={alignedEntries.length ? updateAlignedEntry : updateEntry} onDelete={alignedEntries.length ? deleteAlignedEntry : deleteEntry}/>
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border p-4 text-xs text-muted-foreground"><div className="flex flex-wrap gap-4"><span>{alignedEntries.length ? `${entries.length} originais → ${alignedEntries.length} agrupados` : `${entries.length} lançamentos originais`}</span><span>Total: {currency(exportTotal)}</span>{alignedEntries.length > 0 && <span>{alignmentUsedAI ? "Históricos revisados com IA" : "Históricos padronizados sem alterar valores/contas de despesa"}</span>}</div><Button type="button" variant="outline" size="icon" className="h-9 w-9" disabled={!canExport} onClick={() => exportGroupedExpenses(exportRows, competence)} title="Exportar para o Calima" aria-label="Exportar para o Calima"><Download className="h-4 w-4" /></Button></div>
         </div>
       </TabsContent>
