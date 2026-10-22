@@ -37,7 +37,7 @@ export async function alignExpenseEntriesWithAI(entries: ExpenseEntry[], account
     return { ...entry, creditCode: cash.reducedCode, creditDescription: cash.description, creditCostCenter: "" };
   });
 
-  const grouped = groupExpenseEntries(normalized, "debit", exportDate);
+  const grouped = groupExpenseEntries(normalized, exportDate);
   const isGroupPayment = (entry: GroupedExpenseEntry) => entry.sourceEntryIds.some(id => paymentById.get(id));
   const payload = grouped.map((entry, index) => ({
     id: String(index),
