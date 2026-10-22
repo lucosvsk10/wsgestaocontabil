@@ -53,18 +53,57 @@ export function rawExpenseRowsForExport(entries: ExpenseEntry[]): GroupedExpense
   return entries.map(entry => ({ ...entry, sourceEntryIds: [entry.id], sourceCount: 1, hasMixedCounterpart: false }));
 }
 
-export async function alignExpenseEntriesWithAI(entries: ExpenseEntry[], _accounts: ChartAccount[], exportDate: string) {
+function groupKey(entry: Pick<ExpenseEntry, "debitCode" | "creditCode" | "debitCostCenter" | "creditCostCenter">) {
+  return [
+    entry.debitCode.trim(),
+    entry.creditCode.trim(),
+    entry.debitCostCenter || "",
+    entry.creditCostCenter || "",
+  ].join("::");
+}
+
+export async function loadExpenseHistoryMemory(companyKey: string, currentCompetence: string) {
+  try {
+    const { data, error } = await (supabase as any)
+      .from("accounting_workspace_data")
+      .select("competence,payload")
+      .eq("company_key", companyKey)
+      .eq("module", "despesas")
+      .lt("competence", currentCompetence)
+      .order("competence", { ascending: false })
+      .limit(24);
+    if (error) throw error;
+
+    const memory = new Map<string, string>();
+    for (const row of data ?? []) {
+      const aligned = Array.isArray(row?.payload?.alignedEntries) ? row.payload.alignedEntries as GroupedExpenseEntry[] : [];
+      for (const entry of aligned) {
+        const history = String(entry.history || "").trim();
+        if (!history) continue;
+        const key = groupKey(entry);
+        if (!memory.has(key)) memory.set(key, history);
+      }
+    }
+    return memory;
+  } catch (error) {
+    console.error("Não foi possível carregar históricos padronizados de despesas.", error);
+    return new Map<string, string>();
+  }
+}
+
+export async function alignExpenseEntriesWithAI(entries: ExpenseEntry[], _accounts: ChartAccount[], exportDate: string, historyMemory = new Map<string, string>()) {
   // A Visão agrupada é a fonte única para o agrupamento final.
   // A partir daqui, nenhuma conta, valor, centro de custo, data ou composição do grupo pode mudar.
   const grouped = groupExpenseEntries(entries, exportDate);
 
   const sourceById = new Map(entries.map(entry => [entry.id, entry]));
-  const payload = grouped.map((entry, index) => {
+  const payload = grouped.flatMap((entry, index) => {
+    if (historyMemory.has(groupKey(entry))) return [];
     const sourceRows = entry.sourceEntryIds
       .map(id => sourceById.get(id))
       .filter((row): row is ExpenseEntry => Boolean(row));
 
-    return {
+    return [{
       id: String(index),
       debitCode: entry.debitCode,
       creditCode: entry.creditCode,
@@ -74,13 +113,15 @@ export async function alignExpenseEntriesWithAI(entries: ExpenseEntry[], _accoun
       isPayment: sourceRows.some(row => isPaymentHistory(row.history)),
       currentHistory: preferredExistingHistory(sourceRows, entry),
       sampleHistories: sourceRows.map(row => row.history).filter(Boolean).slice(0, 12),
-    };
+    }];
   });
 
   let usedAI = false;
   let histories = new Map<string, string>();
   try {
-    const { data, error } = await supabase.functions.invoke("align-expense-entries", { body: { groups: payload } });
+    const { data, error } = payload.length
+      ? await supabase.functions.invoke("align-expense-entries", { body: { groups: payload } })
+      : { data: { groups: [] }, error: null };
     if (!error && Array.isArray(data?.groups)) {
       histories = new Map<string, string>(
         data.groups.map((row: { id: string; history: string }) => [String(row.id), String(row.history || "").trim()])
@@ -97,10 +138,12 @@ export async function alignExpenseEntriesWithAI(entries: ExpenseEntry[], _accoun
         .map(id => sourceById.get(id))
         .filter((row): row is ExpenseEntry => Boolean(row));
 
+      const learnedHistory = historyMemory.get(groupKey(entry));
       return {
         ...entry,
-        // ÚNICA transformação permitida após a Visão agrupada: histórico variável.
-        history: histories.get(String(index)) || fallbackHistory(entry, sourceRows),
+        // Prioridade: histórico já aprovado/usado pela empresa → IA → fallback seguro.
+        // A estrutura contábil da Visão agrupada permanece intocada.
+        history: learnedHistory || histories.get(String(index)) || fallbackHistory(entry, sourceRows),
       };
     }),
     cashAccount: null,

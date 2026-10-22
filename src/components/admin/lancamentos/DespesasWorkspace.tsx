@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
-import { alignExpenseEntriesWithAI, rawExpenseRowsForExport } from "@/lib/lancamentos/expenseAlignment";
+import { alignExpenseEntriesWithAI, loadExpenseHistoryMemory, rawExpenseRowsForExport } from "@/lib/lancamentos/expenseAlignment";
 import { ExpenseEntry, ExpenseImportIssue, GroupedExpenseEntry, exportGroupedExpenses, groupExpenseEntries, readExpenseWorkbook } from "@/lib/lancamentos/expenseWorkbook";
 import { clearWorkspaceFiles, deleteWorkspaceData, loadWorkspaceData, loadWorkspaceFiles, removeWorkspaceDocumentsByName, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
@@ -260,10 +260,11 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
     if (!entries.length || aligning) return;
     setAligning(true); setAlignmentMessage("");
     try {
-      const result = await alignExpenseEntriesWithAI(entries, accounts, closingDate(month, year));
+      const historyMemory = await loadExpenseHistoryMemory(company, `${year}-${month}`);
+      const result = await alignExpenseEntriesWithAI(entries, accounts, closingDate(month, year), historyMemory);
       setAlignedEntries(result.rows); setAlignmentUsedAI(result.usedAI);
       setAlignmentMessage(result.usedAI
-        ? `A tabela de Lançamentos foi criada diretamente da Visão agrupada: ${entries.length} originais → ${result.rows.length} agrupados. A IA alterou somente o Histórico variável.`
+        ? `A tabela de Lançamentos foi criada diretamente da Visão agrupada: ${entries.length} originais → ${result.rows.length} agrupados. Históricos já usados pela empresa foram reaproveitados primeiro; a IA atuou apenas nos grupos ainda sem padrão.`
         : `A tabela de Lançamentos foi criada diretamente da Visão agrupada: ${entries.length} originais → ${result.rows.length} agrupados. Como a IA ficou indisponível, os históricos existentes foram preservados/padronizados sem alterar contas ou valores.`);
       onStatusChange?.("review");
     } catch (error) {
