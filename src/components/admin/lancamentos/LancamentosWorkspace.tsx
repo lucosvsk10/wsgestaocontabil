@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Info } from "lucide-react";
+import { Download, FileUp, Info, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -8,8 +8,10 @@ import { useAccountingCompany } from "@/hooks/lancamentos/useAccountingCompany";
 import { AccountingModuleKey, emptyMonthStatuses, loadDynamicYearStatuses, MonthModuleStatus, YearModuleStatuses } from "@/lib/lancamentos/accountingMonthState";
 import { exportAccountingMonthsBatch } from "@/lib/lancamentos/batchAccountingExport";
 import { exportCompleteAccountingMonth } from "@/lib/lancamentos/completeMonthExport";
-import { saveWorkspaceData } from "@/lib/lancamentos/workspaceStorage";
+import { loadWorkspaceData, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
+import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
+import { ExpenseEntry, ExpenseImportIssue, readExpenseWorkbook } from "@/lib/lancamentos/expenseWorkbook";
 import { AccountingYearPicker } from "./AccountingYearPicker";
 import { AccountingImportPrerequisites } from "./AccountingImportPrerequisites";
 import { ComprasWorkspace } from "./ComprasWorkspace";
@@ -21,6 +23,22 @@ type ModuleKey = AccountingModuleKey;
 interface MonthItem { key: string; label: string; }
 interface ModuleItem { key: ModuleKey; label: string; }
 interface LastContext { year: string; selectedMonth: string; selectedModule: ModuleKey; activeTab: string; }
+interface ExpenseSavedData {
+  entries: ExpenseEntry[];
+  issues: ExpenseImportIssue[];
+  ignoredRows: number;
+  alignedEntries?: [];
+  alignmentUsedAI?: boolean;
+}
+interface ReferenceLessImportSummary {
+  batchId: string;
+  files: string[];
+  lines: number;
+  months: Array<{ competence: string; count: number }>;
+  ignoredRows: number;
+  issues: number;
+}
+
 
 const months: MonthItem[] = [
   { key: "01", label: "Janeiro" }, { key: "02", label: "Fevereiro" }, { key: "03", label: "Março" }, { key: "04", label: "Abril" },
@@ -79,6 +97,12 @@ export function LancamentosWorkspace() {
   const [exportingBatch, setExportingBatch] = useState(false);
   const previousCompanyRef = useRef(company.id);
   const skipContextSaveRef = useRef(false);
+  const referenceLessInput = useRef<HTMLInputElement>(null);
+  const [importingWithoutReference, setImportingWithoutReference] = useState(false);
+  const [referenceLessSummary, setReferenceLessSummary] = useState<ReferenceLessImportSummary | null>(null);
+  const [referenceLessError, setReferenceLessError] = useState("");
+  const [referenceLessImportVersion, setReferenceLessImportVersion] = useState(0);
+
 
   useEffect(() => {
     if (previousCompanyRef.current === company.id) return;
@@ -188,15 +212,131 @@ export function LancamentosWorkspace() {
     }
   };
 
+  const importWithoutReference = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!selected.length || importingWithoutReference) return;
+
+    setReferenceLessError("");
+    setReferenceLessSummary(null);
+    setImportingWithoutReference(true);
+
+    try {
+      const chart = await loadWorkspaceData<ChartAccount[]>(`${company.id}:chart-of-accounts`);
+      if (!chart?.length) throw new Error("Importe o Plano de Contas desta empresa antes de usar a importação sem referência.");
+
+      const batchId = crypto.randomUUID();
+      const importedAt = new Date().toISOString();
+      const chartMap = new Map(chart.map(account => [account.reducedCode, account.description]));
+      const allEntries: ExpenseEntry[] = [];
+      const allIssues: ExpenseImportIssue[] = [];
+      let ignoredRows = 0;
+
+      for (const file of selected) {
+        const parsed = await readExpenseWorkbook(file);
+        allEntries.push(...parsed.entries);
+        allIssues.push(...parsed.issues);
+        ignoredRows += parsed.ignoredRows;
+      }
+
+      if (!allEntries.length) throw new Error("Nenhum lançamento válido com data foi identificado nos arquivos.");
+
+      const byCompetence = new Map<string, ExpenseEntry[]>();
+      const invalidDateEntries: ExpenseEntry[] = [];
+
+      for (const entry of allEntries) {
+        const match = entry.date.match(/^\d{2}\/(0[1-9]|1[0-2])\/(20\d{2})$/);
+        if (!match) {
+          invalidDateEntries.push(entry);
+          continue;
+        }
+        const competence = `${match[1]}/${match[2]}`;
+        const enriched: ExpenseEntry = {
+          ...entry,
+          debitDescription: entry.debitDescription || chartMap.get(entry.debitCode) || "",
+          creditDescription: entry.creditDescription || chartMap.get(entry.creditCode) || "",
+          debitCostCenter: entry.debitCostCenter || "",
+          creditCostCenter: entry.creditCostCenter || "",
+          importBatchId: batchId,
+          importedWithoutReferenceAt: importedAt,
+        };
+        byCompetence.set(competence, [...(byCompetence.get(competence) ?? []), enriched]);
+      }
+
+      if (!byCompetence.size) throw new Error("As linhas foram lidas, mas nenhuma possui data válida no formato de competência.");
+
+      const savedMonths: Array<{ competence: string; count: number }> = [];
+      for (const [competenceKey, rows] of [...byCompetence.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+        const [targetMonth, targetYear] = competenceKey.split("/");
+        const targetScope = `${company.id}:${targetYear}:${targetMonth}:despesas`;
+        const targetKey = `${targetScope}:parsed`;
+        const current = await loadWorkspaceData<ExpenseSavedData>(targetKey);
+        const currentEntries = current?.entries ?? [];
+        const existingIds = new Set(currentEntries.map(row => row.id));
+        const append = rows.filter(row => !existingIds.has(row.id));
+
+        await saveWorkspaceData<ExpenseSavedData>(targetKey, {
+          entries: [...currentEntries, ...append],
+          issues: [...(current?.issues ?? [])],
+          ignoredRows: Number(current?.ignoredRows ?? 0),
+          alignedEntries: [],
+          alignmentUsedAI: false,
+        });
+
+        for (const file of selected) {
+          await saveWorkspaceFiles(targetScope, [file], { skipCompetencePrompt: true });
+        }
+        savedMonths.push({ competence: competenceKey, count: append.length });
+      }
+
+      setReferenceLessSummary({
+        batchId,
+        files: selected.map(file => file.name),
+        lines: savedMonths.reduce((sum, item) => sum + item.count, 0),
+        months: savedMonths,
+        ignoredRows: ignoredRows + invalidDateEntries.length,
+        issues: allIssues.length + invalidDateEntries.length,
+      });
+      setReferenceLessImportVersion(current => current + 1);
+
+      await refreshStatuses();
+
+      const currentImported = savedMonths.find(item => item.competence === `${selectedMonth}/${year}`);
+      if (!currentImported && savedMonths.length) {
+        const [targetMonth, targetYear] = savedMonths[0].competence.split("/");
+        changeCompetence(targetMonth, targetYear);
+      }
+      setSelectedModule("despesas");
+    } catch (error) {
+      setReferenceLessError(error instanceof Error ? error.message : "Não foi possível concluir a importação sem referência.");
+    } finally {
+      setImportingWithoutReference(false);
+    }
+  };
+
   return <TooltipProvider delayDuration={180}><div className="mx-auto w-full max-w-[1720px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
     <header className="flex flex-col gap-4 border-b border-border pb-5 xl:flex-row xl:items-end xl:justify-between">
       <div className="min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Operação contábil</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Lançamentos</h1>
+        <div className="mt-1 flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Lançamentos</h1>
+          <Button type="button" variant="outline" size="sm" className="h-8 gap-2" disabled={importingWithoutReference} onClick={() => referenceLessInput.current?.click()}>
+            {importingWithoutReference ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileUp className="h-3.5 w-3.5" />}
+            {importingWithoutReference ? "Importando..." : "Importar sem referência"}
+          </Button>
+          <input ref={referenceLessInput} type="file" multiple accept=".xlsx,.xls,.csv" className="sr-only" onChange={event => void importWithoutReference(event)} />
+        </div>
         <p className="mt-1 truncate text-sm text-muted-foreground">{company.name}<span className="px-2 text-border">/</span>{selectedMonthLabel} de {year}</p>
       </div>
       
     </header>
+
+    {(referenceLessSummary || referenceLessError) && <div className={cn("mt-4 rounded-md border px-4 py-3 text-sm", referenceLessError ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-cyan-500/25 bg-cyan-500/5 text-foreground")}>
+      {referenceLessError ? referenceLessError : referenceLessSummary && <div className="flex flex-col gap-1">
+        <p className="font-medium">Importação sem referência concluída: {referenceLessSummary.lines} linha(s) distribuídas em {referenceLessSummary.months.length} competência(s).</p>
+        <p className="text-xs text-muted-foreground">{referenceLessSummary.months.map(item => `${item.competence}: ${item.count}`).join(" · ")}{referenceLessSummary.issues ? ` · ${referenceLessSummary.issues} linha(s) exigem revisão` : ""}</p>
+      </div>}
+    </div>}
 
     <div className="grid min-h-[720px] lg:grid-cols-[236px_minmax(0,1fr)]">
       <aside className="border-b border-border py-5 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:border-b-0 lg:border-r lg:pr-4">
@@ -251,7 +391,7 @@ export function LancamentosWorkspace() {
         </nav>
 
         {selectedModule === "despesas" ? (
-          <DespesasWorkspace key={`${company.id}-${year}-${selectedMonth}`} company={company.id} month={selectedMonth} year={year} onFileCountChange={setExpenseFileCount} onStatusChange={status => setModuleStatus("despesas", status)} onCompetenceChange={changeCompetence} />
+          <DespesasWorkspace key={`${company.id}-${year}-${selectedMonth}-${referenceLessImportVersion}`} company={company.id} month={selectedMonth} year={year} onFileCountChange={setExpenseFileCount} onStatusChange={status => setModuleStatus("despesas", status)} onCompetenceChange={changeCompetence} />
         ) : selectedModule === "folha" ? (
           <FolhaWorkspace key={`${company.id}-${year}-${selectedMonth}`} company={company.id} month={selectedMonth} year={year} onStatusChange={status => setModuleStatus("folha", status)} onCompetenceChange={changeCompetence} />
         ) : selectedModule === "compras" ? (
