@@ -1,8 +1,6 @@
 import * as XLSX from "xlsx";
 import { exportAccountingWorkbook } from "./accountingExportWorkbook";
 
-export type ExpenseGroupSide = "debit" | "credit";
-
 export interface ExpenseEntry {
   id: string;
   sourceFile: string;
@@ -17,6 +15,8 @@ export interface ExpenseEntry {
   creditDescription: string;
   creditCostCenter: string;
   amountInCents: number;
+  importBatchId?: string;
+  importedWithoutReferenceAt?: string;
 }
 
 export interface ExpenseImportIssue {
@@ -212,14 +212,21 @@ export async function readExpenseWorkbook(file: File): Promise<ExpenseImportResu
   return result;
 }
 
-export function groupExpenseEntries(entries: ExpenseEntry[], side: ExpenseGroupSide, exportDate: string) {
+export function groupExpenseEntries(entries: ExpenseEntry[], exportDate: string) {
   const groups = new Map<string, GroupedExpenseEntry>();
 
   entries.forEach((entry) => {
-    const selectedCode = side === "debit" ? entry.debitCode : entry.creditCode;
-    const selectedDescription = side === "debit" ? entry.debitDescription : entry.creditDescription;
-    const oppositeCode = side === "debit" ? entry.creditCode : entry.debitCode;
-    const key = `${selectedCode}::${oppositeCode}`;
+    const debitCode = entry.debitCode.trim();
+    const creditCode = entry.creditCode.trim();
+
+    // Regra absoluta: somente lançamentos com o MESMO par Débito + Crédito podem ser consolidados.
+    // Centro de custo também precisa coincidir para não misturar lançamentos contabilmente distintos.
+    const key = [
+      debitCode,
+      creditCode,
+      entry.debitCostCenter || "",
+      entry.creditCostCenter || "",
+    ].join("::");
     const current = groups.get(key);
 
     if (current) {
@@ -232,7 +239,7 @@ export function groupExpenseEntries(entries: ExpenseEntry[], side: ExpenseGroupS
     groups.set(key, {
       ...entry,
       date: exportDate,
-      history: (selectedDescription || `CONTA ${selectedCode}`).toUpperCase(),
+      history: (entry.debitDescription || entry.history || `CONTA ${debitCode}`).toUpperCase(),
       sourceEntryIds: [entry.id],
       sourceCount: 1,
       hasMixedCounterpart: false,
@@ -240,9 +247,9 @@ export function groupExpenseEntries(entries: ExpenseEntry[], side: ExpenseGroupS
   });
 
   return Array.from(groups.values()).sort((a, b) => {
-    const aLabel = side === "debit" ? a.debitDescription || a.debitCode : a.creditDescription || a.creditCode;
-    const bLabel = side === "debit" ? b.debitDescription || b.debitCode : b.creditDescription || b.creditCode;
-    return aLabel.localeCompare(bLabel, "pt-BR");
+    const debit = (a.debitDescription || a.debitCode).localeCompare(b.debitDescription || b.debitCode, "pt-BR");
+    if (debit !== 0) return debit;
+    return (a.creditDescription || a.creditCode).localeCompare(b.creditDescription || b.creditCode, "pt-BR");
   });
 }
 
