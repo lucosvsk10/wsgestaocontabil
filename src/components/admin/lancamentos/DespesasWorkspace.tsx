@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
-import { alignExpenseEntriesWithAI, findCashAccount, rawExpenseRowsForExport } from "@/lib/lancamentos/expenseAlignment";
+import { alignExpenseEntriesWithAI, rawExpenseRowsForExport } from "@/lib/lancamentos/expenseAlignment";
 import { ExpenseEntry, ExpenseImportIssue, GroupedExpenseEntry, exportGroupedExpenses, groupExpenseEntries, readExpenseWorkbook } from "@/lib/lancamentos/expenseWorkbook";
 import { clearWorkspaceFiles, deleteWorkspaceData, loadWorkspaceData, loadWorkspaceFiles, removeWorkspaceDocumentsByName, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
@@ -252,19 +252,16 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
 
   const alignWithAI = async () => {
     if (!entries.length || aligning) return;
-    const paymentRows = entries.filter(row => isPaymentHistory(row.history));
-    const cash = findCashAccount(accounts);
-    if (paymentRows.length && !cash) { setAlignmentMessage("Não encontrei uma conta analítica Caixa Matriz ou Caixa Geral no plano desta empresa. O agrupamento foi bloqueado para não usar banco específico."); return; }
     setAligning(true); setAlignmentMessage("");
     try {
       const result = await alignExpenseEntriesWithAI(entries, accounts, closingDate(month, year));
       setAlignedEntries(result.rows); setAlignmentUsedAI(result.usedAI);
       setAlignmentMessage(result.usedAI
-        ? `${entries.length} lançamentos foram agrupados em ${result.rows.length} linha(s). Históricos revisados com IA${result.cashAccount ? ` · pagamentos em ${result.cashAccount.description}` : ""}.`
-        : `${entries.length} lançamentos foram agrupados em ${result.rows.length} linha(s)${result.cashAccount ? ` · pagamentos em ${result.cashAccount.description}` : ""}. A revisão de históricos por IA ficou indisponível nesta execução e foi aplicada a padronização segura.`);
+        ? `A tabela de Lançamentos foi criada diretamente da Visão agrupada: ${entries.length} originais → ${result.rows.length} agrupados. A IA alterou somente o Histórico variável.`
+        : `A tabela de Lançamentos foi criada diretamente da Visão agrupada: ${entries.length} originais → ${result.rows.length} agrupados. Como a IA ficou indisponível, os históricos existentes foram preservados/padronizados sem alterar contas ou valores.`);
       onStatusChange?.("review");
     } catch (error) {
-      setAlignmentMessage(error instanceof Error ? error.message : "Não foi possível agrupar as despesas.");
+      setAlignmentMessage(error instanceof Error ? error.message : "Não foi possível gerar os lançamentos a partir da Visão agrupada.");
     } finally { setAligning(false); }
   };
 
@@ -317,7 +314,7 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
 
       <TabsContent value="lancamentos" className="mt-6">
         <div className="rounded-md border border-border bg-background">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4"><div><h3 className="font-semibold">Lançamentos para o Calima</h3><p className="mt-1 text-xs text-muted-foreground">Sem agrupamento, exporta exatamente os lançamentos importados. O agrupamento é opcional e só roda quando você solicitar.</p></div><div className="flex gap-2"><Button variant="outline" disabled={!entries.length || aligning} onClick={() => void alignWithAI()}>{aligning ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Agrupando...</> : <>Agrupar lançamentos</>}</Button>{alignedEntries.length > 0 && <Button variant="outline" onClick={() => { setAlignedEntries([]); setAlignmentUsedAI(false); setAlignmentMessage("Versão agrupada descartada. O original do Calima voltou a ser usado."); }}>Usar original</Button>}<Button disabled={!canExport} onClick={() => exportGroupedExpenses(exportRows, competence)}>Exportar para o Calima</Button></div></div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4"><div><h3 className="font-semibold">Lançamentos para o Calima</h3><p className="mt-1 text-xs text-muted-foreground">Ao agrupar, esta tabela copia exatamente a Visão agrupada. A única mudança automática é o Histórico variável.</p></div><div className="flex gap-2"><Button variant="outline" disabled={!entries.length || aligning} onClick={() => void alignWithAI()}>{aligning ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Agrupando...</> : <>Agrupar lançamentos</>}</Button>{alignedEntries.length > 0 && <Button variant="outline" onClick={() => { setAlignedEntries([]); setAlignmentUsedAI(false); setAlignmentMessage("Versão agrupada descartada. O original do Calima voltou a ser usado."); }}>Usar original</Button>}<Button disabled={!canExport} onClick={() => exportGroupedExpenses(exportRows, competence)}>Exportar para o Calima</Button></div></div>
           {alignmentMessage && <div className="border-b border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">{alignmentMessage}</div>}
           <LedgerTable rows={exportRows} editable editingId={editingEntryId} onEdit={setEditingEntryId} onCancelEdit={() => setEditingEntryId(null)} onUpdate={alignedEntries.length ? updateAlignedEntry : updateEntry} onDelete={alignedEntries.length ? deleteAlignedEntry : deleteEntry}/>
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border p-4 text-xs text-muted-foreground"><div className="flex flex-wrap gap-4"><span>{alignedEntries.length ? `${entries.length} originais → ${alignedEntries.length} agrupados` : `${entries.length} lançamentos originais`}</span><span>Total: {currency(exportTotal)}</span>{alignedEntries.length > 0 && <span>{alignmentUsedAI ? "Históricos revisados com IA" : "Históricos padronizados sem alterar valores/contas de despesa"}</span>}</div><Button type="button" variant="outline" size="icon" className="h-9 w-9" disabled={!canExport} onClick={() => exportGroupedExpenses(exportRows, competence)} title="Exportar para o Calima" aria-label="Exportar para o Calima"><Download className="h-4 w-4" /></Button></div>
