@@ -101,6 +101,7 @@ export function LancamentosWorkspace() {
   const [importingWithoutReference, setImportingWithoutReference] = useState(false);
   const [referenceLessSummary, setReferenceLessSummary] = useState<ReferenceLessImportSummary | null>(null);
   const [referenceLessError, setReferenceLessError] = useState("");
+  const [referenceLessImportVersion, setReferenceLessImportVersion] = useState(0);
 
 
   useEffect(() => {
@@ -296,6 +297,7 @@ export function LancamentosWorkspace() {
         ignoredRows: ignoredRows + invalidDateEntries.length,
         issues: allIssues.length + invalidDateEntries.length,
       });
+      setReferenceLessImportVersion(current => current + 1);
 
       await refreshStatuses();
 
@@ -389,7 +391,7 @@ export function LancamentosWorkspace() {
         </nav>
 
         {selectedModule === "despesas" ? (
-          <DespesasWorkspace key={`${company.id}-${year}-${selectedMonth}`} company={company.id} month={selectedMonth} year={year} onFileCountChange={setExpenseFileCount} onStatusChange={status => setModuleStatus("despesas", status)} onCompetenceChange={changeCompetence} />
+          <DespesasWorkspace key={`${company.id}-${year}-${selectedMonth}-${referenceLessImportVersion}`} company={company.id} month={selectedMonth} year={year} onFileCountChange={setExpenseFileCount} onStatusChange={status => setModuleStatus("despesas", status)} onCompetenceChange={changeCompetence} />
         ) : selectedModule === "folha" ? (
           <FolhaWorkspace key={`${company.id}-${year}-${selectedMonth}`} company={company.id} month={selectedMonth} year={year} onStatusChange={status => setModuleStatus("folha", status)} onCompetenceChange={changeCompetence} />
         ) : selectedModule === "compras" ? (
