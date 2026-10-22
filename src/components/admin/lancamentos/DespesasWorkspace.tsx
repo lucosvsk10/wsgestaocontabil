@@ -13,7 +13,8 @@ import { AccountingWorkflowSteps, AccountCodeHover } from "./AccountingWorkflowU
 
 export type WorkspaceStatus = "waiting" | "review" | "done";
 interface Props { company: string; month: string; year: string; onFileCountChange?: (count: number) => void; onStatusChange?: (status: WorkspaceStatus) => void; onCompetenceChange?: (month: string, year: string) => void; }
-interface SavedData { entries: ExpenseEntry[]; issues: ExpenseImportIssue[]; ignoredRows: number; alignedEntries?: GroupedExpenseEntry[]; alignmentUsedAI?: boolean; }
+interface SavedData { entries: ExpenseEntry[]; issues: ExpenseImportIssue[]; ignoredRows: number; alignedEntries?: GroupedExpenseEntry[]; alignmentUsedAI?: boolean; alignmentVersion?: number; }
+const EXPENSE_ALIGNMENT_VERSION = 2;
 const displayClass = "flex h-8 items-center px-2 text-xs";
 const currency = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 const closingDate = (month: string, year: string) => `${new Date(+year, +month, 0).getDate().toString().padStart(2, "0")}/${month}/${year}`;
@@ -135,14 +136,20 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
       if (!active) return;
       if (saved) {
         setEntries(saved.entries.map(row => ({ ...row, debitCostCenter: row.debitCostCenter ?? "", creditCostCenter: row.creditCostCenter ?? "" })));
-        setAlignedEntries(saved.alignedEntries ?? []); setAlignmentUsedAI(Boolean(saved.alignmentUsedAI)); setIssues(saved.issues); setIgnoredRows(saved.ignoredRows);
+        const currentAlignment = saved.alignmentVersion === EXPENSE_ALIGNMENT_VERSION;
+        setAlignedEntries(currentAlignment ? (saved.alignedEntries ?? []) : []);
+        setAlignmentUsedAI(currentAlignment && Boolean(saved.alignmentUsedAI));
+        if (!currentAlignment && saved.alignedEntries?.length) {
+          setAlignmentMessage("O agrupamento salvo usava a regra anterior e foi descartado. Clique em Agrupar lançamentos para recriar exatamente a partir da Visão agrupada.");
+        }
+        setIssues(saved.issues); setIgnoredRows(saved.ignoredRows);
       }
       setFiles(storedFiles.map(file => file.name)); setAccounts(chart ?? []); setLoaded(true);
     });
     return () => { active = false; };
   }, [company, dataKey, scope]);
 
-  useEffect(() => { if (loaded) void saveWorkspaceData(dataKey, { entries, issues, ignoredRows, alignedEntries, alignmentUsedAI }); }, [alignedEntries, alignmentUsedAI, dataKey, entries, ignoredRows, issues, loaded]);
+  useEffect(() => { if (loaded) void saveWorkspaceData(dataKey, { entries, issues, ignoredRows, alignedEntries, alignmentUsedAI, alignmentVersion: EXPENSE_ALIGNMENT_VERSION }); }, [alignedEntries, alignmentUsedAI, dataKey, entries, ignoredRows, issues, loaded]);
   useEffect(() => { if (!accounts.length) return; const chart = new Map(accounts.map(account => [account.reducedCode, account.description])); setEntries(current => current.map(row => ({ ...row, debitDescription: row.debitDescription || chart.get(row.debitCode) || "", creditDescription: row.creditDescription || chart.get(row.creditCode) || "" }))); }, [accounts]);
   useEffect(() => onFileCountChange?.(files.length), [files.length, onFileCountChange]);
 
@@ -180,7 +187,7 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
       setIssues(current => [...current, ...pending.issues]); setIgnoredRows(current => current + pending.ignoredRows); setFiles(current => Array.from(new Set([...current, ...pendingFiles.map(file => file.name)])));
     } else {
       const saved = await loadWorkspaceData<SavedData>(targetKey); const current = saved ?? { entries: [], issues: [], ignoredRows: 0 };
-      await saveWorkspaceData(targetKey, { entries: [...current.entries, ...resolved.filter(row => !current.entries.some(savedRow => savedRow.id === row.id))], issues: [...current.issues, ...pending.issues], ignoredRows: current.ignoredRows + pending.ignoredRows, alignedEntries: [], alignmentUsedAI: false });
+      await saveWorkspaceData(targetKey, { entries: [...current.entries, ...resolved.filter(row => !current.entries.some(savedRow => savedRow.id === row.id))], issues: [...current.issues, ...pending.issues], ignoredRows: current.ignoredRows + pending.ignoredRows, alignedEntries: [], alignmentUsedAI: false, alignmentVersion: EXPENSE_ALIGNMENT_VERSION });
     }
     await saveWorkspaceFiles(targetScope, pendingFiles, { skipCompetencePrompt: true });
     setPending(null); setPendingFiles([]); setCompetenceWarning(null); setMixedCompetences([]);
@@ -275,7 +282,7 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
         try { const parsed = await readExpenseWorkbook(file); rebuilt.entries.push(...parsed.entries); rebuilt.issues.push(...parsed.issues); rebuilt.ignoredRows += parsed.ignoredRows; }
         catch { rebuilt.issues.push({ id: `${file.name}-erro`, fileName: file.name, sheetName: "", row: 0, message: "Não foi possível reler este arquivo após a exclusão." }); }
       }
-      const rebuiltResolved = { ...rebuilt, entries: applyChart(rebuilt.entries), alignedEntries: [], alignmentUsedAI: false };
+      const rebuiltResolved = { ...rebuilt, entries: applyChart(rebuilt.entries), alignedEntries: [], alignmentUsedAI: false, alignmentVersion: EXPENSE_ALIGNMENT_VERSION };
       setEntries(rebuiltResolved.entries); setAlignedEntries([]); setIssues(rebuiltResolved.issues); setIgnoredRows(rebuiltResolved.ignoredRows); setFiles(remainingFiles.map(file => file.name)); await saveWorkspaceData(dataKey, rebuiltResolved); onStatusChange?.("review");
     } finally { setLoaded(true); setDeletingFile(null); }
   };
