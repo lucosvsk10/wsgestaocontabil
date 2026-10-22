@@ -53,7 +53,7 @@ export function rawExpenseRowsForExport(entries: ExpenseEntry[]): GroupedExpense
   return entries.map(entry => ({ ...entry, sourceEntryIds: [entry.id], sourceCount: 1, hasMixedCounterpart: false }));
 }
 
-function groupKey(entry: Pick<ExpenseEntry, "debitCode" | "creditCode" | "debitCostCenter" | "creditCostCenter">) {
+function fullGroupKey(entry: Pick<ExpenseEntry, "debitCode" | "creditCode" | "debitCostCenter" | "creditCostCenter">) {
   return [
     entry.debitCode.trim(),
     entry.creditCode.trim(),
@@ -62,7 +62,21 @@ function groupKey(entry: Pick<ExpenseEntry, "debitCode" | "creditCode" | "debitC
   ].join("::");
 }
 
-export async function loadExpenseHistoryMemory(companyKey: string, currentCompetence: string) {
+function accountPairKey(entry: Pick<ExpenseEntry, "debitCode" | "creditCode">) {
+  return [entry.debitCode.trim(), entry.creditCode.trim()].join("::");
+}
+
+type ExpenseHistoryMemory = {
+  exact: Map<string, string>;
+  byAccountPair: Map<string, string>;
+};
+
+function learnedHistoryFor(entry: ExpenseEntry, memory: ExpenseHistoryMemory) {
+  return memory.exact.get(fullGroupKey(entry)) || memory.byAccountPair.get(accountPairKey(entry));
+}
+
+export async function loadExpenseHistoryMemory(companyKey: string, currentCompetence: string): Promise<ExpenseHistoryMemory> {
+  const emptyMemory = { exact: new Map<string, string>(), byAccountPair: new Map<string, string>() };
   try {
     const { data, error } = await (supabase as any)
       .from("accounting_workspace_data")
@@ -74,31 +88,38 @@ export async function loadExpenseHistoryMemory(companyKey: string, currentCompet
       .limit(24);
     if (error) throw error;
 
-    const memory = new Map<string, string>();
+    const memory: ExpenseHistoryMemory = emptyMemory;
     for (const row of data ?? []) {
       const aligned = Array.isArray(row?.payload?.alignedEntries) ? row.payload.alignedEntries as GroupedExpenseEntry[] : [];
       for (const entry of aligned) {
         const history = String(entry.history || "").trim();
         if (!history) continue;
-        const key = groupKey(entry);
-        if (!memory.has(key)) memory.set(key, history);
+        const exactKey = fullGroupKey(entry);
+        const pairKey = accountPairKey(entry);
+        if (!memory.exact.has(exactKey)) memory.exact.set(exactKey, history);
+        if (!memory.byAccountPair.has(pairKey)) memory.byAccountPair.set(pairKey, history);
       }
     }
     return memory;
   } catch (error) {
     console.error("Não foi possível carregar históricos padronizados de despesas.", error);
-    return new Map<string, string>();
+    return emptyMemory;
   }
 }
 
-export async function alignExpenseEntriesWithAI(entries: ExpenseEntry[], _accounts: ChartAccount[], exportDate: string, historyMemory = new Map<string, string>()) {
+export async function alignExpenseEntriesWithAI(
+  entries: ExpenseEntry[],
+  _accounts: ChartAccount[],
+  exportDate: string,
+  historyMemory: ExpenseHistoryMemory = { exact: new Map(), byAccountPair: new Map() },
+) {
   // A Visão agrupada é a fonte única para o agrupamento final.
   // A partir daqui, nenhuma conta, valor, centro de custo, data ou composição do grupo pode mudar.
   const grouped = groupExpenseEntries(entries, exportDate);
 
   const sourceById = new Map(entries.map(entry => [entry.id, entry]));
   const payload = grouped.flatMap((entry, index) => {
-    if (historyMemory.has(groupKey(entry))) return [];
+    if (learnedHistoryFor(entry, historyMemory)) return [];
     const sourceRows = entry.sourceEntryIds
       .map(id => sourceById.get(id))
       .filter((row): row is ExpenseEntry => Boolean(row));
@@ -138,7 +159,7 @@ export async function alignExpenseEntriesWithAI(entries: ExpenseEntry[], _accoun
         .map(id => sourceById.get(id))
         .filter((row): row is ExpenseEntry => Boolean(row));
 
-      const learnedHistory = historyMemory.get(groupKey(entry));
+      const learnedHistory = learnedHistoryFor(entry, historyMemory);
       return {
         ...entry,
         // Prioridade: histórico já aprovado/usado pela empresa → IA → fallback seguro.
