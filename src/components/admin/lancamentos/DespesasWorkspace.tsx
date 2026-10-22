@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
-import { alignExpenseEntriesWithAI, findCashAccount, rawExpenseRowsForExport } from "@/lib/lancamentos/expenseAlignment";
+import { alignExpenseEntriesWithAI, rawExpenseRowsForExport } from "@/lib/lancamentos/expenseAlignment";
 import { ExpenseEntry, ExpenseImportIssue, GroupedExpenseEntry, exportGroupedExpenses, groupExpenseEntries, readExpenseWorkbook } from "@/lib/lancamentos/expenseWorkbook";
 import { clearWorkspaceFiles, deleteWorkspaceData, loadWorkspaceData, loadWorkspaceFiles, removeWorkspaceDocumentsByName, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
@@ -13,11 +13,11 @@ import { AccountingWorkflowSteps, AccountCodeHover } from "./AccountingWorkflowU
 
 export type WorkspaceStatus = "waiting" | "review" | "done";
 interface Props { company: string; month: string; year: string; onFileCountChange?: (count: number) => void; onStatusChange?: (status: WorkspaceStatus) => void; onCompetenceChange?: (month: string, year: string) => void; }
-interface SavedData { entries: ExpenseEntry[]; issues: ExpenseImportIssue[]; ignoredRows: number; alignedEntries?: GroupedExpenseEntry[]; alignmentUsedAI?: boolean; }
+interface SavedData { entries: ExpenseEntry[]; issues: ExpenseImportIssue[]; ignoredRows: number; alignedEntries?: GroupedExpenseEntry[]; alignmentUsedAI?: boolean; alignmentVersion?: number; }
+const EXPENSE_ALIGNMENT_VERSION = 2;
 const displayClass = "flex h-8 items-center px-2 text-xs";
 const currency = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 const closingDate = (month: string, year: string) => `${new Date(+year, +month, 0).getDate().toString().padStart(2, "0")}/${month}/${year}`;
-const isPaymentHistory = (history: string) => /(^|\s)(pagto|pagamento|pgto)(\.|\s|$)/i.test(history);
 
 function LedgerTable({
   rows,
@@ -136,14 +136,20 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
       if (!active) return;
       if (saved) {
         setEntries(saved.entries.map(row => ({ ...row, debitCostCenter: row.debitCostCenter ?? "", creditCostCenter: row.creditCostCenter ?? "" })));
-        setAlignedEntries(saved.alignedEntries ?? []); setAlignmentUsedAI(Boolean(saved.alignmentUsedAI)); setIssues(saved.issues); setIgnoredRows(saved.ignoredRows);
+        const currentAlignment = saved.alignmentVersion === EXPENSE_ALIGNMENT_VERSION;
+        setAlignedEntries(currentAlignment ? (saved.alignedEntries ?? []) : []);
+        setAlignmentUsedAI(currentAlignment && Boolean(saved.alignmentUsedAI));
+        if (!currentAlignment && saved.alignedEntries?.length) {
+          setAlignmentMessage("O agrupamento salvo usava a regra anterior e foi descartado. Clique em Agrupar lançamentos para recriar exatamente a partir da Visão agrupada.");
+        }
+        setIssues(saved.issues); setIgnoredRows(saved.ignoredRows);
       }
       setFiles(storedFiles.map(file => file.name)); setAccounts(chart ?? []); setLoaded(true);
     });
     return () => { active = false; };
   }, [company, dataKey, scope]);
 
-  useEffect(() => { if (loaded) void saveWorkspaceData(dataKey, { entries, issues, ignoredRows, alignedEntries, alignmentUsedAI }); }, [alignedEntries, alignmentUsedAI, dataKey, entries, ignoredRows, issues, loaded]);
+  useEffect(() => { if (loaded) void saveWorkspaceData(dataKey, { entries, issues, ignoredRows, alignedEntries, alignmentUsedAI, alignmentVersion: EXPENSE_ALIGNMENT_VERSION }); }, [alignedEntries, alignmentUsedAI, dataKey, entries, ignoredRows, issues, loaded]);
   useEffect(() => { if (!accounts.length) return; const chart = new Map(accounts.map(account => [account.reducedCode, account.description])); setEntries(current => current.map(row => ({ ...row, debitDescription: row.debitDescription || chart.get(row.debitCode) || "", creditDescription: row.creditDescription || chart.get(row.creditCode) || "" }))); }, [accounts]);
   useEffect(() => onFileCountChange?.(files.length), [files.length, onFileCountChange]);
 
@@ -181,7 +187,7 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
       setIssues(current => [...current, ...pending.issues]); setIgnoredRows(current => current + pending.ignoredRows); setFiles(current => Array.from(new Set([...current, ...pendingFiles.map(file => file.name)])));
     } else {
       const saved = await loadWorkspaceData<SavedData>(targetKey); const current = saved ?? { entries: [], issues: [], ignoredRows: 0 };
-      await saveWorkspaceData(targetKey, { entries: [...current.entries, ...resolved.filter(row => !current.entries.some(savedRow => savedRow.id === row.id))], issues: [...current.issues, ...pending.issues], ignoredRows: current.ignoredRows + pending.ignoredRows, alignedEntries: [], alignmentUsedAI: false });
+      await saveWorkspaceData(targetKey, { entries: [...current.entries, ...resolved.filter(row => !current.entries.some(savedRow => savedRow.id === row.id))], issues: [...current.issues, ...pending.issues], ignoredRows: current.ignoredRows + pending.ignoredRows, alignedEntries: [], alignmentUsedAI: false, alignmentVersion: EXPENSE_ALIGNMENT_VERSION });
     }
     await saveWorkspaceFiles(targetScope, pendingFiles, { skipCompetencePrompt: true });
     setPending(null); setPendingFiles([]); setCompetenceWarning(null); setMixedCompetences([]);
@@ -252,19 +258,16 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
 
   const alignWithAI = async () => {
     if (!entries.length || aligning) return;
-    const paymentRows = entries.filter(row => isPaymentHistory(row.history));
-    const cash = findCashAccount(accounts);
-    if (paymentRows.length && !cash) { setAlignmentMessage("Não encontrei uma conta analítica Caixa Matriz ou Caixa Geral no plano desta empresa. O agrupamento foi bloqueado para não usar banco específico."); return; }
     setAligning(true); setAlignmentMessage("");
     try {
       const result = await alignExpenseEntriesWithAI(entries, accounts, closingDate(month, year));
       setAlignedEntries(result.rows); setAlignmentUsedAI(result.usedAI);
       setAlignmentMessage(result.usedAI
-        ? `${entries.length} lançamentos foram agrupados em ${result.rows.length} linha(s). Históricos revisados com IA${result.cashAccount ? ` · pagamentos em ${result.cashAccount.description}` : ""}.`
-        : `${entries.length} lançamentos foram agrupados em ${result.rows.length} linha(s)${result.cashAccount ? ` · pagamentos em ${result.cashAccount.description}` : ""}. A revisão de históricos por IA ficou indisponível nesta execução e foi aplicada a padronização segura.`);
+        ? `A tabela de Lançamentos foi criada diretamente da Visão agrupada: ${entries.length} originais → ${result.rows.length} agrupados. A IA alterou somente o Histórico variável.`
+        : `A tabela de Lançamentos foi criada diretamente da Visão agrupada: ${entries.length} originais → ${result.rows.length} agrupados. Como a IA ficou indisponível, os históricos existentes foram preservados/padronizados sem alterar contas ou valores.`);
       onStatusChange?.("review");
     } catch (error) {
-      setAlignmentMessage(error instanceof Error ? error.message : "Não foi possível agrupar as despesas.");
+      setAlignmentMessage(error instanceof Error ? error.message : "Não foi possível gerar os lançamentos a partir da Visão agrupada.");
     } finally { setAligning(false); }
   };
 
@@ -279,7 +282,7 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
         try { const parsed = await readExpenseWorkbook(file); rebuilt.entries.push(...parsed.entries); rebuilt.issues.push(...parsed.issues); rebuilt.ignoredRows += parsed.ignoredRows; }
         catch { rebuilt.issues.push({ id: `${file.name}-erro`, fileName: file.name, sheetName: "", row: 0, message: "Não foi possível reler este arquivo após a exclusão." }); }
       }
-      const rebuiltResolved = { ...rebuilt, entries: applyChart(rebuilt.entries), alignedEntries: [], alignmentUsedAI: false };
+      const rebuiltResolved = { ...rebuilt, entries: applyChart(rebuilt.entries), alignedEntries: [], alignmentUsedAI: false, alignmentVersion: EXPENSE_ALIGNMENT_VERSION };
       setEntries(rebuiltResolved.entries); setAlignedEntries([]); setIssues(rebuiltResolved.issues); setIgnoredRows(rebuiltResolved.ignoredRows); setFiles(remainingFiles.map(file => file.name)); await saveWorkspaceData(dataKey, rebuiltResolved); onStatusChange?.("review");
     } finally { setLoaded(true); setDeletingFile(null); }
   };
@@ -317,7 +320,7 @@ export function DespesasWorkspace({ company, month, year, onFileCountChange, onS
 
       <TabsContent value="lancamentos" className="mt-6">
         <div className="rounded-md border border-border bg-background">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4"><div><h3 className="font-semibold">Lançamentos para o Calima</h3><p className="mt-1 text-xs text-muted-foreground">Sem agrupamento, exporta exatamente os lançamentos importados. O agrupamento é opcional e só roda quando você solicitar.</p></div><div className="flex gap-2"><Button variant="outline" disabled={!entries.length || aligning} onClick={() => void alignWithAI()}>{aligning ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Agrupando...</> : <>Agrupar lançamentos</>}</Button>{alignedEntries.length > 0 && <Button variant="outline" onClick={() => { setAlignedEntries([]); setAlignmentUsedAI(false); setAlignmentMessage("Versão agrupada descartada. O original do Calima voltou a ser usado."); }}>Usar original</Button>}<Button disabled={!canExport} onClick={() => exportGroupedExpenses(exportRows, competence)}>Exportar para o Calima</Button></div></div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4"><div><h3 className="font-semibold">Lançamentos para o Calima</h3><p className="mt-1 text-xs text-muted-foreground">Ao agrupar, esta tabela copia exatamente a Visão agrupada. A única mudança automática é o Histórico variável.</p></div><div className="flex gap-2"><Button variant="outline" disabled={!entries.length || aligning} onClick={() => void alignWithAI()}>{aligning ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Agrupando...</> : <>Agrupar lançamentos</>}</Button>{alignedEntries.length > 0 && <Button variant="outline" onClick={() => { setAlignedEntries([]); setAlignmentUsedAI(false); setAlignmentMessage("Versão agrupada descartada. O original do Calima voltou a ser usado."); }}>Usar original</Button>}<Button disabled={!canExport} onClick={() => exportGroupedExpenses(exportRows, competence)}>Exportar para o Calima</Button></div></div>
           {alignmentMessage && <div className="border-b border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">{alignmentMessage}</div>}
           <LedgerTable rows={exportRows} editable editingId={editingEntryId} onEdit={setEditingEntryId} onCancelEdit={() => setEditingEntryId(null)} onUpdate={alignedEntries.length ? updateAlignedEntry : updateEntry} onDelete={alignedEntries.length ? deleteAlignedEntry : deleteEntry}/>
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border p-4 text-xs text-muted-foreground"><div className="flex flex-wrap gap-4"><span>{alignedEntries.length ? `${entries.length} originais → ${alignedEntries.length} agrupados` : `${entries.length} lançamentos originais`}</span><span>Total: {currency(exportTotal)}</span>{alignedEntries.length > 0 && <span>{alignmentUsedAI ? "Históricos revisados com IA" : "Históricos padronizados sem alterar valores/contas de despesa"}</span>}</div><Button type="button" variant="outline" size="icon" className="h-9 w-9" disabled={!canExport} onClick={() => exportGroupedExpenses(exportRows, competence)} title="Exportar para o Calima" aria-label="Exportar para o Calima"><Download className="h-4 w-4" /></Button></div>
