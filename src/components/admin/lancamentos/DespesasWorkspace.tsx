@@ -17,7 +17,6 @@ interface SavedData { entries: ExpenseEntry[]; issues: ExpenseImportIssue[]; ign
 const displayClass = "flex h-8 items-center px-2 text-xs";
 const currency = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 const closingDate = (month: string, year: string) => `${new Date(+year, +month, 0).getDate().toString().padStart(2, "0")}/${month}/${year}`;
-const isPaymentHistory = (history: string) => /(^|\s)(pagto|pagamento|pgto)(\.|\s|$)/i.test(history);
 
 function LedgerTable({
   rows,
