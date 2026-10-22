@@ -14,7 +14,7 @@ import { AccountingWorkflowSteps, AccountCodeHover } from "./AccountingWorkflowU
 export type WorkspaceStatus = "waiting" | "review" | "done";
 interface Props { company: string; month: string; year: string; onFileCountChange?: (count: number) => void; onStatusChange?: (status: WorkspaceStatus) => void; onCompetenceChange?: (month: string, year: string) => void; }
 interface SavedData { entries: ExpenseEntry[]; issues: ExpenseImportIssue[]; ignoredRows: number; alignedEntries?: GroupedExpenseEntry[]; alignmentUsedAI?: boolean; alignmentVersion?: number; }
-const EXPENSE_ALIGNMENT_VERSION = 2;
+const EXPENSE_ALIGNMENT_VERSION = 3;
 const displayClass = "flex h-8 items-center px-2 text-xs";
 const currency = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 const closingDate = (month: string, year: string) => `${new Date(+year, +month, 0).getDate().toString().padStart(2, "0")}/${month}/${year}`;
