@@ -174,42 +174,30 @@ export async function loadWorkspaceFiles(scope: string) {
 
 export async function removeWorkspaceFiles(scope: string, files: File[]) {
   if (!files.length) return;
-  const storagePaths = files.map(file => storagePathFor(scope, file));
-  try {
-    await supabase.storage.from("accounting-documents").remove(storagePaths);
-    const { error } = await (supabase as any).from("accounting_workspace_documents").delete().in("storage_path", storagePaths);
-    if (error) throw error;
-  } catch (error) {
-    console.error("Falha ao remover os documentos selecionados do Supabase.", error);
-  }
-
-  const database = await openDatabase();
-  const transaction = database.transaction(FILE_STORE, "readwrite");
-  const store = transaction.objectStore(FILE_STORE);
-  files.forEach(file => store.delete(localFileId(scope, file)));
-  await complete(transaction);
-  database.close();
+  // Match the stored paths, not freshly reconstructed paths: uploads may share names.
+  await removeWorkspaceDocumentsByName(scope, files.map(file => file.name));
 }
 
 export async function removeWorkspaceDocumentsByName(scope: string, fileNames: string[]) {
   const names = [...new Set(fileNames.filter(Boolean))];
   if (!names.length) return;
-  try {
-    const { data, error } = await (supabase as any)
-      .from("accounting_workspace_documents")
-      .select("id, original_name, storage_path")
-      .eq("scope", scope)
-      .in("original_name", names);
-    if (error) throw error;
-    const storagePaths = (data ?? []).map((record: any) => record.storage_path).filter(Boolean);
-    if (storagePaths.length) await supabase.storage.from("accounting-documents").remove(storagePaths);
-    if (data?.length) {
-      const ids = data.map((record: any) => record.id);
-      const { error: deleteError } = await (supabase as any).from("accounting_workspace_documents").delete().in("id", ids);
-      if (deleteError) throw deleteError;
-    }
-  } catch (error) {
-    console.error("Falha ao remover documentos por nome do Supabase.", error);
+  // A failed remote deletion must never be reported as success: otherwise the
+  // documents return on refresh and the UI misleadingly shows them as deleted.
+  const { data, error } = await (supabase as any)
+    .from("accounting_workspace_documents")
+    .select("id, original_name, storage_path")
+    .eq("scope", scope)
+    .in("original_name", names);
+  if (error) throw error;
+  const storagePaths = (data ?? []).map((record: any) => record.storage_path).filter(Boolean);
+  if (storagePaths.length) {
+    const { error: storageError } = await supabase.storage.from("accounting-documents").remove(storagePaths);
+    if (storageError) throw storageError;
+  }
+  if (data?.length) {
+    const ids = data.map((record: any) => record.id);
+    const { error: deleteError } = await (supabase as any).from("accounting_workspace_documents").delete().in("id", ids);
+    if (deleteError) throw deleteError;
   }
 
   const database = await openDatabase();
