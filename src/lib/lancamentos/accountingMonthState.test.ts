@@ -27,8 +27,24 @@ describe("accounting month dynamic status", () => {
   });
 
   it("recognizes current import/validation errors", () => {
-    expect(hasModuleError({ validationIssues: ["competência incorreta"] })).toBe(true);
-    expect(hasModuleError({ issues: ["linha inválida"] })).toBe(true);
-    expect(hasModuleError({ warnings: [] })).toBe(false);
+    expect(hasModuleError("folha", { validationIssues: ["competência incorreta"] })).toBe(true);
+    expect(hasModuleError("despesas", { issues: ["linha inválida"] })).toBe(true);
+    expect(hasModuleError("faturamento", { warnings: [] })).toBe(false);
+  });
+
+  it("does not turn a confirmed payroll month red for informational internal-PDF mismatches", () => {
+    expect(hasModuleError("folha", {
+      validationIssues: ["O próprio documento não fecha: Total de Proventos - Total de Descontos difere do Líquido."],
+      warnings: [],
+    })).toBe(false);
+    expect(hasModuleError("folha", {
+      validationIssues: ["Líquido: diferença de 2885.38."],
+      warnings: [],
+    })).toBe(false);
+  });
+
+  it("keeps real payroll processing problems blocking", () => {
+    expect(hasModuleError("folha", { warnings: ["rubrica não identificada"] })).toBe(true);
+    expect(hasModuleError("folha", { validationIssues: ["conta obrigatória ausente"] })).toBe(true);
   });
 });
