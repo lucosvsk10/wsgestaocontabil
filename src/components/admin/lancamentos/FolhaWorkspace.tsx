@@ -286,10 +286,9 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
       setEntries(rows => rows.map(markManualReviewed));
       setDeferredEntries(rows => rows.map(markManualReviewed));
       onStatusChange("done");
-      setActiveTab("lancamentos");
       return;
     }
-    if (mappingsToApprove === 0) { onStatusChange("done"); setActiveTab("lancamentos"); return; }
+    if (mappingsToApprove === 0) { onStatusChange("done"); return; }
     setLearning(true);
     try {
       const { data, error } = await supabase.functions.invoke("learn-accounting-mappings", { body: { module: "folha", company_id: company, entries, deferredEntries } });
@@ -301,7 +300,6 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
       setEntries(rows => rows.map(markLearned));
       setDeferredEntries(rows => rows.map(markLearned));
       onStatusChange("done");
-      setActiveTab("lancamentos");
     } catch (error) {
       setValidationIssues(current => [...new Set([...current, error instanceof Error ? `Não foi possível salvar o aprendizado: ${error.message}` : "Não foi possível salvar o aprendizado dos mapeamentos."])]);
     } finally { setLearning(false); }
