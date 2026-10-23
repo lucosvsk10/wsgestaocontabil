@@ -303,7 +303,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
         ...structurallyExcludedEntries,
         ...mappedEntries.filter(row => !hasCompletePurchaseMapping(row)),
       ];
-      const consolidatedEntries = consolidatePurchaseEntriesByMapping(launchableEntries);
+      const individualEntries = consolidatePurchaseEntriesByMapping(launchableEntries);
 
       const mappedByReference = new Map(mappedEntries.map(row => [String(row.rubricCode || "").trim(), row]));
       const excludedByReference = new Map(structurallyExcludedEntries.map(row => [String(row.rubricCode || "").trim(), row]));
@@ -321,7 +321,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
           ...item,
           launchStatus: launchable ? "launchable" : "not_launchable",
           launchReason: launchable
-            ? "Compra lançável; segue para agrupamento e Calima."
+            ? "Compra lançável; segue individualmente para o Calima."
             : excluded
               ? eligibility.reason
               : mapped?.mappingReason || eligibility.reason || "Permanece somente na transcrição.",
@@ -329,7 +329,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
       });
 
       const excludedTotal = excludedEntries.reduce((sum, row) => sum + row.amountInCents, 0);
-      const launchTotal = consolidatedEntries.reduce((sum, row) => sum + row.amountInCents, 0);
+      const launchTotal = individualEntries.reduce((sum, row) => sum + row.amountInCents, 0);
       const documentTotal = Number(data.reference?.totalAmountInCents || 0);
       const expectedLaunchTotal = Math.max(0, documentTotal - excludedTotal);
 
@@ -379,7 +379,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
       const result: PurchaseProcessingResult = {
         items,
         reference: data.reference ?? null,
-        entries: consolidatedEntries,
+        entries: individualEntries,
         comparisons,
         warnings,
         validationIssues: [...new Set(validationIssues)],
