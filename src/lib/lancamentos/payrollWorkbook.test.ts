@@ -18,6 +18,28 @@ const entry = (id: string, amountInCents: number, kind: PayrollEntry["kind"], se
 });
 
 describe("calculatePayrollComparisons", () => {
+  it("keeps an inconsistent printed liquid as informational without blocking export", () => {
+    const entries: PayrollEntry[] = [
+      entry("proventos", 2_875_614, "provento", "folha", "salary_earning"),
+      entry("descontos", 600_395, "desconto", "folha", "payroll_discount"),
+    ];
+    const totals: PayrollDocumentTotal[] = [
+      { key: "total_proventos", label: "Total Geral de Proventos", amountInCents: 2_875_614, source: "Resumo da folha" },
+      { key: "total_descontos", label: "Total Geral de Descontos", amountInCents: 600_395, source: "Resumo da folha" },
+      { key: "liquido", label: "Líquido", amountInCents: 1_986_681, source: "Resultados — Salário Líquido" },
+    ];
+
+    const comparisons = calculatePayrollComparisons(entries, [], totals);
+    const liquid = comparisons.find(row => row.key === "liquido");
+
+    expect(comparisons.find(row => row.key === "total_proventos")?.differenceInCents).toBe(0);
+    expect(comparisons.find(row => row.key === "total_descontos")?.differenceInCents).toBe(0);
+    expect(liquid?.entriesAmountInCents).toBe(2_275_219);
+    expect(liquid?.documentAmountInCents).toBe(1_986_681);
+    expect(liquid?.differenceInCents).toBe(288_538);
+    expect(liquid?.blocking).toBe(false);
+  });
+
   it("reconciles January/2025 with the full vacation INSS in January and no carryover", () => {
     const entries: PayrollEntry[] = [
       entry("adiantamento", 2_738_466, "provento", "adiantamento", "advance_payment"),
