@@ -268,9 +268,9 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
       await saveWorkspaceData(key, result);
       onStatusChange("review");
     } catch (error) {
-      resetWorkspaceState();
-      setFiles(remaining);
-      setValidationIssues([error instanceof Error ? `Documento removido, mas a reconstrução da folha falhou: ${error.message}` : "Documento removido, mas a reconstrução da folha falhou."]);
+      const persisted = await loadWorkspaceFiles(scope).catch(() => files);
+      setFiles(persisted);
+      setValidationIssues([error instanceof Error ? `Não foi possível concluir a exclusão/reconstrução da folha falhou: ${error.message}` : "Documento removido, mas a reconstrução da folha falhou."]);
     } finally {
       setLoaded(true);
       setDeletingFile(null);
