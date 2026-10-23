@@ -318,7 +318,7 @@ Não gere débito, crédito, C.R. ou histórico contábil. source deve identific
         format: "currency",
         source: "Consolidação mensal das entradas",
         blocking: true,
-        note: "Os lançamentos são consolidados por conta somente depois da classificação contábil de cada linha/CFOP.",
+        note: "Cada linha ou CFOP permanece um lançamento individual após a classificação contábil; nunca agrupar por débito/crédito.",
       },
     ];
 
@@ -335,7 +335,7 @@ Não gere débito, crédito, C.R. ou histórico contábil. source deve identific
       primaryModel: model,
       reviewed: false,
       reviewModel: null,
-      routing: `terra-reference + terra-purchase-transcription(${itemsResult.reportMode}) + classification-by-evidence + post-mapping-consolidation`,
+      routing: `terra-reference + terra-purchase-transcription(${itemsResult.reportMode}) + classification-by-evidence + individual-source-entries`,
       reference_response_id: referenceAttempt.raw.id,
       items_response_id: itemsAttempt.raw.id,
     });
