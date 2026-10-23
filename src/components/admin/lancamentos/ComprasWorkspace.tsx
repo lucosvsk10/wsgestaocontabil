@@ -274,9 +274,9 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
       await saveWorkspaceData(key, result);
       onStatusChange("review");
     } catch (error) {
-      resetWorkspaceState();
-      setFiles(remaining);
-      setValidationIssues([error instanceof Error ? `Documento removido, mas a reconstrução de Compras falhou: ${error.message}` : "Documento removido, mas a reconstrução de Compras falhou."]);
+      const persisted = await loadWorkspaceFiles(scope).catch(() => files);
+      setFiles(persisted);
+      setValidationIssues([error instanceof Error ? `Não foi possível concluir a exclusão/reconstrução de Compras falhou: ${error.message}` : "Documento removido, mas a reconstrução de Compras falhou."]);
     } finally {
       setLoaded(true);
       setDeletingFile(null);
