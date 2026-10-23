@@ -169,12 +169,35 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
       const { data, error } = await supabase.functions.invoke("process-accounting-document", {
         body: { module: "folha", company_id: company, competence, documents, chart_of_accounts: accounts },
       });
-      if (error) throw await functionError(error, "Falha ao processar a folha com IA.");
+      if (error) throw await functionError(error, "Falha ao transcrever/processar a folha.");
       if (!data?.entries) throw new Error("O processamento não devolveu lançamentos estruturados.");
 
       const baseEntries: PayrollEntry[] = data.entries.map((row: PayrollEntry, index: number) => ({ ...row, id: row.id || `${Date.now()}-${index}` }));
       const baseDeferred: PayrollEntry[] = (data.deferredEntries ?? []).map((row: PayrollEntry, index: number) => ({ ...row, id: row.id || `deferred-${Date.now()}-${index}` }));
       const mapping = await resolveMappings("folha", company, competence, baseEntries, baseDeferred, accounts);
+
+      if ((mapping.entries?.length ?? 0) !== baseEntries.length) {
+        throw new Error("O mapeamento contábil alterou a quantidade de linhas da Transcrição. A exportação foi bloqueada.");
+      }
+
+      const mappedEntries = (mapping.entries as PayrollEntry[]).map((mapped, index) => {
+        const source = baseEntries[index];
+        return {
+          ...mapped,
+          id: source.id,
+          date: source.date,
+          history: source.history,
+          eventType: source.eventType,
+          rubricCode: source.rubricCode,
+          rubricDescription: source.rubricDescription,
+          kind: source.kind,
+          section: source.section,
+          amountInCents: source.amountInCents,
+          source: source.source,
+          confidence: source.confidence,
+          targetCompetence: source.targetCompetence,
+        };
+      });
 
       const irrelevantPayrollIssue = (issue: string) => {
         const text = normalizeText(issue);
@@ -204,7 +227,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
       const validated = referenceVerified && !hasDifference && warnings.length === 0 && validationIssues.length === 0 && mapping.summary.needsApprovalCount === 0;
 
       const result: PayrollProcessingResult = {
-        entries: mapping.entries as PayrollEntry[],
+        entries: mappedEntries,
         deferredEntries: mapping.deferredEntries,
         documentTotals: data.documentTotals ?? [],
         comparisons,
