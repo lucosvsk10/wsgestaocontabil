@@ -62,10 +62,12 @@ export function parseCfopPurchaseReportText(rawText: string): DeterministicPurch
   const lines = text.split("\n").map(normalizeLine).filter(Boolean);
   const items: PurchaseItem[] = [];
 
-  let current: { code: string; description: string[]; amountInCents?: number; awaitingSubtotal?: boolean } | null = null;
+  let current: { code: string; description: string[]; amountInCents?: number; lastSeenAmountInCents?: number; awaitingSubtotal?: boolean } | null = null;
 
   const pushCurrent = () => {
-    if (!current || !current.amountInCents || current.amountInCents <= 0) {
+    if (!current) return;
+    const resolvedAmount = current.amountInCents || current.lastSeenAmountInCents || 0;
+    if (resolvedAmount <= 0) {
       current = null;
       return;
     }
@@ -75,7 +77,7 @@ export function parseCfopPurchaseReportText(rawText: string): DeterministicPurch
       id: `cfop-${current.code}-${items.length}`,
       entryNumber: `CFOP ${current.code}`,
       supplier: "",
-      amountInCents: current.amountInCents,
+      amountInCents: resolvedAmount,
       entryDate: "",
       emissionDate: "",
       situation: "Resumo por CFOP",
@@ -106,10 +108,22 @@ export function parseCfopPurchaseReportText(rawText: string): DeterministicPurch
 
     if (current) {
       const amount = line.match(/Vr\.\s*Cont[aá]bil\s+([\d.]+,\d{2})/i);
-      if (amount && current.awaitingSubtotal) {
-        current.amountInCents = moneyToCents(amount[1]);
-        current.awaitingSubtotal = false;
-        pushCurrent();
+      if (amount) {
+        const cents = moneyToCents(amount[1]);
+        if (current.awaitingSubtotal) {
+          const previousCfopsTotal = items.reduce((sum, item) => sum + item.amountInCents, 0);
+          const lastDocumentAmount = current.lastSeenAmountInCents || 0;
+          const looksLikeReportSubtotal =
+            previousCfopsTotal > 0 &&
+            lastDocumentAmount > 0 &&
+            cents === previousCfopsTotal + lastDocumentAmount;
+
+          current.amountInCents = looksLikeReportSubtotal ? lastDocumentAmount : cents;
+          current.awaitingSubtotal = false;
+          pushCurrent();
+        } else {
+          current.lastSeenAmountInCents = cents;
+        }
         continue;
       }
 
