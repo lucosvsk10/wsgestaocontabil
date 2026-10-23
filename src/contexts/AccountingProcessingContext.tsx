@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { PayrollComparison, PayrollDocumentTotal, PayrollEntry, PayrollProcessingMeta } from "@/lib/lancamentos/payrollWorkbook";
-import { consolidatePurchaseEntriesByMapping, hasCompletePurchaseMapping, PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
+import { consolidatePurchaseEntriesByMapping, hasCompletePurchaseMapping, purchaseLaunchEligibility, PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
 import { RevenueComparison, RevenueEntry, RevenueProcessingMeta, RevenueReference } from "@/lib/lancamentos/revenueWorkbook";
 
 export type AccountingOperation = "import" | "reprocess";
@@ -276,23 +276,38 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
       if (!Array.isArray(data?.items) || !Array.isArray(data?.entries)) throw new Error("O processamento de Compras não devolveu dados estruturados.");
 
       const baseEntries: PurchaseEntry[] = data.entries.map((row: PurchaseEntry, index: number) => ({ ...row, id: row.id || `purchase-${Date.now()}-${index}` }));
-      const mapping = await resolveMappings("compras", company, competence, baseEntries, [], accounts);
+      const eligibleBaseEntries = baseEntries.filter(row => purchaseLaunchEligibility(row).launchable);
+      const structurallyExcludedEntries = baseEntries.filter(row => !purchaseLaunchEligibility(row).launchable);
+
+      const mapping = await resolveMappings("compras", company, competence, eligibleBaseEntries, [], accounts);
       const mappedEntries = mapping.entries as PurchaseEntry[];
       const launchableEntries = mappedEntries.filter(hasCompletePurchaseMapping);
-      const excludedEntries = mappedEntries.filter(row => !hasCompletePurchaseMapping(row));
+      const excludedEntries = [
+        ...structurallyExcludedEntries,
+        ...mappedEntries.filter(row => !hasCompletePurchaseMapping(row)),
+      ];
       const consolidatedEntries = consolidatePurchaseEntriesByMapping(launchableEntries);
 
       const mappedByReference = new Map(mappedEntries.map(row => [String(row.rubricCode || "").trim(), row]));
+      const excludedByReference = new Map(structurallyExcludedEntries.map(row => [String(row.rubricCode || "").trim(), row]));
       const items: PurchaseItem[] = (data.items ?? []).map((item: PurchaseItem) => {
         const referenceCode = String(item.cfop || item.entryNumber || "").replace(/^CFOP\s+/i, "").trim();
         const mapped = mappedByReference.get(referenceCode) || mappedByReference.get(String(item.entryNumber || "").trim());
-        const launchable = Boolean(mapped && hasCompletePurchaseMapping(mapped));
+        const excluded = excludedByReference.get(referenceCode) || excludedByReference.get(String(item.entryNumber || "").trim());
+        const eligibility = purchaseLaunchEligibility({
+          rubricCode: referenceCode,
+          rubricDescription: item.classification || item.description || "",
+          history: item.description || item.classification || "",
+        });
+        const launchable = Boolean(eligibility.launchable && mapped && hasCompletePurchaseMapping(mapped));
         return {
           ...item,
           launchStatus: launchable ? "launchable" : "not_launchable",
           launchReason: launchable
-            ? "Classificação contábil completa; segue para agrupamento e Calima."
-            : mapped?.mappingReason || "Sem débito/crédito completos; permanece somente na transcrição.",
+            ? "Compra lançável; segue para agrupamento e Calima."
+            : excluded
+              ? eligibility.reason
+              : mapped?.mappingReason || eligibility.reason || "Permanece somente na transcrição.",
         };
       });
 
