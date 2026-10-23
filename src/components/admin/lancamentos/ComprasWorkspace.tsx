@@ -274,9 +274,9 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
       await saveWorkspaceData(key, result);
       onStatusChange("review");
     } catch (error) {
-      resetWorkspaceState();
-      setFiles(remaining);
-      setValidationIssues([error instanceof Error ? `Documento removido, mas a reconstrução de Compras falhou: ${error.message}` : "Documento removido, mas a reconstrução de Compras falhou."]);
+      const persisted = await loadWorkspaceFiles(scope).catch(() => files);
+      setFiles(persisted);
+      setValidationIssues([error instanceof Error ? `Não foi possível concluir a exclusão/reconstrução de Compras falhou: ${error.message}` : "Documento removido, mas a reconstrução de Compras falhou."]);
     } finally {
       setLoaded(true);
       setDeletingFile(null);
@@ -317,7 +317,7 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
       blocking: row.blocking,
       note: row.format === "number" ? `Quantidade: documento ${row.documentValue} · transcrição ${row.extractedValue}` : row.note,
     })),
-    note: "Somente compras com débito e crédito completos seguem para agrupamento e Calima. Linhas não lançáveis permanecem apenas na Transcrição.",
+    note: "Somente compras com débito e crédito completos seguem individualmente para o Calima. Linhas não lançáveis permanecem apenas na Transcrição.",
   });
 
   return <>
@@ -350,7 +350,7 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
         </TabsContent>
 
         <TabsContent value="lancamentos" className="mt-7">
-          <Header title="Compras · Lançamentos" subtitle="Somente linhas lançáveis entram aqui. Depois elas são agrupadas por combinação de débito e crédito para formar o arquivo do Calima." />
+          <Header title="Compras · Lançamentos" subtitle="Somente linhas lançáveis entram aqui. Cada documento permanece como lançamento individual no arquivo do Calima." />
           <div className="rounded-md border border-border bg-background">
             <div className="flex items-center justify-between border-b border-border p-5"><span className="text-sm text-muted-foreground">{entries.length ? `${entries.length} lançamento(s) classificado(s) · ${money(entries.reduce((sum, row) => sum + row.amountInCents, 0))}` : "Sem lançamento nesta competência"}</span><Button disabled={!canFinalize || !entries.length} onClick={exportToCalima}>Exportar para o Calima</Button></div>
             <PurchaseLedger rows={entries} editable update={updateEntry} title={`Lançamentos de compras · ${competence}`} />

@@ -27,7 +27,7 @@ const row = (overrides: Partial<PurchaseEntry> = {}): PurchaseEntry => ({
 });
 
 describe('consolidatePurchaseEntriesByMapping', () => {
-  it('consolidates only rows mapped to the same debit/credit pair', () => {
+  it('preserves every source entry even with identical debit/credit accounts', () => {
     const result = consolidatePurchaseEntriesByMapping([
       row({ id: 'a', rubricCode: '1102', amountInCents: 10000 }),
       row({ id: 'b', rubricCode: '2102', amountInCents: 25000 }),
@@ -41,13 +41,9 @@ describe('consolidatePurchaseEntriesByMapping', () => {
       }),
     ]);
 
-    expect(result).toHaveLength(2);
-    const resale = result.find(item => item.debitCode === '17');
-    const consumption = result.find(item => item.debitCode === '81');
-    expect(resale?.amountInCents).toBe(35000);
-    expect(resale?.rubricCode).toContain('1102');
-    expect(resale?.rubricCode).toContain('2102');
-    expect(consumption?.amountInCents).toBe(5000);
+    expect(result).toHaveLength(3);
+    expect(result.map(item => item.id)).toEqual(['a', 'b', 'c']);
+    expect(result.map(item => item.amountInCents)).toEqual([10000, 25000, 5000]);
   });
 
   it('identifies rows without complete debit and credit mapping as non-launchable', () => {
@@ -87,7 +83,10 @@ describe('consolidatePurchaseEntriesByMapping', () => {
 
   it('blocks expenses and non-purchase natures from Compras even when they have accounts', () => {
     expect(purchaseLaunchEligibility(row({ rubricCode: '1253', rubricDescription: 'Compra de energia elétrica' })).launchable).toBe(false);
-    expect(purchaseLaunchEligibility(row({ rubricCode: '1556', rubricDescription: 'Compra de material para uso ou consumo' })).launchable).toBe(false);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '1556', rubricDescription: 'Compra de material para uso ou consumo' })).launchable).toBe(true);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '1407', rubricDescription: 'Compra de material de uso e consumo ST' })).launchable).toBe(true);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '2556', rubricDescription: 'Compra de material de uso e consumo interestadual' })).launchable).toBe(true);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '1401', rubricDescription: 'Compra para industrialização com ST' })).launchable).toBe(true);
     expect(purchaseLaunchEligibility(row({ rubricCode: '1653', rubricDescription: 'Compra de combustível por consumidor final' })).launchable).toBe(false);
     expect(purchaseLaunchEligibility(row({ rubricCode: '2551', rubricDescription: 'Compra de bem para ativo imobilizado' })).launchable).toBe(false);
     expect(purchaseLaunchEligibility(row({ rubricCode: '2922', rubricDescription: 'Simples faturamento para recebimento futuro' })).launchable).toBe(false);
