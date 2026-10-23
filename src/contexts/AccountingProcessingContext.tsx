@@ -208,7 +208,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
           || (text.includes("total de proventos") && text.includes("total de descontos") && text.includes("liquido"));
       };
       const validationIssues: string[] = (data.validationIssues ?? []).filter((issue: string) => !irrelevantPayrollIssue(issue));
-      if (mapping.failure) validationIssues.push(`Falha na resolução adaptativa de contas: ${mapping.failure}`);
+      if (mapping.failure && !isRecoverableAIError(mapping.failure)) validationIssues.push(`Falha na resolução adaptativa de contas: ${mapping.failure}`);
       if (mapping.summary.unresolvedCount > 0) validationIssues.push(`${mapping.summary.unresolvedCount} lançamento(s) continuam sem débito/crédito completo.`);
 
       const warnings = data.warnings ?? [];
@@ -319,7 +319,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
       const validationIssues: string[] = [...(data.validationIssues ?? [])].filter((issue: string) =>
         !/lançamento\(s\).*sem débito\/crédito completo/i.test(issue)
       );
-      if (mapping.failure) validationIssues.push(`Falha na resolução adaptativa de contas: ${mapping.failure}`);
+      if (mapping.failure && !isRecoverableAIError(mapping.failure)) validationIssues.push(`Falha na resolução adaptativa de contas: ${mapping.failure}`);
 
       const warnings = data.warnings ?? [];
       const baseComparisons: PurchaseComparison[] = (data.comparisons ?? []).filter((row: PurchaseComparison) => row.key !== "launch_total");
@@ -411,7 +411,7 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
       const baseEntries: RevenueEntry[] = data.entries.map((row: RevenueEntry, index: number) => ({ ...row, id: row.id || `revenue-${Date.now()}-${index}` }));
       const mapping = await resolveMappings("faturamento", company, competence, baseEntries, [], accounts);
       const validationIssues: string[] = [...(data.validationIssues ?? [])];
-      if (mapping.failure) validationIssues.push(`Falha na resolução adaptativa de contas: ${mapping.failure}`);
+      if (mapping.failure && !isRecoverableAIError(mapping.failure)) validationIssues.push(`Falha na resolução adaptativa de contas: ${mapping.failure}`);
       if (mapping.summary.unresolvedCount > 0) validationIssues.push(`${mapping.summary.unresolvedCount} lançamento(s) continuam sem débito/crédito completo.`);
 
       const warnings = data.warnings ?? [];
@@ -650,16 +650,56 @@ function asBase64(file: File) {
   });
 }
 
+function isRecoverableAIError(message: string) {
+  const text = normalizeText(message);
+  return text.includes("rate limit")
+    || text.includes("rate_limit")
+    || text.includes("muitas tentativas")
+    || text.includes("temporariamente")
+    || text.includes("temporario")
+    || text.includes("insufficient_quota")
+    || text.includes("current quota")
+    || text.includes("billing_hard_limit")
+    || text.includes("sem credit")
+    || text.includes("quota");
+}
+
+function classifyProviderError(message: string, status?: number) {
+  const text = normalizeText(message);
+
+  if (
+    text.includes("insufficient_quota")
+    || text.includes("current quota")
+    || text.includes("billing_hard_limit")
+    || text.includes("sem credit")
+  ) {
+    return "A OpenAI recusou esta chamada por quota do projeto/chave configurado no servidor. Isso não significa necessariamente que sua conta inteira está sem saldo; a chave pode pertencer a outro projeto ou ter um limite próprio. O restante do sistema continua disponível e os mapeamentos podem ser revisados manualmente.";
+  }
+
+  if (
+    status === 429
+    || text.includes("rate limit")
+    || text.includes("rate_limit")
+    || text.includes("muitas tentativas")
+  ) {
+    return "Limite temporário de requisições atingido. Não é falta de créditos. A interface continua liberada; tente novamente depois ou revise os lançamentos manualmente.";
+  }
+
+  return message;
+}
+
 async function functionError(error: unknown, fallback: string) {
   let message = error instanceof Error ? error.message : fallback;
+  let status: number | undefined;
   try {
     const context = (error as { context?: Response }).context;
     if (context) {
+      status = context.status;
       const payload = await context.clone().json();
-      message = payload?.error || message;
+      message = payload?.error?.message || payload?.error || message;
     }
   } catch {
     // usa a mensagem original
   }
-  return new Error(message);
+  return new Error(classifyProviderError(String(message || fallback), status));
 }
