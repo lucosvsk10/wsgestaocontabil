@@ -180,14 +180,25 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
         const text = normalizeText(issue);
         return text.includes("nao foi possivel localizar uma conta analitica inequivoca")
           || text.includes("referencia obrigatoria ausente")
-          || text.includes("existem pontos que exigem decisao humana antes da exportacao");
+          || text.includes("existem pontos que exigem decisao humana antes da exportacao")
+          || text.includes("o proprio documento nao fecha")
+          || (text.includes("total de proventos") && text.includes("total de descontos") && text.includes("liquido"));
       };
       const validationIssues: string[] = (data.validationIssues ?? []).filter((issue: string) => !irrelevantPayrollIssue(issue));
       if (mapping.failure) validationIssues.push(`Falha na resolução adaptativa de contas: ${mapping.failure}`);
       if (mapping.summary.unresolvedCount > 0) validationIssues.push(`${mapping.summary.unresolvedCount} lançamento(s) continuam sem débito/crédito completo.`);
 
       const warnings = data.warnings ?? [];
-      const comparisons: PayrollComparison[] = data.comparisons ?? [];
+      const comparisons: PayrollComparison[] = (data.comparisons ?? []).map((row: PayrollComparison) =>
+        row.key === "liquido"
+          ? {
+              ...row,
+              label: "Líquido do documento (informativo)",
+              blocking: false,
+              note: "O líquido informado no próprio documento pode divergir de Proventos - Descontos sem impedir a geração dos lançamentos contábeis.",
+            }
+          : row
+      );
       const hasDifference = comparisons.some(row => row.differenceInCents !== 0 && row.blocking !== false && row.key !== "inss_total");
       const referenceVerified = Boolean(data.referenceVerified) || (baseEntries.length > 0 && !hasDifference && warnings.length === 0 && validationIssues.length === 0);
       const validated = referenceVerified && !hasDifference && warnings.length === 0 && validationIssues.length === 0 && mapping.summary.needsApprovalCount === 0;
