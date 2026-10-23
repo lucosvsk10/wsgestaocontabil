@@ -64,6 +64,7 @@ type Entry = {
   targetCompetence?: string;
 };
 type DocumentTotal = { key: TotalKey; label: string; amountInCents: number; source: string };
+type ReferenceResult = { competence: string; totals: DocumentTotal[]; warnings: string[] };
 type PayrollTranscriptionResult = { competence: string; totals: DocumentTotal[]; facts: Fact[]; warnings: string[] };
 
 type Comparison = {
