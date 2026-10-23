@@ -7,7 +7,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { AccountingWorkflowSteps, AccountCodeHover } from "./AccountingWorkflowUI";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { exportAccountingWorkbook } from "@/lib/lancamentos/accountingExportWorkbook";
-import { PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
+import { purchaseLaunchEligibility, PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
 import { deleteWorkspaceData, loadWorkspaceData, loadWorkspaceFiles, removeWorkspaceFiles, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { WorkspaceStatus } from "./DespesasWorkspace";
 import { cn } from "@/lib/utils";
@@ -96,28 +96,34 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
 
   const hydrateSaved = (saved: SavedPurchases | PurchaseProcessingResult) => {
     const savedEntries = saved.entries ?? [];
+    const structurallyLaunchableEntries = savedEntries.filter(row => purchaseLaunchEligibility(row).launchable);
     const launchableCodes = new Set(
-      savedEntries
+      structurallyLaunchableEntries
         .filter(isCompleteMapping)
         .flatMap(row => String(row.rubricCode || "").split("+"))
         .map(code => code.trim())
         .filter(Boolean)
     );
     const unresolvedCodes = new Set(
-      savedEntries
+      structurallyLaunchableEntries
         .filter(row => !isCompleteMapping(row))
         .flatMap(row => String(row.rubricCode || "").split("+"))
         .map(code => code.trim())
         .filter(Boolean)
     );
     setItems((saved.items ?? []).map(item => {
-      if (item.launchStatus) return item;
       const code = String(item.cfop || item.entryNumber || "").replace(/^CFOP\s+/i, "").trim();
-      if (launchableCodes.has(code)) return { ...item, launchStatus: "launchable" as const, launchReason: "Classificação contábil completa; segue para o Calima." };
-      if (unresolvedCodes.has(code)) return { ...item, launchStatus: "not_launchable" as const, launchReason: "Sem classificação contábil completa; permanece somente na transcrição." };
-      return item;
+      const eligibility = purchaseLaunchEligibility({
+        rubricCode: code,
+        rubricDescription: item.classification || item.description || "",
+        history: item.description || item.classification || "",
+      });
+      if (!eligibility.launchable) return { ...item, launchStatus: "not_launchable" as const, launchReason: eligibility.reason };
+      if (launchableCodes.has(code)) return { ...item, launchStatus: "launchable" as const, launchReason: "Compra lançável; segue para o Calima." };
+      if (unresolvedCodes.has(code)) return { ...item, launchStatus: "not_launchable" as const, launchReason: "Sem débito/crédito completos; permanece somente na transcrição." };
+      return { ...item, launchStatus: "not_launchable" as const, launchReason: eligibility.reason };
     }));
-    setEntries(savedEntries.filter(isCompleteMapping));
+    setEntries(structurallyLaunchableEntries.filter(isCompleteMapping));
     setReference(saved.reference ?? null);
     setWarnings(saved.warnings ?? []);
     setValidationIssues((saved.validationIssues ?? []).filter(issue => !/lançamento\(s\).*sem débito\/crédito completo/i.test(issue)));
