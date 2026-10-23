@@ -40,8 +40,25 @@ export function hasModuleActivity(module: AccountingModuleKey, payload: unknown)
   return hasArray(payload, "entries") || hasObject(payload, "reference") || hasBooleanTrue(payload, "referenceVerified");
 }
 
-export function hasModuleError(payload: unknown) {
+function hasPayrollBlockingIssue(payload: unknown) {
   if (!payload || typeof payload !== "object") return false;
+  const record = payload as Record<string, unknown>;
+
+  if (hasArray(payload, "issues") || hasArray(payload, "errors") || hasArray(payload, "warnings")) return true;
+
+  const issues = Array.isArray(record.validationIssues) ? record.validationIssues.map(String) : [];
+  return issues.some(issue => {
+    const normalized = issue.toLocaleLowerCase("pt-BR");
+    if (normalized.includes("o próprio documento não fecha")) return false;
+    if (normalized.includes("total de proventos") && normalized.includes("total de descontos") && normalized.includes("líquido")) return false;
+    if (normalized.includes("diferença de")) return false;
+    return true;
+  });
+}
+
+export function hasModuleError(module: AccountingModuleKey, payload: unknown) {
+  if (!payload || typeof payload !== "object") return false;
+  if (module === "folha") return hasPayrollBlockingIssue(payload);
   return ["issues", "errors", "validationIssues", "warnings"].some(key => hasArray(payload, key));
 }
 
@@ -101,7 +118,7 @@ export async function loadDynamicYearStatuses(company: string, year: string): Pr
     if (!match || match[1] !== year || !result[match[2]]) return;
     const current = ensure(match[2], row.module as AccountingModuleKey);
     current.activity ||= hasModuleActivity(row.module as AccountingModuleKey, row.payload);
-    current.error ||= hasModuleError(row.payload);
+    current.error ||= hasModuleError(row.module as AccountingModuleKey, row.payload);
   });
 
   Object.keys(result).forEach(month => {
