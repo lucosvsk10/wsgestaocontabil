@@ -99,6 +99,11 @@ export function parseCfopPurchaseReportText(rawText: string): DeterministicPurch
 
     if (current && /^CFOP$/i.test(line)) continue;
 
+    if (current && /^Subtotal$/i.test(line)) {
+      pushCurrent();
+      continue;
+    }
+
     if (current) {
       const amount = line.match(/Vr\.\s*Cont[aá]bil\s+([\d.]+,\d{2})/i);
       if (amount) {
