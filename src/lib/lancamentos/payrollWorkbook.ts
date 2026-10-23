@@ -69,18 +69,24 @@ export function calculatePayrollComparisons(entries: PayrollEntry[], deferredEnt
   };
   return totals.map(total => {
     const entriesAmountInCents = calculated[total.key] ?? 0;
-    const informational = total.key === "inss_total";
+    const informational = total.key === "inss_total" || total.key === "liquido";
     return {
       key: total.key,
-      label: informational ? "INSS a recolher (informativo)" : total.label,
+      label: total.key === "inss_total"
+        ? "INSS a recolher (informativo)"
+        : total.key === "liquido"
+          ? "Líquido do documento (informativo)"
+          : total.label,
       documentAmountInCents: total.amountInCents,
       entriesAmountInCents,
       differenceInCents: entriesAmountInCents - total.amountInCents,
       source: total.source,
       blocking: !informational,
-      note: informational
+      note: total.key === "inss_total"
         ? "O Total a Recolher segue o calendário de recolhimento e pode diferir do INSS contabilizado integralmente nas rubricas da competência."
-        : undefined,
+        : total.key === "liquido"
+          ? "O líquido informado no próprio documento pode não coincidir com Proventos - Descontos por eventos/compensações não representados como lançamentos contábeis. Essa diferença é informativa e não bloqueia a exportação."
+          : undefined,
     } satisfies PayrollComparison;
   });
 }
