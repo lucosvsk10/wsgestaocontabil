@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { PayrollComparison, PayrollDocumentTotal, PayrollEntry, PayrollProcessingMeta } from "@/lib/lancamentos/payrollWorkbook";
 import { consolidatePurchaseEntriesByMapping, hasCompletePurchaseMapping, purchaseLaunchEligibility, PurchaseComparison, PurchaseEntry, PurchaseItem, PurchaseProcessingMeta, PurchaseReference } from "@/lib/lancamentos/purchaseWorkbook";
+import { parseCfopPurchaseFiles } from "@/lib/lancamentos/purchaseCfopReport";
 import { RevenueComparison, RevenueEntry, RevenueProcessingMeta, RevenueReference } from "@/lib/lancamentos/revenueWorkbook";
 
 export type AccountingOperation = "import" | "reprocess";
@@ -259,20 +260,36 @@ export function AccountingProcessingProvider({ children }: { children: ReactNode
     const { id, competence } = beginJob("compras", args);
 
     try {
-      const documents = await encodeDocuments(files);
-      const preflight = await detectDocumentCompetence("compras", documents);
-      const detected = singleDetectedCompetence(preflight);
-      if (detected && detected !== competence) {
-        const result = emptyPurchaseResult(detected);
-        finishJob(id, `Competência ${detected} identificada antes do processamento. Aguardando sua confirmação.`);
-        return result;
-      }
-      enforcePreflightCertainty(preflight, "Compras");
+      let data: any;
+      let detected: string | undefined;
 
-      const { data, error } = await supabase.functions.invoke("process-purchases-document", {
-        body: { module: "compras", company_id: company, competence, documents, chart_of_accounts: accounts },
-      });
-      if (error) throw await functionError(error, "Falha ao processar Compras com IA.");
+      const deterministic = await parseCfopPurchaseFiles(files).catch(() => null);
+      if (deterministic) {
+        detected = deterministic.reference.competence;
+        if (detected && detected !== competence) {
+          const result = emptyPurchaseResult(detected);
+          finishJob(id, `Competência ${detected} identificada pelo próprio PDF. Aguardando sua confirmação.`);
+          return result;
+        }
+        data = deterministic;
+      } else {
+        const documents = await encodeDocuments(files);
+        const preflight = await detectDocumentCompetence("compras", documents);
+        detected = singleDetectedCompetence(preflight);
+        if (detected && detected !== competence) {
+          const result = emptyPurchaseResult(detected);
+          finishJob(id, `Competência ${detected} identificada antes do processamento. Aguardando sua confirmação.`);
+          return result;
+        }
+        enforcePreflightCertainty(preflight, "Compras");
+
+        const response = await supabase.functions.invoke("process-purchases-document", {
+          body: { module: "compras", company_id: company, competence, documents, chart_of_accounts: accounts },
+        });
+        if (response.error) throw await functionError(response.error, "Falha ao processar Compras.");
+        data = response.data;
+      }
+
       if (!Array.isArray(data?.items) || !Array.isArray(data?.entries)) throw new Error("O processamento de Compras não devolveu dados estruturados.");
 
       const baseEntries: PurchaseEntry[] = data.entries.map((row: PurchaseEntry, index: number) => ({ ...row, id: row.id || `purchase-${Date.now()}-${index}` }));
