@@ -100,8 +100,8 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
   });
   const hasImportedContent = files.length > 0 || documentTotals.length > 0 || Boolean(processingMeta) || allRows.some(row => String(row.source || "").trim().toLocaleLowerCase("pt-BR") !== "manual");
   const hasAnyWorkspaceContent = hasImportedContent || allRows.length > 0 || warnings.length > 0 || validationIssues.length > 0;
-  const conferenceCount = hasAnyWorkspaceContent ? blockingDifferences.length + missing + mappingsToApprove + warnings.length + structuralIssues.length + (manualOnly || effectiveReferenceVerified || !hasImportedContent ? 0 : 1) : 0;
   const effectiveReferenceVerified = referenceVerified || (entries.length > 0 && blockingDifferences.length === 0 && warnings.length === 0 && structuralIssues.length === 0);
+  const conferenceCount = hasAnyWorkspaceContent ? blockingDifferences.length + missing + mappingsToApprove + warnings.length + structuralIssues.length + (manualOnly || effectiveReferenceVerified || !hasImportedContent ? 0 : 1) : 0;
   const documentConferenceValid = effectiveReferenceVerified && blockingDifferences.length === 0 && warnings.length === 0 && structuralIssues.length === 0;
   const canReviewApprove = entries.length > 0 && !processing && !learning && missing === 0 && (manualOnly || documentConferenceValid);
   const canFinalize = canReviewApprove && (manualOnly || mappingsToApprove === 0);
