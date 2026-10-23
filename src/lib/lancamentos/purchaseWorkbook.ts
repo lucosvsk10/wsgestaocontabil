@@ -75,8 +75,8 @@ export const hasCompletePurchaseMapping = (row: PurchaseEntry) =>
 const normalizePurchaseText = (value: string) =>
   value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
 
-const PURCHASE_CFOPS = new Set(["1101", "1102", "1403", "1910", "2101", "2102"]);
-const EXCLUDED_CFOPS = new Set(["1253", "1407", "1556", "1653", "2551", "2556", "2922"]);
+const PURCHASE_CFOPS = new Set(["1101", "1102", "1401", "1403", "1407", "1556", "1910", "2101", "2102", "2556"]);
+const EXCLUDED_CFOPS = new Set(["1253", "1653", "2551", "2922"]);
 
 const EXCLUDED_NATURE_PATTERNS = [
   /energia eletrica/,
@@ -87,12 +87,6 @@ const EXCLUDED_NATURE_PATTERNS = [
   /internet/,
   /combustivel/,
   /lubrificante/,
-  /uso.*consumo/,
-  /material.*consumo/,
-  /material.*expediente/,
-  /material.*escritorio/,
-  /higiene/,
-  /limpeza/,
   /aluguel/,
   /honorarios/,
   /contabil/,
@@ -129,10 +123,13 @@ export function purchaseLaunchEligibility(row: Pick<PurchaseEntry, "rubricCode" 
   if (EXCLUDED_CFOPS.has(code)) {
     return { launchable: false, reason: `CFOP ${code} pertence a despesa/uso/consumo/ativo ou operação que não deve ser lançada em Compras.` };
   }
+  if (PURCHASE_CFOPS.has(code)) {
+    return { launchable: true, reason: `CFOP ${code}: compra elegível para o Calima, inclusive uso e consumo.` };
+  }
   if (EXCLUDED_NATURE_PATTERNS.some(pattern => pattern.test(text))) {
     return { launchable: false, reason: "Natureza tratada em Despesas ou fora do escopo de Compras; permanece somente na Transcrição." };
   }
-  if (PURCHASE_CFOPS.has(code) || INCLUDED_NATURE_PATTERNS.some(pattern => pattern.test(text))) {
+  if (INCLUDED_NATURE_PATTERNS.some(pattern => pattern.test(text)) || /uso.*consumo|material.*consumo|material.*expediente|material.*escritorio|higiene|limpeza/.test(text)) {
     return { launchable: true, reason: "Natureza de compra para estoque, comercialização ou produção." };
   }
   return { launchable: false, reason: "Natureza não aprovada para Compras; permanece na Transcrição até existir regra explícita." };
@@ -141,56 +138,7 @@ export function purchaseLaunchEligibility(row: Pick<PurchaseEntry, "rubricCode" 
 const uniqueText = (values: string[]) =>
   [...new Set(values.map(value => value.trim()).filter(Boolean))];
 
+/** Keep one accounting entry per source document/reference; never merge by debit/credit. */
 export function consolidatePurchaseEntriesByMapping(rows: PurchaseEntry[]) {
-  const groups = new Map<string, PurchaseEntry[]>();
-
-  for (const row of rows) {
-    const key = hasCompletePurchaseMapping(row)
-      ? [
-          row.debitCode,
-          row.creditCode,
-          row.debitCostCenter || "",
-          row.creditCostCenter || "",
-        ].join("|")
-      : `unresolved:${row.id}`;
-    const current = groups.get(key) ?? [];
-    current.push(row);
-    groups.set(key, current);
-  }
-
-  return [...groups.values()].map(group => {
-    if (group.length === 1) return group[0];
-
-    const first = group[0];
-    const rubricCodes = uniqueText(group.flatMap(row => row.rubricCode.split("+")));
-    const rubricDescriptions = uniqueText(group.map(row => row.rubricDescription));
-    const sources = uniqueText(group.map(row => row.source));
-    const mappingSources = uniqueText(group.map(row => row.mappingSource || ""));
-    const reasons = uniqueText(group.map(row => row.mappingReason || ""));
-    const needsApproval = group.some(row => row.mappingNeedsApproval);
-    const description =
-      first.debitDescription ||
-      (rubricDescriptions.length === 1 ? rubricDescriptions[0] : "compras classificadas na mesma conta");
-
-    return {
-      ...first,
-      id: `purchase-group-${crypto.randomUUID()}`,
-      history: `COMPRAS - ${description.toUpperCase()}`,
-      rubricCode: rubricCodes.join("+"),
-      rubricDescription: rubricDescriptions.join(" / "),
-      amountInCents: group.reduce((sum, row) => sum + row.amountInCents, 0),
-      source: sources.join(" · "),
-      confidence: Math.min(...group.map(row => Number(row.confidence || 0))),
-      mappingSource: mappingSources.length === 1
-        ? (mappingSources[0] as PurchaseEntry["mappingSource"])
-        : needsApproval
-          ? "ai"
-          : first.mappingSource,
-      mappingNeedsApproval: needsApproval,
-      mappingConfidence: Math.min(...group.map(row => Number(row.mappingConfidence ?? row.confidence ?? 0))),
-      mappingReason: reasons.length === 1
-        ? reasons[0]
-        : `Consolidação após classificação contábil: ${group.length} referências usam a mesma conta de débito/crédito.`,
-    };
-  });
+  return rows.map(row => ({ ...row }));
 }
