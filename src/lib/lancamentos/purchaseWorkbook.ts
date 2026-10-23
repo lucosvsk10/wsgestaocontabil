@@ -135,9 +135,6 @@ export function purchaseLaunchEligibility(row: Pick<PurchaseEntry, "rubricCode" 
   return { launchable: false, reason: "Natureza não aprovada para Compras; permanece na Transcrição até existir regra explícita." };
 }
 
-const uniqueText = (values: string[]) =>
-  [...new Set(values.map(value => value.trim()).filter(Boolean))];
-
 /** Keep one accounting entry per source document/reference; never merge by debit/credit. */
 export function consolidatePurchaseEntriesByMapping(rows: PurchaseEntry[]) {
   return rows.map(row => ({ ...row }));
