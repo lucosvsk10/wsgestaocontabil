@@ -64,8 +64,7 @@ type Entry = {
   targetCompetence?: string;
 };
 type DocumentTotal = { key: TotalKey; label: string; amountInCents: number; source: string };
-type ReferenceResult = { competence: string; totals: DocumentTotal[]; warnings: string[] };
-type FactsResult = { facts: Fact[]; warnings: string[] };
+type PayrollTranscriptionResult = { competence: string; totals: DocumentTotal[]; facts: Fact[]; warnings: string[] };
 
 type Comparison = {
   key: TotalKey;
@@ -216,19 +215,25 @@ function validateReference(reference: ReferenceResult, requestedCompetence: stri
 function compare(entries: Entry[], totals: DocumentTotal[], structural: string[]) {
   const calculated = sums(entries);
   const comparisons: Comparison[] = totals.map((total) => {
-    const informational = total.key === "inss_total";
+    const informational = total.key === "inss_total" || total.key === "liquido";
     const entriesAmountInCents = calculated[total.key];
     return {
       key: total.key,
-      label: informational ? "INSS a recolher (informativo)" : total.label,
+      label: total.key === "inss_total"
+        ? "INSS a recolher (informativo)"
+        : total.key === "liquido"
+          ? "Líquido do documento (informativo)"
+          : total.label,
       documentAmountInCents: total.amountInCents,
       entriesAmountInCents,
       differenceInCents: entriesAmountInCents - total.amountInCents,
       source: total.source,
       blocking: !informational,
-      note: informational
+      note: total.key === "inss_total"
         ? "O Total a Recolher segue o calendário de recolhimento. A soma dos descontos INSS das rubricas é contabilizada integralmente na competência e pode ser diferente."
-        : undefined,
+        : total.key === "liquido"
+          ? "O líquido é preservado exatamente como impresso no documento. Ele é informativo e nunca é recalculado para forçar fechamento."
+          : undefined,
     };
   });
   const issues = [...structural];
@@ -243,26 +248,30 @@ const actionableWarnings = (warnings: unknown[]) => warnings.map(String).filter(
   return text && !text.includes("nao ha comprovante") && !text.includes("nao foram gerados lancamentos de pgto") && !text.includes("para evitar duplicidade");
 });
 
-const referenceSchema = {
-  type: "object", additionalProperties: false,
+const transcriptionSchema = {
+  type: "object",
+  additionalProperties: false,
   properties: {
     competence: { type: "string" },
     totals: { type: "array", items: { type: "object", additionalProperties: false, properties: {
-      key: { type: "string", enum: totalKeys }, label: { type: "string" }, amountInCents: { type: "integer" }, source: { type: "string" },
+      key: { type: "string", enum: totalKeys },
+      label: { type: "string" },
+      amountInCents: { type: "integer" },
+      source: { type: "string" },
     }, required: ["key", "label", "amountInCents", "source"] } },
-    warnings: { type: "array", items: { type: "string" } },
-  }, required: ["competence", "totals", "warnings"],
-};
-
-const factsSchema = {
-  type: "object", additionalProperties: false,
-  properties: {
     facts: { type: "array", items: { type: "object", additionalProperties: false, properties: {
-      rubricCode: { type: "string" }, description: { type: "string" }, kind: { type: "string", enum: kinds }, section: { type: "string", enum: sections },
-      amountInCents: { type: "integer" }, source: { type: "string" }, confidence: { type: "number" }, targetCompetence: { type: "string" },
+      rubricCode: { type: "string" },
+      description: { type: "string" },
+      kind: { type: "string", enum: kinds },
+      section: { type: "string", enum: sections },
+      amountInCents: { type: "integer" },
+      source: { type: "string" },
+      confidence: { type: "number" },
+      targetCompetence: { type: "string" },
     }, required: ["rubricCode", "description", "kind", "section", "amountInCents", "source", "confidence", "targetCompetence"] } },
     warnings: { type: "array", items: { type: "string" } },
-  }, required: ["facts", "warnings"],
+  },
+  required: ["competence", "totals", "facts", "warnings"],
 };
 
 serve(async (req) => {
@@ -272,7 +281,6 @@ serve(async (req) => {
   let userId: string | null = null;
   let body: any = {};
   const primaryModel = Deno.env.get("OPENAI_ACCOUNTING_PAYROLL_MODEL") || "gpt-5.6-terra";
-  const reviewModel = Deno.env.get("OPENAI_ACCOUNTING_PAYROLL_REVIEW_MODEL") || primaryModel;
 
   const recordUsage = async (raw: any, status: "success" | "error", requestedModel: string, pass: string, metadata: Record<string, unknown> = {}) => {
     if (!admin) return;
@@ -343,37 +351,46 @@ serve(async (req) => {
       catch { throw new Error("A resposta da IA não pôde ser validada como JSON estruturado."); }
     };
 
-    const referenceInstructions = `Você é um auditor documental de folha brasileira. Leia apenas referências monetárias explícitas da competência ${competence}. NÃO gere lançamentos, NÃO escolha contas e NÃO use inferências para fazer valores fecharem.\nExtraia, quando visíveis: Total Geral de Proventos, Total Geral de Descontos, Líquido; totais de proventos/descontos de cada seção (Adiantamento de Folha, Folha de Pagamento, Férias, 13º e Rescisão); e no Resumo de INSS e FGTS os valores da linha Total a Recolher para INSS e FGTS.\nPreserve os centavos exatamente como impressos. source deve nomear a seção/linha. inss_total significa somente o INSS da linha Total a Recolher do Resumo; ele é uma referência de calendário de recolhimento, não a soma contábil das rubricas INSS. warnings somente para leitura realmente ambígua.`;
+    const transcriptionInstructions = `Você é um TRANSCRITOR LITERAL de folha de pagamento brasileira para a competência ${competence}. Faça UMA ÚNICA leitura do documento e devolva, no mesmo resultado, as rubricas e os totais impressos.
 
-    const factsInstructions = `Você é um TRANSCRITOR FACTUAL de folha brasileira. Leia a competência ${competence}. Sua única tarefa é copiar rubrica por rubrica; você NÃO escolhe conta, débito, crédito ou C.R.\nREGRA ABSOLUTA DE VALOR: amountInCents deve ser cópia literal do valor monetário impresso na MESMA LINHA da rubrica na seção principal. É proibido somar, subtrair, ratear, ajustar, substituir, completar centavos ou alterar um valor para fazer totais fecharem. Se não conseguir ler a linha com segurança, use a melhor leitura literal e gere warning; jamais faça ajuste aritmético.\nPara cada linha monetária das seções Adiantamento de Folha, Folha de Pagamento, Férias, 13º Salário e Rescisão, devolva rubricCode, descrição literal curta, kind=provento/desconto, section e o valor exato da própria linha. Não agrupe rubricas.\nFÉRIAS/INSS: a rubrica 310 INSS da seção Férias é UM ÚNICO fato pelo valor INTEGRAL impresso na seção Férias. NÃO substitua nem decomponha essa rubrica usando o Demonstrativo de INSS e FGTS de Férias. As colunas Competência/Recolhimento desse demonstrativo são somente calendário de auditoria e NÃO geram fatos, deferredEntries ou lançamentos em outro mês. Exemplo de regressão 01/2025: rubrica 310 INSS em Férias = 981,88; o demonstrativo mostra INSS 890,80 e 91,08 por recolhimento e FGTS 895,28 e 97,15, mas esses números NÃO substituem os 981,88 da rubrica.\nFGTS: gere um único fato adicional kind=encargo, rubricCode=FGTS, description=FGTS, section=folha, usando literalmente o valor FGTS da linha Total a Recolher do Resumo de INSS e FGTS da competência. Não use o FGTS futuro do demonstrativo de férias.\nPara TODOS os fatos, targetCompetence deve ser exatamente ${competence}. Não crie pagamento, banco, caixa, ajuste ou carryover. source deve indicar a seção/rubrica exata. confidence entre 0 e 1.`;
+REGRA CENTRAL: a Transcrição é a fonte de verdade. NÃO contabilize, NÃO escolha débito/crédito, NÃO invente conta, NÃO agrupe e NÃO ajuste valores para fazê-los fechar.
 
-    const [referenceAttempt, factsAttempt] = await Promise.all([
-      callOpenAI(primaryModel, referenceInstructions, "Extraia somente referências independentes do documento original.", referenceSchema, "payroll_reference", 5000, "reference"),
-      callOpenAI(primaryModel, factsInstructions, "Transcreva todas as rubricas sem contabilizá-las e sem alterar nenhum valor.", factsSchema, "payroll_facts", 12000, "facts"),
-    ]);
+RUBRICAS:
+1. Para cada linha monetária das seções Adiantamento de Folha, Folha de Pagamento, Férias, 13º Salário e Rescisão, copie rubricCode, descrição, kind, section e o valor EXATAMENTE da própria linha.
+2. amountInCents deve ser cópia literal dos centavos impressos na mesma linha. É proibido somar, subtrair, ratear, completar ou trocar um valor por outro.
+3. Não use demonstrativos auxiliares para substituir o valor da rubrica principal. Ex.: INSS de Férias deve vir da linha da rubrica de Férias, não do quadro de recolhimento.
+4. Gere FGTS como encargo apenas quando existir valor explícito de FGTS/Total a Recolher no documento.
+5. targetCompetence deve ser exatamente ${competence}. Não mova rubricas para outro mês.
 
-    const reference = referenceAttempt.parsed as ReferenceResult;
-    let factsResult = factsAttempt.parsed as FactsResult;
+TOTAIS:
+6. No mesmo passe, copie literalmente os totais impressos: Total Geral de Proventos, Total Geral de Descontos, Líquido e, quando existirem, totais por seção, INSS a recolher e FGTS.
+7. NÃO recalcule o Líquido. Se o documento imprimir um Líquido que não seja Proventos - Descontos, preserve o valor impresso exatamente e não tente corrigir.
+8. source deve identificar a linha/seção de onde cada valor saiu.
+9. Se uma linha estiver realmente ilegível, gere warning específico; nunca invente valor para fechar total.
+10. Não faça uma segunda leitura e não proponha correções aritméticas.`;
+
+    const transcriptionAttempt = await callOpenAI(
+      primaryModel,
+      transcriptionInstructions,
+      "Transcreva literalmente uma única vez o documento: rubricas e totais impressos. Não contabilize.",
+      transcriptionSchema,
+      "payroll_literal_transcription",
+      16000,
+      "literal_transcription"
+    );
+
+    const transcription = transcriptionAttempt.parsed as PayrollTranscriptionResult;
+    const reference: ReferenceResult = {
+      competence: transcription.competence,
+      totals: transcription.totals ?? [],
+      warnings: transcription.warnings ?? [],
+    };
     const referenceValidation = validateReference(reference, competence);
-    let normalized = factsToEntries(factsResult.facts ?? [], competence);
-    let validation = compare(normalized.entries, reference.totals ?? [], [...referenceValidation.issues, ...normalized.issues]);
-    let reviewed = false;
+    const normalized = factsToEntries(transcription.facts ?? [], competence);
+    const validation = compare(normalized.entries, reference.totals ?? [], [...referenceValidation.issues, ...normalized.issues]);
 
-    const blockingMismatches = validation.comparisons
-      .filter(row => row.blocking && row.differenceInCents !== 0)
-      .map(row => row.key);
-
-    if (referenceValidation.verified && blockingMismatches.length && normalized.issues.length === 0 && reviewModel) {
-      const reviewInstructions = `${factsInstructions}\nEsta é uma segunda transcrição independente porque a primeira não reconciliou algumas categorias BLOQUEANTES. Releia o documento do zero. Você não recebe os valores-alvo e NÃO deve inventar correções. Copie cada valor diretamente da linha correspondente. Categorias a revisar: ${blockingMismatches.join(", ")}.`;
-      const reviewedFacts = await callOpenAI(reviewModel, reviewInstructions, "Faça uma segunda leitura factual independente, sem ajustar valores.", factsSchema, "payroll_facts_review", 12000, "facts_review");
-      factsResult = reviewedFacts.parsed as FactsResult;
-      normalized = factsToEntries(factsResult.facts ?? [], competence);
-      validation = compare(normalized.entries, reference.totals ?? [], [...referenceValidation.issues, ...normalized.issues]);
-      reviewed = true;
-    }
-
-    const warnings = [...new Set([...actionableWarnings(reference.warnings ?? []), ...actionableWarnings(factsResult.warnings ?? [])])];
-    const validationIssues = [...new Set([...validation.issues, ...(warnings.length ? ["Existem pontos que exigem decisão humana antes da exportação."] : [])])];
+    const warnings = [...new Set(actionableWarnings(transcription.warnings ?? []))];
+    const validationIssues = [...new Set([...validation.issues, ...(warnings.length ? ["Existem linhas da transcrição que exigem revisão humana antes da exportação."] : [])])];
     const validated = referenceValidation.verified && validation.passed && warnings.length === 0;
 
     return json({
@@ -387,11 +404,10 @@ serve(async (req) => {
       validated,
       model: primaryModel,
       primaryModel,
-      reviewed,
-      reviewModel: reviewed ? reviewModel : null,
-      routing: reviewed ? "terra-reference + terra-rubrics-literal + terra-targeted-reread" : "terra-reference + terra-rubrics-literal",
-      reference_response_id: referenceAttempt.raw.id,
-      facts_response_id: factsAttempt.raw.id,
+      reviewed: false,
+      reviewModel: null,
+      routing: "single-literal-transcription -> deterministic-accounting-mapping",
+      transcription_response_id: transcriptionAttempt.raw.id,
     });
   } catch (error) {
     console.error("process-accounting-document", error);
