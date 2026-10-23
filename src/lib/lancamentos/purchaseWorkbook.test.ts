@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { consolidatePurchaseEntriesByMapping, hasCompletePurchaseMapping, type PurchaseEntry } from './purchaseWorkbook';
+import { consolidatePurchaseEntriesByMapping, hasCompletePurchaseMapping, purchaseLaunchEligibility, type PurchaseEntry } from './purchaseWorkbook';
 
 const row = (overrides: Partial<PurchaseEntry> = {}): PurchaseEntry => ({
   id: crypto.randomUUID(),
@@ -83,5 +83,21 @@ describe('consolidatePurchaseEntriesByMapping', () => {
     const result = consolidatePurchaseEntriesByMapping([unresolvedA, unresolvedB]);
     expect(result).toHaveLength(2);
     expect(result.map(item => item.rubricCode)).toEqual(['1556', '1407']);
+  });
+
+  it('blocks expenses and non-purchase natures from Compras even when they have accounts', () => {
+    expect(purchaseLaunchEligibility(row({ rubricCode: '1253', rubricDescription: 'Compra de energia elétrica' })).launchable).toBe(false);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '1556', rubricDescription: 'Compra de material para uso ou consumo' })).launchable).toBe(false);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '1653', rubricDescription: 'Compra de combustível por consumidor final' })).launchable).toBe(false);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '2551', rubricDescription: 'Compra de bem para ativo imobilizado' })).launchable).toBe(false);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '2922', rubricDescription: 'Simples faturamento para recebimento futuro' })).launchable).toBe(false);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '', rubricDescription: 'Despesas com água e esgoto' })).launchable).toBe(false);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '', rubricDescription: 'Serviços de internet' })).launchable).toBe(false);
+  });
+
+  it('allows only approved purchase natures to proceed to mapping', () => {
+    expect(purchaseLaunchEligibility(row({ rubricCode: '1102', rubricDescription: 'Compra para comercialização' })).launchable).toBe(true);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '2101', rubricDescription: 'Compra para industrialização' })).launchable).toBe(true);
+    expect(purchaseLaunchEligibility(row({ rubricCode: '', rubricDescription: 'Mercadorias para revenda' })).launchable).toBe(true);
   });
 });
