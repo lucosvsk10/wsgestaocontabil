@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { useAccountingProcessing, RevenueProcessingResult } from "@/contexts/AccountingProcessingContext";
+
 import { exportAccountingWorkbook } from "@/lib/lancamentos/accountingExportWorkbook";
 import { ChartAccount } from "@/lib/lancamentos/chartOfAccounts";
 import { processRevenueBatch } from "@/lib/lancamentos/processRevenueBatch";
@@ -72,9 +72,8 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
   const [pendingWrongFiles, setPendingWrongFiles] = useState<File[]>([]);
   const [summary, setSummary] = useState<RevenueBatchResult | null>(null);
   const [deletingDocument, setDeletingDocument] = useState<string | null>(null);
-  const { processRevenue, isProcessingScope } = useAccountingProcessing();
-  const processing = isProcessingScope(company, month, year, "faturamento");
-  const busy = processing || batchProcessing || Boolean(deletingDocument);
+  const processing = batchProcessing;
+  const busy = batchProcessing || Boolean(deletingDocument);
   const scope = `${company}:${year}:${month}:faturamento`;
   const key = `${scope}:parsed`;
   const competence = `${month}/${year}`;
@@ -114,7 +113,7 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
     setCurrentSourceFiles([]);
   };
 
-  const hydrate = (saved: SavedRevenue | RevenueProcessingResult | RevenueBatchPeriodResult) => {
+  const hydrate = (saved: SavedRevenue | RevenueBatchPeriodResult) => {
     setReference(saved.reference ?? null);
     setEntries(saved.entries ?? []);
     setWarnings(saved.warnings ?? []);
@@ -159,15 +158,26 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
     } satisfies SavedRevenue);
   }, [comparisons, currentImportId, currentSourceFiles, entries, key, loaded, processingMeta, reference, referenceVerified, validationIssues, warnings]);
 
-  const process = async (selected: File[], operation: "import" | "reprocess", targetMonth = month, targetYear = year) => {
+  const process = async (selected: File[], _operation: "import" | "reprocess", targetMonth = month, targetYear = year) => {
     if (!accounts.length) { setValidationIssues(["Importe o plano de contas desta empresa antes de processar Faturamento."]); return; }
     if (!selected.length) { setValidationIssues(["Nenhum relatório de faturamento está disponível para processamento."]); return; }
     setWarnings([]); setValidationIssues([]);
+    setBatchProcessing(true);
+    setBatchStartedAt(Date.now());
     try {
-      const result = await processRevenue({ company, month: targetMonth, year: targetYear, files: selected, accounts, operation });
-      if (targetMonth === month && targetYear === year) { hydrate(result); onStatusChange("review"); }
+      const result = await processRevenueBatch({ company, files: selected, accounts });
+      const targetCompetence = `${targetMonth}/${targetYear}`;
+      const period = result.periods.find(item => item.competence === targetCompetence);
+      if (!period) {
+        throw new Error(`A competência ${targetCompetence} não foi encontrada no PDF. Encontradas: ${result.periods.map(item => item.competence).join(", ") || "nenhuma"}.`);
+      }
+      hydrate(period);
+      onStatusChange("review");
     } catch (error) {
-      if (targetMonth === month && targetYear === year) setValidationIssues([error instanceof Error ? error.message : "Falha ao processar Faturamento com IA."]);
+      if (targetMonth === month && targetYear === year) setValidationIssues([error instanceof Error ? error.message : "Falha ao ler o faturamento."]);
+    } finally {
+      setBatchProcessing(false);
+      setBatchStartedAt(null);
     }
   };
 
@@ -399,8 +409,8 @@ export function FaturamentoWorkspace({ company, month, year, onStatusChange, onC
       <div className="flex items-center justify-between gap-5">
         <div><h3 className="font-semibold">Faturamento de {competence}</h3><p className="mt-1 text-xs text-muted-foreground">O documento informa o faturamento mensal; o sistema gera somente uma linha de FATURAMENTO por competência.</p></div>
         <div className="flex flex-wrap justify-end gap-2">
-          {files.length > 0 && <Button variant="outline" disabled={busy} onClick={() => void process(files, "reprocess")}>{processing ? "Processando..." : "Reprocessar com IA"}</Button>}
-          <Button variant="outline" disabled={busy} onClick={() => input.current?.click()}>{batchProcessing ? "Analisando documento..." : "Importar faturamento"}</Button>
+          {files.length > 0 && <Button variant="outline" disabled={busy} onClick={() => void process(files, "reprocess")}>{processing ? "Lendo PDF..." : "Reprocessar"}</Button>}
+          <Button variant="outline" disabled={busy} onClick={() => input.current?.click()}>{batchProcessing ? "Lendo PDF..." : "Importar faturamento"}</Button>
         </div>
         <input ref={input} type="file" multiple accept=".pdf" className="sr-only" onChange={event => void importFiles(event)} />
       </div>
@@ -494,5 +504,5 @@ function BatchProgress({ startedAt, fileNames }: { startedAt: number; fileNames:
   useEffect(() => { const id = window.setInterval(() => tick(value => value + 1), 1000); return () => window.clearInterval(id); }, []);
   const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
   const duration = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-  return <div className="fixed bottom-5 right-5 z-[110] w-[min(390px,calc(100vw-2rem))] rounded-lg border border-border bg-background p-4 shadow-2xl"><div className="flex gap-3"><Loader2 className="mt-0.5 h-5 w-5 animate-spin text-muted-foreground" /><div className="min-w-0"><p className="text-sm font-semibold">Analisando faturamento</p><p className="mt-1 text-xs text-muted-foreground">Identificando anos e distribuindo as competências do documento.</p>{fileNames.length > 0 && <p className="mt-2 truncate text-xs text-foreground">{fileNames[0]}</p>}<p className="mt-2 text-xs tabular-nums text-muted-foreground">Tempo decorrido: {duration}</p><p className="mt-1 text-xs text-muted-foreground">Você pode continuar navegando pelo site.</p></div></div></div>;
+  return <div className="fixed bottom-5 right-5 z-[110] w-[min(390px,calc(100vw-2rem))] rounded-lg border border-border bg-background p-4 shadow-2xl"><div className="flex gap-3"><Loader2 className="mt-0.5 h-5 w-5 animate-spin text-muted-foreground" /><div className="min-w-0"><p className="text-sm font-semibold">Lendo faturamento</p><p className="mt-1 text-xs text-muted-foreground">Leitura direta do PDF, sem IA.</p>{fileNames.length > 0 && <p className="mt-2 truncate text-xs text-foreground">{fileNames[0]}</p>}<p className="mt-2 text-xs tabular-nums text-muted-foreground">Tempo decorrido: {duration}</p><p className="mt-1 text-xs text-muted-foreground">Você pode continuar navegando pelo site.</p></div></div></div>;
 }
