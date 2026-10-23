@@ -62,10 +62,12 @@ export function parseCfopPurchaseReportText(rawText: string): DeterministicPurch
   const lines = text.split("\n").map(normalizeLine).filter(Boolean);
   const items: PurchaseItem[] = [];
 
-  let current: { code: string; description: string[]; amountInCents?: number } | null = null;
+  let current: { code: string; description: string[]; amountInCents?: number; lastSeenAmountInCents?: number; awaitingSubtotal?: boolean } | null = null;
 
   const pushCurrent = () => {
-    if (!current || !current.amountInCents || current.amountInCents <= 0) {
+    if (!current) return;
+    const resolvedAmount = current.amountInCents || current.lastSeenAmountInCents || 0;
+    if (resolvedAmount <= 0) {
       current = null;
       return;
     }
@@ -75,11 +77,11 @@ export function parseCfopPurchaseReportText(rawText: string): DeterministicPurch
       id: `cfop-${current.code}-${items.length}`,
       entryNumber: `CFOP ${current.code}`,
       supplier: "",
-      amountInCents: current.amountInCents,
+      amountInCents: resolvedAmount,
       entryDate: "",
       emissionDate: "",
       situation: "Resumo por CFOP",
-      source: `CFOP ${current.code} · Vr. Contábil`,
+      source: `CFOP ${current.code} · Subtotal · Vr. Contábil`,
       confidence: 1,
       rowType: "cfop_summary",
       cfop: current.code,
@@ -93,31 +95,48 @@ export function parseCfopPurchaseReportText(rawText: string): DeterministicPurch
     const cfop = line.match(/^(?:CFOP\s+)?(\d{4})\s*-\s*(.+)$/i);
     if (cfop) {
       pushCurrent();
-      current = { code: cfop[1], description: [cfop[2]] };
+      current = { code: cfop[1], description: [cfop[2]], awaitingSubtotal: false };
       continue;
     }
 
     if (current && /^CFOP$/i.test(line)) continue;
 
     if (current && /^Subtotal$/i.test(line)) {
-      pushCurrent();
+      current.awaitingSubtotal = true;
       continue;
     }
 
     if (current) {
       const amount = line.match(/Vr\.\s*Cont[aá]bil\s+([\d.]+,\d{2})/i);
       if (amount) {
-        current.amountInCents = moneyToCents(amount[1]);
+        const cents = moneyToCents(amount[1]);
+        if (current.awaitingSubtotal) {
+          const previousCfopsTotal = items.reduce((sum, item) => sum + item.amountInCents, 0);
+          const lastDocumentAmount = current.lastSeenAmountInCents || 0;
+          const looksLikeReportSubtotal =
+            previousCfopsTotal > 0 &&
+            lastDocumentAmount > 0 &&
+            cents === previousCfopsTotal + lastDocumentAmount;
+
+          current.amountInCents = looksLikeReportSubtotal ? lastDocumentAmount : cents;
+          current.awaitingSubtotal = false;
+          pushCurrent();
+        } else {
+          current.lastSeenAmountInCents = cents;
+        }
         continue;
       }
 
       if (
+        !current.awaitingSubtotal &&
         !/^Vr\./i.test(line) &&
         !/^Subtotal$/i.test(line) &&
         !/^ICMS/i.test(line) &&
         !/^Isenta/i.test(line) &&
         !/^Outras/i.test(line) &&
-        !/^Total/i.test(line)
+        !/^Total/i.test(line) &&
+        !/^Dt\. Emissão/i.test(line) &&
+        !/^Nro\. Doc/i.test(line)
       ) {
         current.description.push(line);
       }
@@ -127,13 +146,10 @@ export function parseCfopPurchaseReportText(rawText: string): DeterministicPurch
 
   if (!items.length) return null;
 
-  const beforeLiquid = text.split(/Total L[ií]quido/i)[0] || text;
-  const allAccountingTotals = [...beforeLiquid.matchAll(/Vr\.\s*Cont[aá]bil\s+([\d.]+,\d{2})/gi)]
-    .map(match => moneyToCents(match[1]))
-    .filter(value => value >= 0);
-
   const extractedTotal = items.reduce((sum, item) => sum + item.amountInCents, 0);
-  const explicitTotal = allAccountingTotals.length ? allAccountingTotals[allAccountingTotals.length - 1] : extractedTotal;
+  const liquidSection = text.split(/Total L[ií]quido/i)[1] || "";
+  const liquidMatch = liquidSection.match(/Vr\.\s*Cont[aá]bil\s+([\d.]+,\d{2})/i);
+  const explicitTotal = liquidMatch ? moneyToCents(liquidMatch[1]) : extractedTotal;
   const totalDifference = extractedTotal - explicitTotal;
 
   const reference: PurchaseReference = {
