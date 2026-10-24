@@ -106,6 +106,24 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
   const canReviewApprove = entries.length > 0 && !processing && !learning && missing === 0 && (manualOnly || documentConferenceValid);
   const canFinalize = canReviewApprove && (manualOnly || mappingsToApprove === 0);
   const total = entries.reduce((sum, row) => sum + row.amountInCents, 0);
+  const groupedHistory = (group: PayrollEntry[]) => {
+    const histories = group.map(row => row.history.toLocaleUpperCase("pt-BR"));
+    const isPayable = histories.every(value => /A PAGAR/.test(value));
+    const isPayment = histories.every(value => /PAG(AMENTO|TO)|PAGO/.test(value) && !/A PAGAR/.test(value));
+    // Preserve the original wording if the source rows describe different events.
+    if (!isPayable && !isPayment) return null;
+    const [first] = group;
+    const debit = first.debitCode;
+    const credit = first.creditCode;
+    if (isPayable) {
+      if (debit === "92" && credit === "823") return "SALÁRIOS E REMUNERAÇÕES A PAGAR";
+      if (debit === "93" && credit === "823") return "AJUDAS DE CUSTO E COMPLEMENTOS A PAGAR";
+      if (debit === "96" && credit === "826") return "FGTS A PAGAR";
+      if (debit === "88" && credit === "897") return "PRÓ-LABORE A PAGAR";
+    }
+    if (isPayment && debit === "823") return "PAGAMENTO DE SALÁRIOS E REMUNERAÇÕES";
+    return null;
+  };
   const groupedEntries = useMemo(() => {
     const groups = new Map<string, PayrollEntry[]>();
     for (const row of entries) {
@@ -120,15 +138,18 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
     }
     return [...groups.values()].map(group => {
       if (group.length === 1) return group[0];
+      const history = groupedHistory(group);
+      // For mixed benefits/deductions keep each factual description intact.
+      if (!history) return group;
       const first = group[0];
       return {
         ...first,
         id: `payroll-group-${group.map(row => row.id).join("-")}`,
-        history: `FOLHA AGRUPADA ${competence} - ${group.map(row => row.history).join(" + ")}`,
+        history: `${history} MÊS ${competence}`,
         amountInCents: group.reduce((sum, row) => sum + row.amountInCents, 0),
         source: group.map(row => row.source).join(" · "),
       };
-    });
+    }).flat();
   }, [entries, competence]);
 
   const hydrateSaved = (saved: SavedPayroll | PayrollProcessingResult) => {
