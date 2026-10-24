@@ -106,6 +106,30 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
   const canReviewApprove = entries.length > 0 && !processing && !learning && missing === 0 && (manualOnly || documentConferenceValid);
   const canFinalize = canReviewApprove && (manualOnly || mappingsToApprove === 0);
   const total = entries.reduce((sum, row) => sum + row.amountInCents, 0);
+  const groupedEntries = useMemo(() => {
+    const groups = new Map<string, PayrollEntry[]>();
+    for (const row of entries) {
+      // Do not merge incomplete mappings or different dates/cost centers.
+      const complete = isCompleteMapping(row);
+      const key = complete
+        ? [row.date, row.debitCode, row.creditCode, row.debitCostCenter || "", row.creditCostCenter || ""].join("|")
+        : `unresolved:${row.id}`;
+      const group = groups.get(key) ?? [];
+      group.push(row);
+      groups.set(key, group);
+    }
+    return [...groups.values()].map(group => {
+      if (group.length === 1) return group[0];
+      const first = group[0];
+      return {
+        ...first,
+        id: `payroll-group-${group.map(row => row.id).join("-")}`,
+        history: `FOLHA AGRUPADA ${competence} - ${group.map(row => row.history).join(" + ")}`,
+        amountInCents: group.reduce((sum, row) => sum + row.amountInCents, 0),
+        source: group.map(row => row.source).join(" · "),
+      };
+    });
+  }, [entries, competence]);
 
   const hydrateSaved = (saved: SavedPayroll | PayrollProcessingResult) => {
     setEntries(saved.entries ?? []);
@@ -328,7 +352,7 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <AccountingWorkflowSteps steps={[
           { value: "transcricao", label: "Transcrição", count: entries.length + deferredEntries.length },
-          { value: "lancamentos", label: "Lançamentos", count: entries.length },
+          { value: "lancamentos", label: "Lançamentos", count: groupedEntries.length },
           { value: "conferencia", label: "Conferência", count: conferenceCount },
         ]} />
 
@@ -346,8 +370,8 @@ export function FolhaWorkspace({ company, month, year, onStatusChange, onCompete
         <TabsContent value="lancamentos" className="mt-6">
           <Header title="Folha de pagamento · Lançamentos" />
           <div className="rounded-md border border-border bg-background">
-            <div className="flex items-center justify-between border-b border-border p-5"><div><span className="text-sm text-muted-foreground">{entries.length} lançamentos · {money(total)}</span><p className="mt-1 text-[11px] text-muted-foreground">Valores, rubricas, seções e datas vêm exclusivamente da Transcrição; o mapeamento só preenche as contas contábeis.</p></div><Button disabled={!canFinalize} onClick={() => exportPayroll(entries, comparisons, competence)}>Exportar para o Calima</Button></div>
-            <Ledger rows={entries} title={`Lançamentos da folha · ${competence}`} />
+            <div className="flex items-center justify-between border-b border-border p-5"><div><span className="text-sm text-muted-foreground">{groupedEntries.length} lançamentos agrupados · {entries.length} linhas transcritas · {money(total)}</span><p className="mt-1 text-[11px] text-muted-foreground">Valores, rubricas, seções e datas vêm exclusivamente da Transcrição; o mapeamento só preenche as contas contábeis.</p></div><Button disabled={!canFinalize} onClick={() => exportPayroll(groupedEntries, comparisons, competence)}>Exportar para o Calima</Button></div>
+            <Ledger rows={groupedEntries} title={`Lançamentos da folha · ${competence}`} />
             {!canFinalize && entries.length > 0 && <p className="px-5 pb-4 text-xs text-muted-foreground">{manualOnly ? "Preencha as contas de débito e crédito das linhas manuais para liberar a exportação." : mappingsToApprove > 0 ? "Confirme os mapeamentos na aba Conferência para liberar a exportação." : blockingDifferences.length > 0 ? "Existem diferenças contábeis bloqueantes que precisam ser corrigidas antes da exportação." : "A exportação será liberada assim que a conferência obrigatória estiver concluída."}</p>}
           </div>
         </TabsContent>
