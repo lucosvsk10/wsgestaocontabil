@@ -47,7 +47,7 @@ function standardizeExpenseHistory(history: string, entry: GroupedExpenseEntry, 
   const normalized = normalize(original);
   const current = normalize(history);
   // Não mudar valores/contas, nem confundir movimentações patrimoniais com pagamentos.
-  if (/^(transferencia|transf\\.?|baixa de? |estorno|ajuste|apropriacao|depreciacao)/.test(current)) {
+  if (/^(transferencia|transf\\.?|baixa de? |estorno|ajuste|apropriacao)/.test(current)) {
     return history.trim().toUpperCase();
   }
   const isSupplier = /insumos|materiais? diretos?|fornecedores?/.test(normalized);
