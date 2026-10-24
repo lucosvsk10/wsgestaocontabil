@@ -35,7 +35,7 @@ function fallbackHistory(grouped: GroupedExpenseEntry, sourceRows: ExpenseEntry[
   if (!existing) return grouped.history;
 
   if (sourceRows.some(row => isPaymentHistory(row.history))) {
-    const cleaned = existing.replace(/^(PAGTO|PAGAMENTO|PGTO)\.?\s*/i, "").trim();
+    const cleaned = existing.replace(/^(?:(?:PAGTO|PAGAMENTO|PGTO|PGT)\.?\s*)+/i, "").trim();
     return `PAGTO. ${cleaned || grouped.debitDescription || grouped.history}`.replace(/\s+/g, " ").trim().toUpperCase();
   }
 
@@ -45,14 +45,14 @@ function fallbackHistory(grouped: GroupedExpenseEntry, sourceRows: ExpenseEntry[
 function standardizeExpenseHistory(history: string, entry: GroupedExpenseEntry, sourceRows: ExpenseEntry[]) {
   const original = [history, entry.debitDescription, ...sourceRows.map(row => row.history)].join(" ");
   const normalized = normalize(original);
-  const current = normalize(history);
+  const current = normalize(history.replace(/^(?:(?:PAGTO|PAGAMENTO|PGTO|PGT)\.?\s*)+/i, ""));
   // Não mudar valores/contas, nem confundir movimentações patrimoniais com pagamentos.
   if (/^(transferencia|transf\\.?|baixa de? |estorno|ajuste|apropriacao)/.test(current)) {
     return history.trim().toUpperCase();
   }
   const isSupplier = /insumos|materiais? diretos?|fornecedores?/.test(normalized);
   const isBank = /juros bancarios?|despesas bancarias?|tarifas? bancarias?/.test(normalized);
-  let label = history.replace(/^(PAGTO|PAGAMENTO|PGTO)\\.?\\s*/i, "").trim().toUpperCase();
+  let label = history.replace(/^(?:(?:PAGTO|PAGAMENTO|PGTO|PGT)\.?\s*)+/i, "").trim().toUpperCase();
   if (isSupplier) label = "FORNECEDORES";
   else if (isBank) label = "DESPESAS BANCÁRIAS";
   else if (/despesas? com telefone|telefonia|telecomunicac/.test(normalized)) label = "DESPESAS COM TELEFONE";
