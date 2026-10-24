@@ -223,7 +223,14 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
 
       const allFiles = uniqueFiles([...files, ...selected]);
       const finalResult = files.length ? await runProcessing(allFiles, "import", month, year) : probe;
+      if (!finalResult.items?.length && !finalResult.entries?.length) {
+        throw new Error("Nenhuma entrada foi identificada no relatório. Nada foi salvo; revise o PDF e a competência.");
+      }
       await saveWorkspaceFiles(scope, selected, { skipCompetencePrompt: true });
+      const saveResult = await saveWorkspaceData(key, finalResult);
+      if (!saveResult.synced) {
+        throw new Error(`A transcrição foi processada, mas não foi salva no servidor: ${saveResult.error || "erro de sincronização"}`);
+      }
       setFiles(allFiles);
       hydrateSaved(finalResult);
       onStatusChange("review");
@@ -245,7 +252,8 @@ export function ComprasWorkspace({ company, month, year, onStatusChange, onCompe
       const targetFiles = uniqueFiles([...existingTargetFiles, ...pending.files]);
       const result = await runProcessing(targetFiles, "import", targetMonth, targetYear);
       await saveWorkspaceFiles(targetScope, pending.files, { skipCompetencePrompt: true });
-      await saveWorkspaceData(targetKey, result);
+      const saveResult = await saveWorkspaceData(targetKey, result);
+      if (!saveResult.synced) throw new Error(`O resultado não foi salvo no servidor: ${saveResult.error || "erro de sincronização"}`);
       setPendingWrongImport(null);
       onCompetenceChange(targetMonth, targetYear);
     } catch (error) {
