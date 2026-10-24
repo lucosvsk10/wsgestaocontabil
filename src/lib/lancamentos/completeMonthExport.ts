@@ -1,12 +1,13 @@
 import { exportAccountingWorkbook, AccountingExportEntry } from "./accountingExportWorkbook";
 import { ExpenseEntry, GroupedExpenseEntry } from "./expenseWorkbook";
-import { EXPENSE_ALIGNMENT_VERSION, rawExpenseRowsForExport } from "./expenseAlignment";
+import { rawExpenseRowsForExport } from "./expenseAlignment";
+const EXPENSE_ALIGNMENT_VERSION = 3;
 import { PayrollEntry } from "./payrollWorkbook";
 import { PurchaseEntry } from "./purchaseWorkbook";
 import { RevenueEntry } from "./revenueWorkbook";
 import { loadWorkspaceData } from "./workspaceStorage";
 
-interface ExpenseSaved { entries?: ExpenseEntry[]; alignedEntries?: GroupedExpenseEntry[]; alignmentVersion?: string; }
+interface ExpenseSaved { entries?: ExpenseEntry[]; alignedEntries?: GroupedExpenseEntry[]; alignmentVersion?: number; }
 interface PayrollSaved { entries?: PayrollEntry[]; }
 interface PurchaseSaved { entries?: PurchaseEntry[]; }
 interface RevenueSaved { entries?: RevenueEntry[]; }
