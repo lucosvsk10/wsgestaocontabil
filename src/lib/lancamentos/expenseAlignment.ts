@@ -35,7 +35,7 @@ function fallbackHistory(grouped: GroupedExpenseEntry, sourceRows: ExpenseEntry[
   if (!existing) return grouped.history;
 
   if (sourceRows.some(row => isPaymentHistory(row.history))) {
-    const cleaned = existing.replace(/^(PAGTO|PAGAMENTO|PGTO)\.?\s*/i, "").trim();
+    const cleaned = existing.replace(/^(?:(?:PAGTO|PAGAMENTO|PGTO|PGT)\.?\s*)+/i, "").trim();
     return `PAGTO. ${cleaned || grouped.debitDescription || grouped.history}`.replace(/\s+/g, " ").trim().toUpperCase();
   }
 
@@ -52,7 +52,7 @@ function standardizeExpenseHistory(history: string, entry: GroupedExpenseEntry, 
   }
   const isSupplier = /insumos|materiais? diretos?|fornecedores?/.test(normalized);
   const isBank = /juros bancarios?|despesas bancarias?|tarifas? bancarias?/.test(normalized);
-  let label = history.replace(/^(PAGTO|PAGAMENTO|PGTO)\\.?\\s*/i, "").trim().toUpperCase();
+  let label = history.replace(/^(?:(?:PAGTO|PAGAMENTO|PGTO|PGT)\.?\s*)+/i, "").trim().toUpperCase();
   if (isSupplier) label = "FORNECEDORES";
   else if (isBank) label = "DESPESAS BANCÁRIAS";
   else if (/despesas? com telefone|telefonia|telecomunicac/.test(normalized)) label = "DESPESAS COM TELEFONE";
