@@ -299,24 +299,31 @@ serve(async (req) => {
 - Ativo imobilizado (ex.: CFOP 2551) deve permanecer separado de despesas e estoques.
 - Simples faturamento/recebimento futuro (ex.: CFOP 2922) não deve ser convertido em compra/despesa definitiva sem regra aprovada da empresa.
 - Se a natureza não puder ser sustentada pela linha e pelo plano de contas, deixe a conta correspondente vazia em vez de forçar uma classificação.
-- O agrupamento das compras ocorrerá depois, somente entre linhas que terminarem na mesma combinação de contas.`
+- Nunca agrupe compras por contas. Cada documento/CFOP de origem permanece uma linha própria.
+- Histórico Calima da empresa (jan-jun/2026): compra para industrialização/produção rural = D 493 / C 777; uso e consumo (inclusive com ST e interestadual) = D 494 / C 777; compra para comercialização encontrada em fevereiro = D 486 / C 777. Use somente se os códigos existirem no plano atual e a natureza for a mesma.
+- Nunca descarte CFOP 1407, 1556 ou 2556 só por serem uso e consumo; devem seguir ao Calima quando corretamente classificados.
+- Energia, água, combustível e despesas já contabilizadas em Despesas não devem gerar uma segunda linha em Compras.`
         : module === "faturamento"
           ? `REGRAS ESPECÍFICAS DE FATURAMENTO:
 - Existe somente uma rubrica por competência: FATURAMENTO.
 - Nunca divida o faturamento em serviços, mercadorias, PGDAS, impostos ou outras receitas.
 - Nunca crie novas linhas ou naturezas; você só escolhe débito e crédito para a única linha recebida.
-- Use primeiro regra já aprovada da empresa. Sem regra aprovada, escolha somente uma combinação plausível existente no plano e marque para revisão.
+- Histórico Calima da empresa (jan-jun/2026): faturamento registrado D 429 / C 9, mas use esses códigos APENAS quando ambos existirem no plano atual, a natureza coincidir e não houver uma regra comprovadamente mais específica.
+- Use primeiro o padrão Calima mais antigo e recorrente desta empresa; não copie mapeamentos recentes possivelmente incorretos. Sem referência histórica aplicável, marque para revisão.
 - Não invente recebimento, banco, caixa, imposto, cliente individual ou composição do faturamento.`
           : `REGRAS ESPECÍFICAS DE FOLHA:
-- Não invente banco, caixa ou pagamento. Estamos classificando o lançamento de folha, não registrando quitação.`;
+- Histórico Calima da empresa (jan-jun/2026), com preferência para padrão repetido em vários meses: salários e remunerações provisionados D 92 / C 823; pró-labore provisionado D 88 / C 897; INSS descontado de salários D 823 / C 825; INSS de sócio D 897 / C 825; FGTS provisionado D 96 / C 826; pagamento de salários (somente se documento for quitação) D 823 / C 374; pagamento de pró-labore D 897 / C 374.
+- Consignados, férias, décimo terceiro e rescisões exigem atenção à natureza específica e ao histórico: não reutilize automaticamente contas de INSS/FGTS em lançamentos de outra natureza.
+- Só aplique esses C.R.s quando existirem no plano atual da MESMA empresa e a descrição/natureza da linha for compatível.
+- Não invente banco, caixa ou pagamento quando o documento mostrar apenas provisão. Nunca confunda o lançamento de provisão com quitação.`;
 
       const instructions = `Você é um classificador contábil assistido por humano. Sua tarefa é preencher SOMENTE débito e crédito das linhas pendentes usando exclusivamente o plano de contas fornecido desta empresa.
 
 REGRAS OBRIGATÓRIAS:
 1. Empresas diferentes usam planos de contas diferentes. Nunca transfira um C.R. de outra empresa.
 2. Só retorne C.R.s existentes exatamente na lista PLANO_DE_CONTAS.
-3. Use os exemplos APROVADOS_DA_EMPRESA como conhecimento prioritário quando forem semanticamente compatíveis.
-4. Se houver uma conta já preenchida na linha, preserve-a a menos que seja claramente incompatível.
+3. Dê prioridade ao histórico do Calima de JAN-JUN/2026 da própria empresa e aos padrões antigos repetidos; exemplos APROVADOS_DA_EMPRESA recentes podem estar errados e nunca prevalecem automaticamente sobre o histórico antigo validado.
+4. Se houver uma conta já preenchida na linha, compare com o histórico antigo confiável; nunca preserve uma conta claramente incompatível apenas porque já foi preenchida.
 5. Escolha a combinação mais plausível segundo a natureza da rubrica, seção e tipo. A decisão ainda será revisada por um contador.
 6. ${moduleRule}
 7. Não use uma categoria genérica apenas para evitar campo vazio.
