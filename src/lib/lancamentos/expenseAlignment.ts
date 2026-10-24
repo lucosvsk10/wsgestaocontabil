@@ -45,7 +45,7 @@ function fallbackHistory(grouped: GroupedExpenseEntry, sourceRows: ExpenseEntry[
 function standardizeExpenseHistory(history: string, entry: GroupedExpenseEntry, sourceRows: ExpenseEntry[]) {
   const original = [history, entry.debitDescription, ...sourceRows.map(row => row.history)].join(" ");
   const normalized = normalize(original);
-  const current = normalize(history);
+  const current = normalize(history.replace(/^(?:(?:PAGTO|PAGAMENTO|PGTO|PGT)\.?\s*)+/i, ""));
   // Não mudar valores/contas, nem confundir movimentações patrimoniais com pagamentos.
   if (/^(transferencia|transf\\.?|baixa de? |estorno|ajuste|apropriacao)/.test(current)) {
     return history.trim().toUpperCase();
