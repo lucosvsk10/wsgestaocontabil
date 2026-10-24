@@ -42,6 +42,27 @@ function fallbackHistory(grouped: GroupedExpenseEntry, sourceRows: ExpenseEntry[
   return existing.toUpperCase();
 }
 
+function standardizeExpenseHistory(history: string, entry: GroupedExpenseEntry, sourceRows: ExpenseEntry[]) {
+  const original = [history, entry.debitDescription, ...sourceRows.map(row => row.history)].join(" ");
+  const normalized = normalize(original);
+  const current = normalize(history);
+  // Não mudar valores/contas, nem confundir movimentações patrimoniais com pagamentos.
+  if (/^(transferencia|transf\\.?|baixa de? |estorno|ajuste|apropriacao|depreciacao)/.test(current)) {
+    return history.trim().toUpperCase();
+  }
+  const isSupplier = /insumos|materiais? diretos?|fornecedores?/.test(normalized);
+  const isBank = /juros bancarios?|despesas bancarias?|tarifas? bancarias?/.test(normalized);
+  let label = history.replace(/^(PAGTO|PAGAMENTO|PGTO)\\.?\\s*/i, "").trim().toUpperCase();
+  if (isSupplier) label = "FORNECEDORES";
+  else if (isBank) label = "DESPESAS BANCÁRIAS";
+  else if (/despesas? com telefone|telefonia|telecomunicac/.test(normalized)) label = "DESPESAS COM TELEFONE";
+  else if (/despesas? com veicul|manutencao de veicul/.test(normalized)) label = "DESPESAS COM VEÍCULOS";
+  else if (/material de limpeza|materiais de limpeza|higiene e limpeza/.test(normalized)) label = "MATERIAL DE LIMPEZA";
+  else if (/prestacao de servico|servicos prestados|servicos de terceiros/.test(normalized)) label = "PRESTAÇÃO DE SERVIÇOS";
+  if (!label) label = (entry.debitDescription || history).trim().toUpperCase();
+  return `PAGTO. ${label}`;
+}
+
 export function findCashAccount(accounts: ChartAccount[]) {
   const candidates = accounts.filter(account => account.analytical && account.reducedCode);
   return candidates.find(account => account.reducedCode.trim() === "1" && normalize(account.description).includes("caixa geral"))
@@ -164,7 +185,7 @@ export async function alignExpenseEntriesWithAI(
         ...entry,
         // Prioridade: histórico já aprovado/usado pela empresa → IA → fallback seguro.
         // A estrutura contábil da Visão agrupada permanece intocada.
-        history: learnedHistory || histories.get(String(index)) || fallbackHistory(entry, sourceRows),
+        history: standardizeExpenseHistory(learnedHistory || histories.get(String(index)) || fallbackHistory(entry, sourceRows), entry, sourceRows),
       };
     }),
     cashAccount: null,
