@@ -1,18 +1,15 @@
 import { exportAccountingWorkbook, AccountingExportEntry } from "./accountingExportWorkbook";
-import { ExpenseEntry, groupExpenseEntries } from "./expenseWorkbook";
+import { ExpenseEntry, GroupedExpenseEntry } from "./expenseWorkbook";
+import { EXPENSE_ALIGNMENT_VERSION, rawExpenseRowsForExport } from "./expenseAlignment";
 import { PayrollEntry } from "./payrollWorkbook";
 import { PurchaseEntry } from "./purchaseWorkbook";
 import { RevenueEntry } from "./revenueWorkbook";
 import { loadWorkspaceData } from "./workspaceStorage";
 
-interface ExpenseSaved { entries?: ExpenseEntry[]; }
+interface ExpenseSaved { entries?: ExpenseEntry[]; alignedEntries?: GroupedExpenseEntry[]; alignmentVersion?: string; }
 interface PayrollSaved { entries?: PayrollEntry[]; }
 interface PurchaseSaved { entries?: PurchaseEntry[]; }
 interface RevenueSaved { entries?: RevenueEntry[]; }
-
-function closingDate(month: string, year: string) {
-  return `${String(new Date(Number(year), Number(month), 0).getDate()).padStart(2, "0")}/${month}/${year}`;
-}
 
 function mapEntry(row: PayrollEntry | PurchaseEntry | RevenueEntry, module: string): AccountingExportEntry {
   return {
@@ -43,7 +40,15 @@ async function loadMonthEntries(company: string, month: string, year: string) {
     loadWorkspaceData<RevenueSaved>(`${prefix}:faturamento:parsed`),
   ]);
 
-  const groupedExpenses = groupExpenseEntries(expenses?.entries ?? [], "debit", closingDate(month, year));
+  const originalExpenses = expenses?.entries ?? [];
+  const savedGrouped = expenses?.alignmentVersion === EXPENSE_ALIGNMENT_VERSION ? (expenses?.alignedEntries ?? []) : [];
+  const groupedExpenses = savedGrouped.length ? savedGrouped : rawExpenseRowsForExport(originalExpenses);
+  const expectedExpenses = originalExpenses.reduce((sum, row) => sum + row.amountInCents, 0);
+  const actualExpenses = groupedExpenses.reduce((sum, row) => sum + row.amountInCents, 0);
+  if (expectedExpenses !== actualExpenses) {
+    throw new Error("Despesas: os valores da Transcrição e dos Lançamentos não coincidem. Exportação interrompida para evitar perda.");
+  }
+  if (originalExpenses.length && !groupedExpenses.length) throw new Error("Despesas têm lançamentos mas nenhuma linha exportável.");
   const expenseEntries: AccountingExportEntry[] = groupedExpenses.map(row => ({
     date: row.date,
     amountInCents: row.amountInCents,
@@ -59,7 +64,7 @@ async function loadMonthEntries(company: string, month: string, year: string) {
     type: "despesa",
     section: "despesas",
     mappingSource: "predefined",
-    mappingReason: `Agrupado por conta de débito a partir de ${row.sourceCount} lançamento(s).`,
+    mappingReason: `Lançamento proveniente da aba Despesas, respeitando agrupamento salvo.`,
   }));
 
   const moduleGroups: Array<{ label: string; entries: AccountingExportEntry[] }> = [
