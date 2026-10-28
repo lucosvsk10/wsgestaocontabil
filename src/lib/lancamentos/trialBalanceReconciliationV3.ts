@@ -8,6 +8,7 @@ import { RevenueEntry, RevenueReference } from "./revenueWorkbook";
 import { TrialBalanceAutoTarget, TrialBalanceObservation } from "./trialBalanceAutoAdjustment";
 import {
   analyticalTrialBalanceRows,
+  isAncestorAccount,
   normalizeTrialBalanceText,
   signedBalance,
   TrialBalanceRow,
@@ -416,14 +417,9 @@ function apply(rows: TrialBalanceRow[], adjustments: AccountingExportEntry[]) {
 
   const leaves = analytical(direct);
   const leafIds = new Set(leaves.map(row => row.id));
-  const accountPath = (value: string) => value.split(".").map(part => Number(part)).filter(part => Number.isFinite(part));
-  const descendant = (parent: number[], child: number[]) => parent.length < child.length && parent.every((part, index) => child[index] === part);
-  const leafPaths = leaves.map(row => ({ row, path: accountPath(row.accountCode) }));
-
   return direct.map(row => {
     if (leafIds.has(row.id)) return row;
-    const parent = accountPath(row.accountCode);
-    const children = leafPaths.filter(item => descendant(parent, item.path)).map(item => item.row);
+    const children = leaves.filter(item => isAncestorAccount(row.accountCode, item.accountCode));
     if (!children.length) return row;
 
     const previous = children.reduce((sum, child) => sum + previousSigned(child), 0);
