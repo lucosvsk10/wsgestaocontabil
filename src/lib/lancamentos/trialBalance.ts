@@ -97,7 +97,7 @@ function isAncestorPath(parent: number[], child: number[]) {
 export function isAncestorAccount(parent: string, child: string) {
   if (!parent || !child || parent === child) return false;
   // Calima emits hierarchical codes without dots (e.g. 101, 10101, 101010101).
-  if (!parent.includes(".") && !child.includes(".") && /^\\d+$/.test(parent) && /^\\d+$/.test(child)) {
+  if (!parent.includes(".") && !child.includes(".") && /^[0-9]+$/.test(parent) && /^[0-9]+$/.test(child)) {
     return child.length > parent.length && child.startsWith(parent);
   }
   return isAncestorPath(accountPath(parent), accountPath(child));
