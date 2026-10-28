@@ -912,10 +912,10 @@ export function applyAiClosingReview(
   const projectedCashSignedInCents = projectedCash ? currentSigned(projectedCash) : null;
   const movements = analytical(previewRows).reduce((sum, row) => sum + row.debitInCents - row.creditInCents, 0);
   const arithmeticOk = analytical(previewRows).every(row => Math.abs(validateTrialBalanceRow(row)) <= material);
-  const cashOk = projectedCashSignedInCents === null || (
-    projectedCashSignedInCents > 0 && projectedCashSignedInCents >= 10_000
-    && projectedCashSignedInCents <= 95_000
-  );
+  // Referência de fechamento: Caixa deve permanecer devedor e abaixo de R$ 1.000.
+  // Não fixar máximo em R$ 950, pois empresas podem ter alvo válido de R$ 960.
+  const cashOk = projectedCashSignedInCents === null
+    || (projectedCashSignedInCents > 0 && projectedCashSignedInCents < 100_000);
   const report: AiClosingReport = {
     summary: review.summary || "Análise documental concluída.",
     model: review.model,
