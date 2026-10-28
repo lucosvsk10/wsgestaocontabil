@@ -53,13 +53,14 @@ function parsePage(tokens: PdfToken[], page: number, width: number) {
   return rows;
 }
 
-export async function parseCalimaTrialBalance(file: File): Promise<TrialBalanceResult & { previousBalanceVerified: boolean }> {
+export async function parseCalimaTrialBalance(file: File): Promise<TrialBalanceResult & { previousBalanceVerified: boolean; documentCnpj?: string }> {
   if (!/\.pdf$/i.test(file.name)) throw new Error("Selecione um Balancete do Calima em PDF.");
   const buffer = await file.arrayBuffer();
   // Text extraction only; scanned PDFs without a selectable text layer are rejected.
   const document = await pdfjs.getDocument({ data: new Uint8Array(buffer), useSystemFonts: true, disableFontFace: true }).promise;
   try {
     let header = "";
+    let companyName = "";
     let allRows: ParsedRow[] = [];
     for (let index = 1; index <= document.numPages; index++) {
       const page = await document.getPage(index);
@@ -71,6 +72,10 @@ export async function parseCalimaTrialBalance(file: File): Promise<TrialBalanceR
         return [{ x, y: viewport.height - y, text: item.str.trim() }];
       });
       header += " " + tokens.filter(t => t.y < 110 || t.y > viewport.height - 45).map(t => t.text).join(" ");
+      if (index === 1) {
+        companyName = tokens.filter(t => t.y >= 34 && t.y <= 63 && t.x > 70 && t.x < viewport.width * 0.72)
+          .sort((a, b) => a.x - b.x).map(t => t.text).join(" ").trim();
+      }
       allRows.push(...parsePage(tokens, index, viewport.width));
     }
     if (!allRows.length) throw new Error("Não foi possível ler linhas contábeis do PDF. Verifique se o arquivo é pesquisável e não apenas uma imagem.");
@@ -102,10 +107,11 @@ export async function parseCalimaTrialBalance(file: File): Promise<TrialBalanceR
     if (rows.length < 10 || analytical.length < 4) throw new Error("O PDF não contém um balancete analítico completo.");
     const invalid = rows.filter(row => Math.abs(validateTrialBalanceRow(row)) > 1);
     if (invalid.length) throw new Error("O documento tem " + invalid.length + " divergência(s) aritmética(s) ou erros de leitura, por exemplo " + invalid.slice(0, 3).map(row => "C.R. " + row.reducedCode).join(", ") + ". Importação cancelada.");
-    const companyMatch = header.match(/CICERO\s+FONSECA\s+COSTA/i);
+    const documentCnpj = header.match(/CNPJ:\s*([0-9.\/-]{14,20})/i)?.[1];
     return {
       competence,
-      companyName: companyMatch?.[0] ?? "",
+      companyName,
+      documentCnpj,
       rows, warnings: [], validationIssues: [], validated: true,
       previousBalanceVerified: true,
       processingMeta: { model: "PDF.js — sem IA", routing: "local-text-layer" },
