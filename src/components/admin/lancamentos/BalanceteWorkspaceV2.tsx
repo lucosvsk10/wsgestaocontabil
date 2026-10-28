@@ -27,7 +27,7 @@ import {
   TrialBalanceRow,
   validateTrialBalanceRow,
 } from "@/lib/lancamentos/trialBalance";
-import { clearWorkspaceFiles, deleteWorkspaceData, loadWorkspaceData, loadWorkspaceFiles, saveWorkspaceData, saveWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
+import { clearWorkspaceFiles, deleteWorkspaceData, deleteLocalWorkspaceData, loadWorkspaceData, loadLocalWorkspaceData, loadLocalWorkspaceFiles, saveWorkspaceData, saveWorkspaceFiles, saveLocalWorkspaceData, saveLocalWorkspaceFiles } from "@/lib/lancamentos/workspaceStorage";
 import { cn } from "@/lib/utils";
 import { AccountingWorkflowSteps } from "./AccountingWorkflowUI";
 import { AccountingYearPicker } from "./AccountingYearPicker";
@@ -66,6 +66,8 @@ export function BalanceteWorkspaceV2() {
   const [plan, setPlan] = useState<CriticalTrialBalancePlan | null>(null);
   const [conferenceOk, setConferenceOk] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [processingStep, setProcessingStep] = useState("");
+  const [syncStatus, setSyncStatus] = useState<"none" | "local" | "syncing" | "synced" | "failed">("none");
   const [correcting, setCorrecting] = useState(false);
   const [pending, setPending] = useState<PendingImport | null>(null);
   const [expanded, setExpanded] = useState<"original" | "preview" | null>(null);
@@ -99,11 +101,11 @@ export function BalanceteWorkspaceV2() {
     const entries = await Promise.all(months.map(async ([key]) => {
       const prefix = `${company.id}:${year}:${key}:balancete`;
       const [saved, savedPlan, ok] = await Promise.all([
-        loadWorkspaceData<TrialBalanceResult>(`${prefix}:parsed`),
-        loadWorkspaceData<CriticalTrialBalancePlan>(`${prefix}:auto-plan`),
-        loadWorkspaceData<boolean>(`${prefix}:conference-ok`),
+        loadLocalWorkspaceData<TrialBalanceResult>(`${prefix}:parsed`),
+        loadLocalWorkspaceData<CriticalTrialBalancePlan>(`${prefix}:auto-plan`),
+        loadLocalWorkspaceData<boolean>(`${prefix}:conference-ok`),
       ]);
-      const storedLimits = await loadWorkspaceData<BalanceLimitOverrides>(`${company.id}:balancete:limits`);
+      const storedLimits = await loadLocalWorkspaceData<BalanceLimitOverrides>(`${company.id}:balancete:limits`);
       const corrected = criticalTrialBalancePlanIsCorrected(savedPlan)
         && checkBalanceLimits(savedPlan?.previewRows ?? [], storedLimits || {}).every(item => !item.critical);
       const issues = corrected ? 0 : saved?.rows?.length ? checkBalanceLimits(saved.rows, storedLimits || {}).filter(item => item.critical).length : 0;
@@ -182,10 +184,11 @@ export function BalanceteWorkspaceV2() {
     const selected = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (!selected.length) return;
-    setProcessing(true); setError(null);
+    setProcessing(true); setProcessingStep("Lendo PDF no navegador..."); setError(null);
     try {
       if (selected.length !== 1) throw new Error("Envie um balancete PDF por vez.");
       const parsed = await parseCalimaTrialBalance(selected[0]);
+      setProcessingStep("Salvando cópia local...");
       const digits = (value: string | undefined) => String(value || "").replace(/[^0-9]/g, "");
       if (company.cnpj && (!parsed.documentCnpj || digits(company.cnpj) !== digits(parsed.documentCnpj))) {
         throw new Error("O CNPJ do Balancete não foi confirmado como sendo da empresa selecionada. Importação cancelada para evitar misturar dados.");
@@ -194,7 +197,7 @@ export function BalanceteWorkspaceV2() {
       else await persistImport(parsed, selected);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Falha ao importar o balancete.");
-    } finally { setProcessing(false); }
+    } finally { setProcessing(false); setProcessingStep(""); }
   };
 
   const persistImport = async (parsed: TrialBalanceResult, selected: File[]) => {
