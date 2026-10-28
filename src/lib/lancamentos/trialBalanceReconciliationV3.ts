@@ -177,9 +177,12 @@ function semanticAlias(description: string, account: ChartAccount | null, side: 
   return null;
 }
 
-function resolveBalanceRow(rows: TrialBalanceRow[], reducedCode: string, description: string, accounts: ChartAccount[], side: "debit" | "credit") {
+function resolveBalanceRow(rows: TrialBalanceRow[], reducedCode: string, description: string, accounts: ChartAccount[], side: "debit" | "credit", overrides: Record<string, string> = {}) {
   const exact = findExact(rows, reducedCode);
   if (exact) return exact;
+  // Mapeamento explícito aprovado pelo usuário; somente para uma conta analítica existente.
+  const mapped = overrides[reducedCode] ? findExact(rows, overrides[reducedCode]) : null;
+  if (mapped) return mapped;
 
   const account = currentAccount(accounts, reducedCode);
   const alias = semanticAlias(description, account, side);
@@ -222,9 +225,9 @@ function exportEntry(row: SavedEntry, section: string): AccountingExportEntry {
   };
 }
 
-function bridgeEntry(entry: AccountingExportEntry, rows: TrialBalanceRow[], accounts: ChartAccount[]) {
-  const debit = resolveBalanceRow(rows, entry.debitCode, entry.debitDescription ?? "", accounts, "debit");
-  const credit = resolveBalanceRow(rows, entry.creditCode, entry.creditDescription ?? "", accounts, "credit");
+function bridgeEntry(entry: AccountingExportEntry, rows: TrialBalanceRow[], accounts: ChartAccount[], overrides: Record<string, string>) {
+  const debit = resolveBalanceRow(rows, entry.debitCode, entry.debitDescription ?? "", accounts, "debit", overrides);
+  const credit = resolveBalanceRow(rows, entry.creditCode, entry.creditDescription ?? "", accounts, "credit", overrides);
   if (!debit || !credit) return null;
 
   return {
@@ -531,7 +534,7 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
   const prefix = `${company}:${year}:${month}`;
   const previous = previousCompetence(month, year);
   const previousPrefix = `${company}:${previous.year}:${previous.month}`;
-  const [expenses, payroll, purchases, revenue, previousPurchases, policy, accounts] = await Promise.all([
+  const [expenses, payroll, purchases, revenue, previousPurchases, policy, accounts, savedMappings] = await Promise.all([
     loadWorkspaceData<ExpensePayload>(`${prefix}:despesas:parsed`),
     loadWorkspaceData<PayrollPayload>(`${prefix}:folha:parsed`),
     loadWorkspaceData<PurchasePayload>(`${prefix}:compras:parsed`),
@@ -539,6 +542,7 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
     loadWorkspaceData<PurchasePayload>(`${previousPrefix}:compras:parsed`),
     loadWorkspaceData<TrialBalanceClosingPolicy>(`${company}:balancete:closing-policy`),
     loadWorkspaceData<ChartAccount[]>(`${company}:chart-of-accounts`),
+    loadWorkspaceData<Record<string, string>>(`${company}:balancete:account-mappings`),
   ]);
 
   const chart = accounts ?? [];
@@ -549,13 +553,14 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
     ...(revenue?.entries ?? []).map(entry => exportEntry(entry, "faturamento")),
   ];
   const withCenters = await applyConfiguredCostCenters(company, rawOperational, chart);
-  const bridged = withCenters.map(entry => bridgeEntry(entry, rows, chart));
+  const overrides = savedMappings ?? {};
+  const bridged = withCenters.map(entry => bridgeEntry(entry, rows, chart, overrides));
   const operational: AccountingExportEntry[] = bridged.filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
   const unmappedEntries: UnmappedTrialBalanceEntry[] = withCenters.flatMap((entry, index) => {
     if (bridged[index]) return [];
     const missingSides = [
-      !resolveBalanceRow(rows, entry.debitCode, entry.debitDescription ?? "", chart, "debit") ? "débito" : "",
-      !resolveBalanceRow(rows, entry.creditCode, entry.creditDescription ?? "", chart, "credit") ? "crédito" : "",
+      !resolveBalanceRow(rows, entry.debitCode, entry.debitDescription ?? "", chart, "debit", overrides) ? "débito" : "",
+      !resolveBalanceRow(rows, entry.creditCode, entry.creditDescription ?? "", chart, "credit", overrides) ? "crédito" : "",
     ].filter(Boolean);
     return [{
       section: entry.section ?? "desconhecido",
