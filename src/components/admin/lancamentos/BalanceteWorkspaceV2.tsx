@@ -148,7 +148,15 @@ export function BalanceteWorkspaceV2() {
 
   const checks = useMemo(() => checkBalanceLimits(result?.rows || [], limits), [result, limits]);
   const flagged = useMemo(() => checks.filter(item => item.critical), [checks]);
-  const projectedFlags = useMemo(() => plan ? checkBalanceLimits(plan.previewRows, limits).filter(item => item.critical) : [], [plan, limits]);
+  const reviewLimits = useMemo<BalanceLimitOverrides>(() => {
+    const tightened: BalanceLimitOverrides = {};
+    (result?.rows || []).forEach(row => {
+      const rule = balanceLimitForRow(row, limits[row.reducedCode] || {});
+      tightened[row.reducedCode] = { ...rule, marginPercent: Math.min(rule.marginPercent, 20) };
+    });
+    return tightened;
+  }, [result, limits]);
+  const projectedFlags = useMemo(() => plan ? checkBalanceLimits(plan.previewRows, reviewLimits).filter(item => item.critical) : [], [plan, reviewLimits]);
   const chooseRule = (row: TrialBalanceRow) => {
     setEditingCode(row.reducedCode);
     setEditingRule(balanceLimitForRow(row, limits[row.reducedCode] || {}));
@@ -244,6 +252,12 @@ export function BalanceteWorkspaceV2() {
           unmapped: preliminary.unmappedEntries,
           sources,
           cashPolicy: { cashTargetSignedInCents: preliminary.targetCashSignedInCents },
+          limits: checkBalanceLimits(result.rows, reviewLimits).filter(item => item.critical).map(item => ({
+            accountCode: item.row.accountCode, reducedCode: item.row.reducedCode,
+            title: item.row.title, balanceInCents: item.signedInCents,
+            minInCents: item.rule.minInCents, maxInCents: item.rule.maxInCents,
+            expectedNature: item.rule.nature, reasons: item.reasons,
+          })),
         },
       });
       if (aiError) throw await functionError(aiError, "Falha na análise documental por IA.");
@@ -331,7 +345,7 @@ export function BalanceteWorkspaceV2() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
           <AccountingWorkflowSteps steps={[
             { value: "balancete", label: "Balancete", count: result?.rows.length ?? 0 },
-            { value: "lancamentos", label: "Lançamentos", count: plan?.adjustments.length ?? observations.length },
+            { value: "lancamentos", label: "Lançamentos", count: plan?.adjustments.length ?? 0 },
 
           ]} />
 
@@ -391,37 +405,10 @@ export function BalanceteWorkspaceV2() {
                 <span>Fontes lidas: {plan.documentSources?.filter(source => source.available).length ?? 0}/4</span>
                 {plan.documentSources?.filter(source => !source.available).map(source => <span key={source.module} className="text-amber-700 dark:text-amber-300">Falta {source.module}</span>)}
               </div>
-              {plan.aiReview && <section className="rounded-md border border-border bg-background p-4 text-xs">
-                <p className="font-semibold">Análise documental por IA · {plan.aiReview.model}</p>
-                <p className="mt-2 text-muted-foreground">{plan.aiReview.summary}</p>
-                <div className="mt-3 flex flex-wrap gap-3 text-muted-foreground">
-                  <span>{plan.aiReview.supportedCount} comprovados</span>
-                  <span>{plan.aiReview.pendingCount} pendentes</span>
-                  <span>{plan.aiReview.rejectedCount} rejeitados</span>
-                  <span>{plan.aiReview.addedCount} novos sugeridos</span>
-                </div>
-                {!!plan.aiReview.issues.length && <ul className="mt-3 space-y-1 text-amber-700 dark:text-amber-300">{plan.aiReview.issues.map((issue, i) => <li key={i}>• {issue}</li>)}</ul>}
-              </section>}
+              {plan.aiReview && <p className="rounded-md border border-border bg-background px-4 py-3 text-xs text-muted-foreground">{plan.aiReview.summary}</p>}
               <BalanceChangeList before={result?.rows ?? []} plan={plan} />
 
-              {Boolean(plan.unmappedEntries?.length) && <section className="rounded-md border border-amber-500/40 bg-amber-500/5 p-4">
-                <h4 className="text-sm font-semibold">Contas ainda não identificadas</h4>
-                <p className="mt-1 text-xs text-muted-foreground">Sem C.R. correspondente, o sistema não pode criar um lançamento confiável.</p>
-                <ul className="mt-3 space-y-2 text-xs">{plan.unmappedEntries.map((item, i) => <li key={i} className="rounded border border-border bg-background p-3">
-                  <p className="font-semibold">{item.section.toUpperCase()}: {item.history} — {money(item.amountInCents)}</p>
-                  <p className="mt-1">D {item.debitCode} ({item.debitDescription || "sem descrição"}) / C {item.creditCode} ({item.creditDescription || "sem descrição"})</p>
-                  <p className="mt-1 text-amber-700 dark:text-amber-300">Sem correspondência: {item.missingSides.join(" e ")}.</p>
-                </li>)}</ul>
-              </section>}
-
-              {plan.remainingCriticalObservations.length > 0 && <section className="rounded-md border border-red-500/35 bg-red-500/5 p-4">
-                <h4 className="text-sm font-semibold">O que ainda impede o fechamento</h4>
-                <ul className="mt-2 space-y-2 text-xs">{plan.remainingCriticalObservations.map(item => <li key={item.id}>
-                  <span className="font-semibold">{item.title} — {item.headline}:</span> {item.message}
-                </li>)}</ul>
-              </section>}
-              {plan.correctionComplete ? <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="h-4 w-4" />Prévia matematicamente conciliada. Confira os comprovantes antes da importação.</div> : <div className="flex items-center gap-2 text-xs text-red-700 dark:text-red-300"><AlertTriangle className="h-4 w-4" />Ajustes simulados. Exportação bloqueada enquanto houver divergências.</div>}
-
+              {!planConferable && <p className="text-xs text-amber-700 dark:text-amber-300">O saldo simulado ainda não atende todas as regras. A exportação permanece indisponível.</p>}
               <section className="overflow-hidden rounded-md border border-border bg-background">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-4">
                   <h4 className="text-sm font-semibold">Lançamentos sugeridos ({plan.adjustments.length})</h4>
