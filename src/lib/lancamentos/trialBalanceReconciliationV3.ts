@@ -419,7 +419,7 @@ function observation(row: TrialBalanceRow, headline: string, message: string, so
   };
 }
 
-function criticals(rows: TrialBalanceRow[], scale: number, targetCash: number | null, unmapped: UnmappedTrialBalanceEntry[], missingCodes: string[]) {
+function criticals(rows: TrialBalanceRow[], scale: number, targetCash: number | null, unmapped: UnmappedTrialBalanceEntry[], missingCodes: string[], sources: DocumentSourceEvidence[]) {
   const observations: TrialBalanceObservation[] = [];
   const material = threshold(scale);
   const push = (item: TrialBalanceObservation) => {
@@ -486,6 +486,15 @@ function criticals(rows: TrialBalanceRow[], scale: number, targetCash: number | 
     }
   }
 
+  const anchor = cash ?? analytical(rows)[0];
+  if (anchor) {
+    sources.filter(source => !source.available).forEach(source => push(observation(
+      anchor,
+      "Documentação ausente: " + source.module,
+      "Não foi localizado conjunto de lançamentos estruturados de " + source.module + " nesta competência. Importe ou confira o documento antes de concluir o fechamento.",
+      "Cobertura documental dos quatro fundamentos",
+    )));
+  }
   return observations;
 }
 
@@ -716,8 +725,8 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
 
   const projectedCashRow = cash ? findExact(previewRows, cash.reducedCode) : null;
   const projectedCash = projectedCashRow ? currentSigned(projectedCashRow) : null;
-  const originalCritical = criticals(rows, operatingScale, targetCash, unmappedEntries, adjustmentMissingCodes);
-  const remainingCritical = criticals(previewRows, operatingScale, targetCash, unmappedEntries, secondPassMissingCodes);
+  const originalCritical = criticals(rows, operatingScale, targetCash, unmappedEntries, adjustmentMissingCodes, documentSources);
+  const remainingCritical = criticals(previewRows, operatingScale, targetCash, unmappedEntries, secondPassMissingCodes, documentSources);
   const materialArithmetic = analytical(previewRows)
     .filter(row => Math.abs(validateTrialBalanceRow(row)) > threshold(operatingScale));
   const movementDifference = analytical(previewRows)
