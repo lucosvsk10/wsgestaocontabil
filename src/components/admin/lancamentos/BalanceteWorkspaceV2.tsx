@@ -321,7 +321,7 @@ export function BalanceteWorkspaceV2() {
           <TabsContent value="lancamentos" className="mt-7 space-y-6">
             <div className="rounded-md border border-border bg-background p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div><h3 className="font-semibold">Correção do Balancete</h3><p className="mt-1 max-w-3xl text-sm text-muted-foreground">A correção tenta explicar o saldo pela manobra contábil real. Ex.: Caixa credor + Clientes devedor do faturamento → recebimento D Caixa / C Clientes. Não força uma meta fixa de Caixa.</p></div>
+                <div><h3 className="font-semibold">Correção do Balancete</h3><p className="mt-1 max-w-3xl text-sm text-muted-foreground">O motor calcula os ajustes pela movimentação e pelo saldo final da competência. Para Caixa credor com Clientes devedor, sugere recebimento D Caixa / C Clientes até atingir o alvo configurado. Confira o recebimento no extrato antes de importar.</p></div>
                 <Button disabled={!result?.rows.length || correcting || !previousBalanceVerified} onClick={() => void correctAutomatically()}>{correcting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Recalculando saldos...</> : <><Sparkles className="mr-2 h-4 w-4" />Corrigir automaticamente</>}</Button>
               </div>
               {analysis?.contextSummary?.length ? <div className="mt-4 grid gap-2 border-t border-border pt-4 text-xs text-muted-foreground md:grid-cols-2">{analysis.contextSummary.map(text => <p key={text}>{text}</p>)}</div> : null}
@@ -329,6 +329,19 @@ export function BalanceteWorkspaceV2() {
 
             {!plan ? <div className="grid min-h-52 place-items-center rounded-md border border-dashed border-border bg-muted/20 p-8 text-center"><div><Sparkles className="mx-auto h-6 w-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium">Nenhuma prévia gerada ainda</p><p className="mt-1 text-xs text-muted-foreground">Clique em Corrigir automaticamente para transformar os problemas críticos em lançamentos de ajuste.</p></div></div> : <>
               <div className="grid gap-3 sm:grid-cols-4"><Metric label="Ajustes gerados" value={String(plan.adjustments.length)} /><Metric label="Críticos restantes" value={String(plan.remainingCriticalObservations.length)} /><Metric label="Caixa atual" value={plan.currentCashSignedInCents === null ? "Não localizado" : balance(plan.currentCashSignedInCents)} /><Metric label="Caixa projetado" value={plan.projectedCashSignedInCents === null ? "Não localizado" : balance(plan.projectedCashSignedInCents)} /></div>
+              {!!plan.unmappedEntries?.length && <section className="rounded-md border border-amber-600/50 bg-amber-500/10 p-4 text-sm">
+                <p className="font-bold text-amber-800 dark:text-amber-200">Contas que impedem o fechamento ({plan.unmappedEntries.length})</p>
+                <p className="mt-1 text-xs text-muted-foreground">Estes lançamentos existem nos módulos, mas não foi possível identificar a conta correspondente no Balancete. Confira o C.R. e o plano da empresa; o sistema não substituirá uma conta por outra sem correspondência segura.</p>
+                <ul className="mt-3 space-y-3">{plan.unmappedEntries.map((entry, index) => <li key={index} className="rounded border border-amber-600/25 bg-background/60 p-3">
+                  <p className="font-semibold">{entry.section.toUpperCase()} — {entry.history}</p>
+                  <p className="mt-1 text-xs">Valor: {money(entry.amountInCents)} · Débito: {entry.debitCode} ({entry.debitDescription || "não informado"}) · Crédito: {entry.creditCode} ({entry.creditDescription || "não informado"})</p>
+                  <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">Sem correspondência no balancete: {entry.missingSides.join(" e ")}</p>
+                </li>)}</ul>
+              </section>}
+              {!!plan.remainingCriticalObservations.length && <div className="rounded-md border border-red-600/30 bg-red-500/5 p-3 text-xs">
+                <p className="mb-2 font-bold">Problemas que continuam após os ajustes</p>
+                <ol className="list-decimal space-y-1 pl-5">{plan.remainingCriticalObservations.map(item => <li key={item.id}><span className="font-semibold">{item.title} — {item.headline}:</span> {item.message}</li>)}</ol>
+              </div>
 
               {!plan.correctionComplete && <div className="flex gap-2 rounded-md border-2 border-red-600/50 bg-red-600/15 p-4 text-sm font-semibold text-red-800 dark:text-red-200"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />Esta prévia ainda NÃO está corrigida. Existem {plan.remainingCriticalObservations.length} problema(s) crítico(s) ou a conferência matemática não fechou. Ela não recebe status verde e não pode ser exportada.</div>}
               {plan.correctionComplete && <div className="flex gap-2 rounded-md border-2 border-emerald-600/50 bg-emerald-500/15 p-4 text-sm font-semibold text-emerald-800 dark:text-emerald-200"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />Os problemas críticos foram resolvidos na prévia. As linhas realmente alteradas aparecem em verde forte abaixo.</div>}
