@@ -115,6 +115,49 @@ async function confirmDifferentCompetence(context: ReturnType<typeof parseScope>
   });
 }
 
+// Fast local-first persistence for the Balancete PDF importer.
+// These methods never wait on cloud storage or a paused Supabase project.
+export async function saveLocalWorkspaceFiles(scope: string, files: File[]) {
+  const database = await openDatabase();
+  try {
+    const transaction = database.transaction(FILE_STORE, "readwrite");
+    const store = transaction.objectStore(FILE_STORE);
+    files.forEach(file => store.put({
+      id: localFileId(scope, file), scope, file, createdAt: new Date().toISOString(),
+    } satisfies StoredFile));
+    await complete(transaction);
+  } finally {
+    database.close();
+  }
+}
+
+export async function loadLocalWorkspaceFiles(scope: string): Promise<File[]> {
+  const database = await openDatabase();
+  try {
+    const transaction = database.transaction(FILE_STORE, "readonly");
+    const request = transaction.objectStore(FILE_STORE).index("scope").getAll(scope);
+    const records = await new Promise<StoredFile[]>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result as StoredFile[]);
+      request.onerror = () => reject(request.error);
+    });
+    await complete(transaction);
+    return records.map(record => record.file);
+  } finally {
+    database.close();
+  }
+}
+
+export async function saveLocalWorkspaceData<T>(id: string, value: T) {
+  const database = await openDatabase();
+  try {
+    const transaction = database.transaction(DATA_STORE, "readwrite");
+    transaction.objectStore(DATA_STORE).put({ id, value, updatedAt: new Date().toISOString() });
+    await complete(transaction);
+  } finally {
+    database.close();
+  }
+}
+
 export async function saveWorkspaceFiles(scope: string, files: File[], options: SaveWorkspaceFilesOptions = {}) {
   const context = parseScope(scope);
   try {
