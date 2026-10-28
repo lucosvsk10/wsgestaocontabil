@@ -186,6 +186,10 @@ export function BalanceteWorkspaceV2() {
     try {
       if (selected.length !== 1) throw new Error("Envie um balancete PDF por vez.");
       const parsed = await parseCalimaTrialBalance(selected[0]);
+      const digits = (value: string | undefined) => String(value || "").replace(/[^0-9]/g, "");
+      if (company.cnpj && parsed.documentCnpj && digits(company.cnpj) !== digits(parsed.documentCnpj)) {
+        throw new Error("O CNPJ do Balancete não corresponde à empresa selecionada. Importação cancelada para proteger os dados.");
+      }
       if (parsed.competence !== competence) setPending({ result: parsed, files: selected });
       else await persistImport(parsed, selected);
     } catch (reason) {
