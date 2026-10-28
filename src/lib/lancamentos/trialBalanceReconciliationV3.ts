@@ -259,15 +259,14 @@ function journal(date: string, amount: number, debit: TrialBalanceRow, credit: T
 }
 
 function cashTarget(company: string, month: string, year: string, previousCash: number, policy: TrialBalanceClosingPolicy) {
-  const minimum = Math.max(0, policy.cashTargetMinInCents ?? 60_000);
-  const maximum = Math.max(minimum, policy.cashTargetMaxInCents ?? 180_000);
+  // Alvo determinístico: não inventar variações de saldo por hash.
+  // O intervalo padrão mantém Caixa devedor e abaixo de R$ 1.000.
+  const minimum = Math.max(0, policy.cashTargetMinInCents ?? 10_000);
+  const maximum = Math.max(minimum, policy.cashTargetMaxInCents ?? 95_000);
   const anchor = previousCash >= minimum && previousCash <= maximum
     ? previousCash
-    : Math.min(maximum, Math.max(minimum, policy.cashTargetAnchorInCents ?? 100_000));
-  let hash = 0;
-  for (const char of `${company}:${year}:${month}`) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  const variation = 0.90 + (hash % 2601) / 10_000;
-  return Math.min(maximum, Math.max(minimum, Math.round(anchor * variation)));
+    : (policy.cashTargetAnchorInCents ?? 50_000);
+  return Math.min(maximum, Math.max(minimum, anchor));
 }
 
 function supplierRate(policy: TrialBalanceClosingPolicy, year: string, operatingScale: number, purchaseBase: number) {
@@ -565,7 +564,9 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
 
   const closingPayments: AccountingExportEntry[] = [];
   // Não presumir quitação de obrigações sem uma política explícita aprovada.
-  if (cash && closingPolicy.payPriorLiabilitiesFully === true) {
+  // Sem razão/extrato não há suporte para declarar a quitação de todos os passivos.
+  // Não gerar pagamentos sintéticos com base apenas em saldo anterior.
+  if (false && cash && closingPolicy.payPriorLiabilitiesFully === true) {
     const payableKeys: AliasKey[] = [
       "salariesPayable",
       "vacationPayable",
@@ -665,8 +666,8 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
   const movementDifference = analytical(previewRows)
     .reduce((sum, row) => sum + row.debitInCents - row.creditInCents, 0);
 
-  const minCash = closingPolicy.cashTargetMinInCents ?? 60_000;
-  const maxCash = closingPolicy.cashTargetMaxInCents ?? 180_000;
+  const minCash = closingPolicy.cashTargetMinInCents ?? 10_000;
+  const maxCash = closingPolicy.cashTargetMaxInCents ?? 95_000;
   const cashOk = !cash || (
     projectedCash !== null
     && projectedCash > 0
