@@ -122,12 +122,21 @@ export function BalanceteWorkspaceV2() {
       if (!active) return;
       setResult(saved ?? null);
       setFiles(docs);
-      setPlan(savedPlan ?? null);
-      setConferenceOk(Boolean(savedOk && criticalTrialBalancePlanIsCorrected(savedPlan)));
+      // Um plano persistido foi calculado com regras anteriores; nunca reutilize
+      // seus lançamentos ou o status verde depois de atualizar o motor.
+      setPlan(null);
+      setConferenceOk(false);
       if (saved?.rows?.length && previousBalancesAreVerified(saved)) {
         try {
           const nextAnalysis = await buildCriticalTrialBalancePlan(company.id, month, year, saved.rows);
-          if (active) setAnalysis(nextAnalysis);
+          if (!active) return;
+          setAnalysis(nextAnalysis);
+          if (savedPlan) {
+            setPlan(nextAnalysis);
+            await saveWorkspaceData(planKey, nextAnalysis);
+            await saveWorkspaceData(conferenceKey, false);
+            void refreshYearStates();
+          }
         } catch (reason) {
           if (active) setError(reason instanceof Error ? reason.message : "Falha ao analisar o balancete.");
         }
