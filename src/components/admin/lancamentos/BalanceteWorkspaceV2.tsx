@@ -166,7 +166,7 @@ export function BalanceteWorkspaceV2() {
   const observations = (analysis?.observations ?? []).filter(item => item.severity === "critical");
   const observationMap = useMemo(() => groupObservations(observations), [observations]);
   const previewObservationMap = useMemo(() => groupObservations(plan?.remainingCriticalObservations ?? []), [plan]);
-  const previewSummary = useMemo(() => summarizeTrialBalance(plan?.previewRows ?? []), [plan]);
+
   const planConferable = criticalTrialBalancePlanIsCorrected(plan) && projectedFlags.length === 0;
   const criticalOriginal = flagged.length;
 
@@ -253,8 +253,8 @@ export function BalanceteWorkspaceV2() {
       await saveWorkspaceData(planKey, nextPlan);
       await saveWorkspaceData(conferenceKey, false);
       await refreshYearStates();
-      if (!nextPlan.correctionComplete) {
-        setError(`Correção incompleta: ainda restam ${nextPlan.remainingCriticalObservations.length} problema(s) crítico(s). A competência NÃO foi marcada como corrigida.`);
+      if (!nextPlan.correctionComplete || checkBalanceLimits(nextPlan.previewRows, limits).some(item => item.critical)) {
+        setError("A prévia ainda não atingiu todos os limites. Os ajustes propostos permanecem disponíveis para visualização, mas não podem ser exportados.");
       }
     } catch (reason) {
       setPlan(null);
@@ -262,15 +262,8 @@ export function BalanceteWorkspaceV2() {
     } finally { setCorrecting(false); }
   };
 
-  const markConferenceOk = async () => {
-    if (!planConferable) return;
-    setConferenceOk(true);
-    await saveWorkspaceData(conferenceKey, true);
-    await refreshYearStates();
-  };
-
   const exportAdjustments = () => {
-    if (!plan || !conferenceOk || !planConferable) return;
+    if (!plan || !planConferable) return;
     exportAccountingWorkbook({
       moduleTitle: "Ajustes do Balancete",
       competence,
@@ -285,7 +278,7 @@ export function BalanceteWorkspaceV2() {
         blocking: false,
         note: `${balance(target.currentSignedInCents)} → ${balance(target.targetSignedInCents)}`,
       })),
-      note: "Ajustes gerados apenas para inconsistências materiais. A Conferência não altera saldos; apenas valida a prévia antes da exportação.",
+      note: "Lançamentos conferidos pelo motor, pela IA e pelos limites da empresa. Verificar documentos de suporte antes de importar no Calima.",
     });
   };
 
@@ -309,7 +302,7 @@ export function BalanceteWorkspaceV2() {
           {months.map(([key, label]) => {
             const state = yearStates[key];
             const active = month === key;
-            const dot = state?.conferenceOk ? "bg-emerald-500" : state?.corrected ? "bg-emerald-500" : state?.hasData && state.issues > 0 ? "bg-red-500" : state?.hasData ? "bg-sky-500" : state?.hasFile ? "bg-amber-500" : "bg-muted-foreground/25";
+            const dot = state?.hasData && state.issues > 0 ? "bg-red-500" : state?.corrected ? "bg-emerald-500" : state?.hasData ? "bg-sky-500" : state?.hasFile ? "bg-amber-500" : "bg-muted-foreground/25";
             return <button key={key} type="button" onClick={() => setMonth(key)} className={cn("flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm transition-colors", active ? "bg-cyan-500/15 text-cyan-800 dark:text-cyan-200" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
               <span>{label}</span><span className="flex items-center gap-2"><span className="text-[10px]">{state?.conferenceOk ? "OK" : state?.corrected ? "corrigido" : state?.hasData && state.issues ? `${state.issues} crítico(s)` : state?.hasData ? "importado" : state?.hasFile ? "arquivo" : ""}</span><span className={cn("h-2 w-2 rounded-full", dot)} /></span>
             </button>;
@@ -339,7 +332,7 @@ export function BalanceteWorkspaceV2() {
           <AccountingWorkflowSteps steps={[
             { value: "balancete", label: "Balancete", count: result?.rows.length ?? 0 },
             { value: "lancamentos", label: "Lançamentos", count: plan?.adjustments.length ?? observations.length },
-            { value: "conferencia", label: "Conferência", count: conferenceOk ? 0 : plan?.remainingCriticalObservations.length ?? 1 },
+
           ]} />
 
           <TabsContent value="balancete" className="mt-5 space-y-3">
@@ -432,7 +425,7 @@ export function BalanceteWorkspaceV2() {
               <section className="overflow-hidden rounded-md border border-border bg-background">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-4">
                   <h4 className="text-sm font-semibold">Lançamentos sugeridos ({plan.adjustments.length})</h4>
-                  <Button disabled={!conferenceOk || !planConferable || !plan.adjustments.length} onClick={exportAdjustments} size="sm">Exportar para o Calima</Button>
+                  <Button disabled={!planConferable || !plan.adjustments.length} onClick={exportAdjustments} size="sm">Exportar para o Calima</Button>
                 </div>
                 <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-xs">
                   <thead className="bg-muted/40 text-left text-muted-foreground"><tr><th className="p-3">Data / Histórico</th><th className="p-3">Débito</th><th className="p-3">Crédito</th><th className="p-3 text-right">Valor</th><th className="p-3 text-center">Motivo</th></tr></thead>
@@ -454,20 +447,6 @@ export function BalanceteWorkspaceV2() {
             </>}
           </TabsContent>
 
-          <TabsContent value="conferencia" className="mt-7">
-            <section className="rounded-md border border-border bg-background p-6">
-              <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between">
-                <div><h3 className="font-semibold">Conferência</h3><p className="mt-1 text-sm text-muted-foreground">Aqui nada é ajustado. Esta aba apenas verifica se a prévia realmente resolveu os críticos antes da exportação.</p></div>
-                <Button disabled={!planConferable || conferenceOk} onClick={() => void markConferenceOk()}>{conferenceOk ? <><CheckCircle2 className="mr-2 h-4 w-4" />Conferência OK</> : "Marcar conferência como OK"}</Button>
-              </div>
-
-              {!plan ? <div className="grid min-h-48 place-items-center text-sm text-muted-foreground">Gere primeiro a correção automática na aba Lançamentos.</div> : <div className="mt-5 space-y-5">
-                <div className="grid gap-4 sm:grid-cols-5"><CheckCard label="Saldo Anterior" ok={plan.previousBalanceVerified} detail={plan.previousBalanceVerified ? "Confirmado em todas as linhas" : "Leitura incompleta"} /><CheckCard label="Críticos restantes" ok={plan.remainingCriticalObservations.length === 0} detail={`${plan.remainingCriticalObservations.length} crítico(s)`} /><CheckCard label="Débitos x créditos" ok={Math.abs(previewSummary.movementDifferenceInCents) <= 1} detail={`Diferença ${money(previewSummary.movementDifferenceInCents)}`} /><CheckCard label="Saldos atuais" ok={Math.abs(previewSummary.currentSignedInCents) <= 1} detail={`Diferença ${money(previewSummary.currentSignedInCents)}`} /><CheckCard label="Linhas matemáticas" ok={!plan.previewRows.some(row => Math.abs(validateTrialBalanceRow(row)) > 10_000)} detail={`${plan.previewRows.filter(row => Math.abs(validateTrialBalanceRow(row)) > 10_000).length} divergência(s) material(is)`} /></div>
-                <div className="rounded-md bg-muted/40 p-4 text-xs text-muted-foreground"><p className="font-medium text-foreground">Regra desta Conferência</p><p className="mt-2">• Detalhes pequenos não recebem alerta vermelho.</p><p className="mt-1">• Uma prévia só é considerada corrigida quando os críticos somem de verdade.</p><p className="mt-1">• O Saldo Anterior precisa ter sido lido do documento, inclusive quando o valor literal é 0,00.</p></div>
-                {conferenceOk && <div className="flex items-center gap-2 rounded-md border-2 border-emerald-600/40 bg-emerald-500/15 p-4 text-sm font-semibold text-emerald-800 dark:text-emerald-200"><CheckCircle2 className="h-4 w-4" />Conferência marcada como OK. A exportação dos ajustes está liberada na aba Lançamentos.</div>}
-              </div>}
-            </section>
-          </TabsContent>
         </Tabs>
       </main>
     </div>
