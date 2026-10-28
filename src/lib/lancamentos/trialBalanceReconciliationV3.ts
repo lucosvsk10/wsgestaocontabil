@@ -564,7 +564,8 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
     : null;
 
   const closingPayments: AccountingExportEntry[] = [];
-  if (cash && closingPolicy.payPriorLiabilitiesFully !== false) {
+  // Não presumir quitação de obrigações sem uma política explícita aprovada.
+  if (cash && closingPolicy.payPriorLiabilitiesFully === true) {
     const payableKeys: AliasKey[] = [
       "salariesPayable",
       "vacationPayable",
@@ -598,7 +599,10 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
       const purchaseBase = previousPurchaseFromSite
         || previousInventory
         || Math.abs(Math.min(0, previousSigned(suppliers)));
-      const rate = supplierRate(closingPolicy, year, operatingScale, purchaseBase);
+      // Uma taxa calculada do volume de compras não é comprovação de pagamento.
+      const configuredRate = closingPolicy.supplierPaymentRateByYear?.[year];
+      const rate = typeof configuredRate === "number" && configuredRate > 0 && configuredRate <= 1
+        ? configuredRate : 0;
       const amount = Math.round(purchaseBase * rate);
       if (amount > 0) {
         closingPayments.push(journal(
