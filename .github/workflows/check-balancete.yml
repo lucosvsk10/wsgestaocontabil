@@ -1,0 +1,33 @@
+name: Validate balancete build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/components/admin/lancamentos/BalanceteWorkspaceV2.tsx'
+      - 'src/lib/lancamentos/trialBalance*.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/check-balancete.yml'
+  pull_request:
+    paths:
+      - 'src/components/admin/lancamentos/BalanceteWorkspaceV2.tsx'
+      - 'src/lib/lancamentos/trialBalance*.ts'
+      - 'package.json'
+      - 'package-lock.json'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Check React/SWC compilation
+        run: npm run build:dev
+      - name: Validate balancete reconciliation tests
+        run: npx vitest run src/lib/lancamentos/trialBalanceCriticalCorrection.test.ts
