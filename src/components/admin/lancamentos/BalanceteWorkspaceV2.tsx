@@ -98,6 +98,7 @@ export function BalanceteWorkspaceV2() {
   }, [activeTab, company.id, month, year]);
 
   const refreshYearStates = useCallback(async () => {
+    const storedLimits = await loadLocalWorkspaceData<BalanceLimitOverrides>(`${company.id}:balancete:limits`);
     const entries = await Promise.all(months.map(async ([key]) => {
       const prefix = `${company.id}:${year}:${key}:balancete`;
       const [saved, savedPlan, ok] = await Promise.all([
@@ -105,7 +106,6 @@ export function BalanceteWorkspaceV2() {
         loadLocalWorkspaceData<CriticalTrialBalancePlan>(`${prefix}:auto-plan`),
         loadLocalWorkspaceData<boolean>(`${prefix}:conference-ok`),
       ]);
-      const storedLimits = await loadLocalWorkspaceData<BalanceLimitOverrides>(`${company.id}:balancete:limits`);
       const corrected = criticalTrialBalancePlanIsCorrected(savedPlan)
         && checkBalanceLimits(savedPlan?.previewRows ?? [], storedLimits || {}).every(item => !item.critical);
       const issues = corrected ? 0 : saved?.rows?.length ? checkBalanceLimits(saved.rows, storedLimits || {}).filter(item => item.critical).length : 0;
@@ -364,11 +364,19 @@ export function BalanceteWorkspaceV2() {
             <div><h2 className="font-semibold">{monthLabel} de {year}</h2><p className="mt-1 text-xs text-muted-foreground">O documento original fica intacto. A correção é gerada depois, em Lançamentos.</p></div>
             <div className="flex flex-wrap gap-2">
               {files.length > 0 && <Button type="button" variant="outline" onClick={() => void clearImport()}><Trash2 className="mr-2 h-4 w-4" />Excluir documento</Button>}
-              <Button type="button" variant="outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Lendo Saldo Anterior...</> : <><FileSpreadsheet className="mr-2 h-4 w-4" />Importar Balancete</>}</Button>
+              <Button type="button" variant="outline" disabled={processing} onClick={() => inputRef.current?.click()}>{processing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{processingStep || "Importando..."}</> : <><FileSpreadsheet className="mr-2 h-4 w-4" />Importar Balancete</>}</Button>
               <input ref={inputRef} type="file" accept=".pdf" className="sr-only" onChange={event => void importFile(event)} />
             </div>
           </div>
           {files.length > 0 && <div className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">{files.map(file => <span key={`${file.name}-${file.size}`} className="mr-4 text-foreground">{file.name}</span>)}</div>}
+          {cloudSync?.scope === scope && result?.rows?.length ? <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded border border-border px-3 py-2 text-xs">
+            <span className={cloudSync.status === "synced" ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}>
+              {cloudSync.status === "synced" ? "Salvo neste navegador e sincronizado com a nuvem."
+                : cloudSync.status === "syncing" ? "Importação concluída neste navegador. Sincronizando com a nuvem..."
+                : "Importação concluída neste navegador. Cópia na nuvem ainda não confirmada."}
+            </span>
+            {(cloudSync.status === "failed" || cloudSync.status === "local") && files.length > 0 && <Button type="button" size="sm" variant="outline" onClick={() => void syncImport(scope, result, files)}>Tentar sincronizar</Button>}
+          </div> : null}
           {result?.rows.length ? <div className={cn("mt-4 flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium", previousBalanceVerified ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "border-red-500/40 bg-red-500/15 text-red-700 dark:text-red-300")}>
             {previousBalanceVerified ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
             {previousBalanceVerified ? "Saldo Anterior confirmado linha por linha." : "Saldo Anterior não foi verificado nesta importação antiga. Reimporte o PDF antes de corrigir."}
