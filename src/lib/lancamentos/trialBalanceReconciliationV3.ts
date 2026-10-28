@@ -29,6 +29,12 @@ export interface TrialBalanceClosingPolicy {
   source?: string;
 }
 
+export interface DocumentSourceEvidence {
+  module: "despesas" | "folha" | "compras" | "faturamento";
+  available: boolean;
+  entryCount: number;
+}
+
 export interface UnmappedTrialBalanceEntry {
   section: string;
   history: string;
@@ -59,6 +65,7 @@ export interface CriticalTrialBalancePlan {
   missingEntryCount: number;
   unmappedEntryCount: number;
   unmappedEntries: UnmappedTrialBalanceEntry[];
+  documentSources: DocumentSourceEvidence[];
   costCenterIssues: string[];
   generatedAt: string;
 }
@@ -546,6 +553,15 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
   ]);
 
   const chart = accounts ?? [];
+  // Documentação efetivamente consultada: distingue mês sem documentos de
+  // documento importado sem lançamentos (zero confirmado).
+  const documentSources: DocumentSourceEvidence[] = [
+    { module: "despesas", available: Array.isArray(expenses?.entries), entryCount: expenses?.entries?.length ?? 0 },
+    { module: "folha", available: Array.isArray(payroll?.entries), entryCount: payroll?.entries?.length ?? 0 },
+    { module: "compras", available: Array.isArray(purchases?.entries), entryCount: purchases?.entries?.length ?? 0 },
+    { module: "faturamento", available: Array.isArray(revenue?.entries), entryCount: revenue?.entries?.length ?? 0 },
+  ];
+  const documentSourcesComplete = documentSources.every(source => source.available);
   const rawOperational = [
     ...(expenses?.entries ?? []).map(entry => exportEntry(entry, "despesas")),
     ...(payroll?.entries ?? []).filter(entry => entry.amountInCents > 0).map(entry => exportEntry(entry, "folha")),
@@ -716,6 +732,7 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
     && projectedCash <= maxCash
   );
   const correctionComplete = previousVerified
+    && documentSourcesComplete
     && unmappedOperational === 0
     && adjustmentMissingCodes.length === 0
     && structureOk
@@ -739,6 +756,7 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
   });
 
   const contextSummary = [
+    `Documentos estruturados carregados: ${documentSources.filter(source => source.available).length}/4; ${documentSources.filter(source => !source.available).map(source => source.module).join(", ") || "nenhum módulo faltante"}.`,
     `Esperados ${expected.length} lançamento(s): ${reconciliation.posted.length} têm movimentos brutos compatíveis (não comprovam partidas individuais) e ${adjustments.length} serão sugeridos na prévia.`,
     `${unmappedOperational} lançamento(s) dos módulos não encontraram conta equivalente no Balancete${unmappedOperational ? " e bloqueiam o fechamento" : ""}.`,
     cash
@@ -766,6 +784,7 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
     missingEntryCount: adjustments.length,
     unmappedEntryCount: unmappedOperational,
     unmappedEntries,
+    documentSources,
     costCenterIssues,
     generatedAt: new Date().toISOString(),
   };
