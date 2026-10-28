@@ -8,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAccountingCompany } from "@/hooks/lancamentos/useAccountingCompany";
 import { exportAccountingWorkbook } from "@/lib/lancamentos/accountingExportWorkbook";
 import {
+  applyAiClosingReview,
+  AiClosingResponse,
+  AiClosingSource,
   buildCriticalTrialBalancePlan,
   CriticalTrialBalancePlan,
   criticalTrialBalancePlanIsCorrected,
@@ -123,16 +126,16 @@ export function BalanceteWorkspaceV2() {
       if (!active) return;
       setResult(saved ?? null);
       setFiles(docs);
-      // Um plano persistido foi calculado com regras anteriores; nunca reutilize
-      // seus lançamentos ou o status verde depois de atualizar o motor.
-      setPlan(null);
+      // O plano salvo por IA permanece como prévia; o usuário pode reexecutar
+      // a análise sempre que carregar novos documentos nos módulos.
+      setPlan(savedPlan?.aiReview ? savedPlan : null);
       setConferenceOk(false);
       if (saved?.rows?.length && previousBalancesAreVerified(saved)) {
         try {
           const nextAnalysis = await buildCriticalTrialBalancePlan(company.id, month, year, saved.rows);
           if (!active) return;
           setAnalysis(nextAnalysis);
-          if (savedPlan) {
+          if (savedPlan && !savedPlan.aiReview) {
             setPlan(nextAnalysis);
             await saveWorkspaceData(planKey, nextAnalysis);
             await saveWorkspaceData(conferenceKey, false);
@@ -217,7 +220,27 @@ export function BalanceteWorkspaceV2() {
     }
     setCorrecting(true); setError(null); setConferenceOk(false);
     try {
-      const nextPlan = await buildCriticalTrialBalancePlan(company.id, month, year, result.rows);
+      const preliminary = await buildCriticalTrialBalancePlan(company.id, month, year, result.rows);
+      setAnalysis(preliminary);
+      const modules = ["despesas", "folha", "compras", "faturamento"] as const;
+      const sources: AiClosingSource[] = await Promise.all(modules.map(async module => {
+        const content = await loadWorkspaceData<{ entries?: AiClosingSource["entries"] }>(`${company.id}:${year}:${month}:${module}:parsed`);
+        return { module, entries: Array.isArray(content?.entries) ? content.entries : null };
+      }));
+      const { data, error: aiError } = await supabase.functions.invoke("analyze-trial-balance-closing", {
+        body: {
+          company_id: company.id,
+          competence,
+          rows: analyticalTrialBalanceRows(result.rows),
+          candidates: preliminary.adjustments,
+          unmapped: preliminary.unmappedEntries,
+          sources,
+          cashPolicy: { cashTargetSignedInCents: preliminary.targetCashSignedInCents },
+        },
+      });
+      if (aiError) throw await functionError(aiError, "Falha na análise documental por IA.");
+      if (!data || !Array.isArray(data.decisions) || !Array.isArray(data.proposals)) throw new Error("A IA não devolveu uma análise válida.");
+      const nextPlan = applyAiClosingReview(preliminary, result.rows, data as AiClosingResponse, sources);
       setPlan(nextPlan);
       await saveWorkspaceData(planKey, nextPlan);
       await saveWorkspaceData(conferenceKey, false);
@@ -226,7 +249,8 @@ export function BalanceteWorkspaceV2() {
         setError(`Correção incompleta: ainda restam ${nextPlan.remainingCriticalObservations.length} problema(s) crítico(s). A competência NÃO foi marcada como corrigida.`);
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Falha ao gerar os ajustes automáticos.");
+      setPlan(null);
+      setError(reason instanceof Error ? reason.message : "Falha na análise de fechamento por IA.");
     } finally { setCorrecting(false); }
   };
 
@@ -339,6 +363,17 @@ export function BalanceteWorkspaceV2() {
                 <span>Fontes lidas: {plan.documentSources?.filter(source => source.available).length ?? 0}/4</span>
                 {plan.documentSources?.filter(source => !source.available).map(source => <span key={source.module} className="text-amber-700 dark:text-amber-300">Falta {source.module}</span>)}
               </div>
+              {plan.aiReview && <section className="rounded-md border border-border bg-background p-4 text-xs">
+                <p className="font-semibold">Análise documental por IA · {plan.aiReview.model}</p>
+                <p className="mt-2 text-muted-foreground">{plan.aiReview.summary}</p>
+                <div className="mt-3 flex flex-wrap gap-3 text-muted-foreground">
+                  <span>{plan.aiReview.supportedCount} comprovados</span>
+                  <span>{plan.aiReview.pendingCount} pendentes</span>
+                  <span>{plan.aiReview.rejectedCount} rejeitados</span>
+                  <span>{plan.aiReview.addedCount} novos sugeridos</span>
+                </div>
+                {!!plan.aiReview.issues.length && <ul className="mt-3 space-y-1 text-amber-700 dark:text-amber-300">{plan.aiReview.issues.map((issue, i) => <li key={i}>• {issue}</li>)}</ul>}
+              </section>}
               <BalanceChangeList before={result?.rows ?? []} plan={plan} />
 
               {Boolean(plan.unmappedEntries?.length) && <section className="rounded-md border border-amber-500/40 bg-amber-500/5 p-4">
