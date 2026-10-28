@@ -94,9 +94,19 @@ function isAncestorPath(parent: number[], child: number[]) {
   return parent.every((part, index) => child[index] === part);
 }
 
+export function isAncestorAccount(parent: string, child: string) {
+  if (!parent || !child || parent === child) return false;
+  // Calima emits hierarchical codes without dots (e.g. 101, 10101, 101010101).
+  if (!parent.includes(".") && !child.includes(".") && /^\\d+$/.test(parent) && /^\\d+$/.test(child)) {
+    return child.length > parent.length && child.startsWith(parent);
+  }
+  return isAncestorPath(accountPath(parent), accountPath(child));
+}
+
 export function analyticalTrialBalanceRows(rows: TrialBalanceRow[]) {
-  const paths = rows.map(row => ({ row, path: accountPath(row.accountCode) }));
-  return paths.filter(candidate => !paths.some(other => other.row.id !== candidate.row.id && isAncestorPath(candidate.path, other.path))).map(candidate => candidate.row);
+  return rows.filter(candidate => !rows.some(other => (
+    other.id !== candidate.id && isAncestorAccount(candidate.accountCode, other.accountCode)
+  )));
 }
 
 export function summarizeTrialBalance(rows: TrialBalanceRow[]): TrialBalanceGlobalSummary {
