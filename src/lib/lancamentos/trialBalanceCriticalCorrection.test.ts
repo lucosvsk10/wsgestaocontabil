@@ -188,6 +188,31 @@ describe("critical trial balance correction", () => {
     expect(plan.correctionComplete).toBe(false);
   });
 
+
+  it("accepts an explicitly confirmed C.R. only when it exists in the imported analytical balance", async () => {
+    mocks.loadWorkspaceData.mockImplementation(async (key: string) => {
+      if (key.endsWith(":balancete:closing-policy")) return {};
+      if (key.endsWith(":chart-of-accounts")) return [];
+      if (key.endsWith(":balancete:account-mappings")) return { "99999": "130" };
+      if (key === `${COMPANY}:2026:01:despesas:parsed`) return {
+        entries: [{
+          date: "31/01/2026", amountInCents: 12_000, debitCode: "99999", creditCode: "374",
+          debitDescription: "Despesa de combustíveis", creditDescription: "Caixa Matriz",
+          debitCostCenter: "", creditCostCenter: "", history: "PAGTO. COMBUSTÍVEIS", kind: "despesa",
+        }],
+      };
+      return { entries: [] };
+    });
+    const januaryRows = [
+      row({ id: "cash-jan", accountCode: "1.1.1.01.0001", title: "CAIXA MATRIZ", reducedCode: "374",
+        previousBalanceInCents: 100_000, previousNature: "D", currentBalanceInCents: 100_000, currentNature: "D" }),
+      row({ id: "fuel-jan", accountCode: "3.1.1.01.0001", title: "DESPESAS COM COMBUSTÍVEIS", reducedCode: "130" }),
+    ];
+    const plan = await buildCriticalTrialBalancePlan(COMPANY, "01", "2026", januaryRows);
+    expect(plan.unmappedEntryCount).toBe(0);
+    expect(plan.adjustments.some(entry => entry.debitCode === "130" && entry.creditCode === "374" && entry.amountInCents === 12_000)).toBe(true);
+  });
+
   it("does not generate a duplicate when an expected entry is already in the Balancete", () => {
     const duplicateRows = [
       row({ id: "expense", accountCode: "4.4.1.40.4496", title: "ALUGUEL", reducedCode: "4496", debitInCents: 320_000, currentBalanceInCents: 320_000, currentNature: "D" }),
