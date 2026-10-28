@@ -32,7 +32,7 @@ const months = [
 ] as const;
 
 interface PendingImport { result: TrialBalanceResult; files: File[]; }
-interface MonthState { hasData: boolean; issues: number; corrected: boolean; conferenceOk: boolean; }
+interface MonthState { hasData: boolean; hasFile: boolean; issues: number; corrected: boolean; conferenceOk: boolean; }
 interface SavedContext { year: string; month: string; tab: string; }
 type TrialBalanceResultWithPrevious = TrialBalanceResult & { previousBalanceVerified?: boolean; previousBalanceReadCount?: number; };
 type TrialBalanceRowWithPrevious = TrialBalanceRow & { previousBalanceRead?: boolean; };
@@ -86,15 +86,16 @@ export function BalanceteWorkspaceV2() {
   const refreshYearStates = useCallback(async () => {
     const entries = await Promise.all(months.map(async ([key]) => {
       const prefix = `${company.id}:${year}:${key}:balancete`;
-      const [saved, savedPlan, ok] = await Promise.all([
+      const [saved, savedPlan, ok, storedFiles] = await Promise.all([
         loadWorkspaceData<TrialBalanceResult>(`${prefix}:parsed`),
         loadWorkspaceData<CriticalTrialBalancePlan>(`${prefix}:auto-plan`),
         loadWorkspaceData<boolean>(`${prefix}:conference-ok`),
+        loadWorkspaceFiles(prefix),
       ]);
       const corrected = criticalTrialBalancePlanIsCorrected(savedPlan);
       const issues = savedPlan?.remainingCriticalObservations?.length
         ?? (saved?.validationIssues.length ?? 0) + (saved?.rows.filter(row => Math.abs(validateTrialBalanceRow(row)) > 10_000).length ?? 0);
-      return [key, { hasData: Boolean(saved?.rows?.length), issues, corrected, conferenceOk: Boolean(ok && corrected) }] as const;
+      return [key, { hasData: Boolean(saved?.rows?.length), hasFile: storedFiles.length > 0, issues, corrected, conferenceOk: Boolean(ok && corrected) }] as const;
     }));
     setYearStates(Object.fromEntries(entries));
   }, [company.id, year]);
@@ -266,9 +267,9 @@ export function BalanceteWorkspaceV2() {
           {months.map(([key, label]) => {
             const state = yearStates[key];
             const active = month === key;
-            const dot = state?.conferenceOk ? "bg-emerald-500" : state?.corrected ? "bg-emerald-500" : state?.hasData ? "bg-muted-foreground/45" : "bg-muted-foreground/25";
+            const dot = state?.conferenceOk ? "bg-emerald-500" : state?.corrected ? "bg-emerald-500" : state?.hasData && state.issues > 0 ? "bg-red-500" : state?.hasData ? "bg-sky-500" : state?.hasFile ? "bg-amber-500" : "bg-muted-foreground/25";
             return <button key={key} type="button" onClick={() => setMonth(key)} className={cn("flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm transition-colors", active ? "bg-cyan-500/15 text-cyan-800 dark:text-cyan-200" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
-              <span>{label}</span><span className="flex items-center gap-2"><span className="text-[10px]">{state?.conferenceOk ? "OK" : state?.corrected ? "corrigido" : state?.hasData && state.issues ? `${state.issues} crítico(s)` : ""}</span><span className={cn("h-2 w-2 rounded-full", dot)} /></span>
+              <span>{label}</span><span className="flex items-center gap-2"><span className="text-[10px]">{state?.conferenceOk ? "OK" : state?.corrected ? "corrigido" : state?.hasData && state.issues ? `${state.issues} crítico(s)` : state?.hasData ? "importado" : state?.hasFile ? "arquivo" : ""}</span><span className={cn("h-2 w-2 rounded-full", dot)} /></span>
             </button>;
           })}
         </nav>
@@ -304,6 +305,7 @@ export function BalanceteWorkspaceV2() {
               <div><h3 className="font-semibold">Balancete importado</h3><p className="mt-1 text-sm text-muted-foreground">Somente problemas realmente críticos aparecem em vermelho. Diferenças pequenas e detalhes sem impacto material não recebem alerta.</p></div>
               {result?.rows.length ? <span className="rounded-md border-2 border-red-600/60 bg-red-600/20 px-3 py-1.5 text-xs font-bold text-red-800 dark:text-red-200">{criticalOriginal} CRÍTICO(S)</span> : null}
             </div>
+            {observations.length > 0 && <div className="rounded-md border border-red-600/30 bg-red-500/5 p-3"><p className="mb-2 text-sm font-semibold">Todos os {observations.length} problemas críticos encontrados</p><ol className="list-decimal space-y-1 pl-5 text-xs">{observations.map(item => <li key={item.id}><span className="font-semibold">{item.title} — {item.headline}:</span> {item.message}</li>)}</ol></div>}
             <TrialBalanceTable rows={result?.rows ?? []} observations={observationMap} onExpand={() => setExpanded("original")} empty="Importe um Balancete Acumulado Analítico do Calima para começar." />
           </TabsContent>
 
@@ -372,7 +374,7 @@ function TrialBalanceTable({ rows, observations, originalRows, preview = false, 
         : !isAnalytical && depth === 0
           ? "bg-cyan-950/[0.08] dark:bg-cyan-300/[0.08]"
           : !isAnalytical && depth === 1 ? "bg-cyan-500/[0.07]" : !isAnalytical ? "bg-cyan-500/[0.035]" : "";
-    return <tr key={row.id} className={cn("border-b border-border transition-colors", semanticClass)}><td className="border-r border-border px-2 py-1.5 font-mono text-[11px]">{row.accountCode}</td><td className="border-r border-border px-2 py-1.5"><div className="flex min-w-0 items-center gap-2" style={{ paddingLeft: `${depth * 14}px` }}>{rowObservations.length > 0 && <ObservationHover observations={rowObservations} />}<span className={cn("truncate", !isAnalytical && "font-semibold", depth === 0 && "uppercase tracking-wide")}>{row.title}</span>{changed && !rowObservations.length && <span className="shrink-0 rounded-md border border-emerald-800/30 bg-emerald-700 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">AJUSTADO</span>}</div></td><td className="border-r border-border px-2 py-1.5 tabular-nums">{row.reducedCode || "—"}</td><td className="border-r border-border px-2 py-1.5 text-right tabular-nums">{formatAmountNature(row.previousBalanceInCents, row.previousNature)}</td><td className="border-r border-border px-2 py-1.5 text-right tabular-nums">{money(row.debitInCents)}</td><td className="border-r border-border px-2 py-1.5 text-right tabular-nums">{money(row.creditInCents)}</td><td className="px-2 py-1.5 text-right font-semibold tabular-nums">{formatAmountNature(row.currentBalanceInCents, row.currentNature)}</td></tr>;
+    return <tr key={row.id} className={cn("border-b border-border transition-colors", semanticClass)}><td className="border-r border-border px-2 py-1.5 font-mono text-[11px]">{row.accountCode}</td><td className="border-r border-border px-2 py-1.5"><div className="flex min-w-0 items-center gap-2" style={{ paddingLeft: `${depth * 14}px` }}>{rowObservations.length > 0 && <><ObservationHover observations={rowObservations} />{rowObservations.length > 1 && <span className="shrink-0 rounded bg-red-700 px-1.5 py-0.5 text-[10px] font-bold text-white" title={`${rowObservations.length} problemas nesta conta`}>{rowObservations.length}</span>}</>}<span className={cn("truncate", !isAnalytical && "font-semibold", depth === 0 && "uppercase tracking-wide")}>{row.title}</span>{changed && !rowObservations.length && <span className="shrink-0 rounded-md border border-emerald-800/30 bg-emerald-700 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">AJUSTADO</span>}</div></td><td className="border-r border-border px-2 py-1.5 tabular-nums">{row.reducedCode || "—"}</td><td className="border-r border-border px-2 py-1.5 text-right tabular-nums">{formatAmountNature(row.previousBalanceInCents, row.previousNature)}</td><td className="border-r border-border px-2 py-1.5 text-right tabular-nums">{money(row.debitInCents)}</td><td className="border-r border-border px-2 py-1.5 text-right tabular-nums">{money(row.creditInCents)}</td><td className="px-2 py-1.5 text-right font-semibold tabular-nums">{formatAmountNature(row.currentBalanceInCents, row.currentNature)}</td></tr>;
   })}{!rows.length && <tr><td colSpan={7} className="h-44 text-center text-muted-foreground">{empty}</td></tr>}</tbody></table>;
   if (embedded) return table;
   return <div className="overflow-hidden rounded-md border border-border bg-background"><div className="flex h-8 items-center justify-end border-b border-border px-2">{onExpand && <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={onExpand} title="Expandir tabela"><Maximize2 className="h-3.5 w-3.5" /></Button>}</div><div className="overflow-x-auto">{table}</div></div>;
