@@ -29,6 +29,17 @@ export interface TrialBalanceClosingPolicy {
   source?: string;
 }
 
+export interface UnmappedTrialBalanceEntry {
+  section: string;
+  history: string;
+  debitCode: string;
+  creditCode: string;
+  debitDescription: string;
+  creditDescription: string;
+  amountInCents: number;
+  missingSides: string[];
+}
+
 export interface CriticalTrialBalancePlan {
   competence: string;
   observations: TrialBalanceObservation[];
@@ -47,6 +58,7 @@ export interface CriticalTrialBalancePlan {
   alreadyPostedCount: number;
   missingEntryCount: number;
   unmappedEntryCount: number;
+  unmappedEntries: UnmappedTrialBalanceEntry[];
   costCenterIssues: string[];
   generatedAt: string;
 }
@@ -397,7 +409,7 @@ function observation(row: TrialBalanceRow, headline: string, message: string, so
   };
 }
 
-function criticals(rows: TrialBalanceRow[], scale: number, targetCash: number | null, unmapped: number, missingCodes: string[]) {
+function criticals(rows: TrialBalanceRow[], scale: number, targetCash: number | null, unmapped: UnmappedTrialBalanceEntry[], missingCodes: string[]) {
   const observations: TrialBalanceObservation[] = [];
   const material = threshold(scale);
   const push = (item: TrialBalanceObservation) => {
@@ -449,14 +461,17 @@ function criticals(rows: TrialBalanceRow[], scale: number, targetCash: number | 
     ));
   });
 
-  if (unmapped > 0) {
+  if (unmapped.length > 0) {
     const anchor = cash ?? analytical(rows)[0];
     if (anchor) {
+      const detail = unmapped.map(entry =>
+        `${entry.section}: ${entry.history} — D ${entry.debitCode} (${entry.debitDescription || "sem descrição"}), C ${entry.creditCode} (${entry.creditDescription || "sem descrição"}); sem correspondência: ${entry.missingSides.join(" e ")}.`
+      ).join(" | ");
       push(observation(
         anchor,
         "Existem contas não reconhecidas",
-        `${unmapped} lançamento(s) esperado(s) não puderam ser ligados a uma conta analítica do Balancete.`,
-        "Ponte semântica entre Plano de Contas e Balancete",
+        `${unmapped.length} lançamento(s) sem conta analítica correspondente. ${detail}`,
+        "Verificar C.R. no balancete e descrição do plano de contas; não substituir por conta arbitrária",
       ));
     }
   }
@@ -536,7 +551,24 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
   const withCenters = await applyConfiguredCostCenters(company, rawOperational, chart);
   const bridged = withCenters.map(entry => bridgeEntry(entry, rows, chart));
   const operational: AccountingExportEntry[] = bridged.filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-  const unmappedOperational = bridged.filter(entry => !entry).length;
+  const unmappedEntries: UnmappedTrialBalanceEntry[] = withCenters.flatMap((entry, index) => {
+    if (bridged[index]) return [];
+    const missingSides = [
+      !resolveBalanceRow(rows, entry.debitCode, entry.debitDescription ?? "", chart, "debit") ? "débito" : "",
+      !resolveBalanceRow(rows, entry.creditCode, entry.creditDescription ?? "", chart, "credit") ? "crédito" : "",
+    ].filter(Boolean);
+    return [{
+      section: entry.section ?? "desconhecido",
+      history: entry.history,
+      debitCode: entry.debitCode,
+      creditCode: entry.creditCode,
+      debitDescription: entry.debitDescription ?? "",
+      creditDescription: entry.creditDescription ?? "",
+      amountInCents: entry.amountInCents,
+      missingSides,
+    }];
+  });
+  const unmappedOperational = unmappedEntries.length;
 
   const revenueTotal = revenue?.reference?.totalAmountInCents
     ?? total(rawOperational.filter(entry => entry.section === "faturamento" && !normalizeTrialBalanceText(entry.history).includes("pgdas")));
@@ -626,7 +658,9 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
     .filter(entry => entry.amountInCents > 0 && entry.debitCode && entry.creditCode);
   const beforeReceiptReconciliation = consume(rows, expectedBeforeReceipt);
 
-  const closing = [...closingPayments];
+  // Recebimento de clientes é calculado pelo saldo líquido, não pode ser
+  // considerado "já lançado" apenas porque há débitos/créditos brutos suficientes.
+  const receiptAdjustments: AccountingExportEntry[] = [];
   if (cash && clients && targetCash !== null) {
     const cashBeforeReceipt = currentSigned(cash)
       + signedMovement(beforeReceiptReconciliation.missing, cash.reducedCode);
@@ -636,7 +670,7 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
     const receipt = Math.min(Math.max(0, neededReceipt), Math.max(0, clientsBeforeReceipt));
 
     if (receipt > 0) {
-      closing.push(journal(
+      receiptAdjustments.push(journal(
         date,
         receipt,
         cash,
@@ -648,19 +682,21 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
     }
   }
 
-  const expected = [...operational, ...closing]
-    .filter(entry => entry.amountInCents > 0 && entry.debitCode && entry.creditCode);
-  const reconciliation = consume(rows, expected);
-  const adjustmentMissingCodes = adjustmentsOutsideTrialBalance(rows, reconciliation.missing);
-  const previewRows = apply(rows, reconciliation.missing);
+  const expected = [...expectedBeforeReceipt, ...receiptAdjustments];
+  const reconciliation = beforeReceiptReconciliation;
+  // Só movimentos operacionais são estimados pelos totais; o recebimento de
+  // fechamento é incluído explicitamente para atingir o saldo líquido calculado.
+  const adjustments = [...reconciliation.missing, ...receiptAdjustments];
+  const adjustmentMissingCodes = adjustmentsOutsideTrialBalance(rows, adjustments);
+  const previewRows = apply(rows, adjustments);
   const structureOk = previewPreservesStructure(rows, previewRows);
   const secondPass = consume(previewRows, expected);
   const secondPassMissingCodes = adjustmentsOutsideTrialBalance(rows, secondPass.missing);
 
   const projectedCashRow = cash ? findExact(previewRows, cash.reducedCode) : null;
   const projectedCash = projectedCashRow ? currentSigned(projectedCashRow) : null;
-  const originalCritical = criticals(rows, operatingScale, targetCash, unmappedOperational, adjustmentMissingCodes);
-  const remainingCritical = criticals(previewRows, operatingScale, targetCash, unmappedOperational, secondPassMissingCodes);
+  const originalCritical = criticals(rows, operatingScale, targetCash, unmappedEntries, adjustmentMissingCodes);
+  const remainingCritical = criticals(previewRows, operatingScale, targetCash, unmappedEntries, secondPassMissingCodes);
   const materialArithmetic = analytical(previewRows)
     .filter(row => Math.abs(validateTrialBalanceRow(row)) > threshold(operatingScale));
   const movementDifference = analytical(previewRows)
@@ -698,7 +734,7 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
   });
 
   const contextSummary = [
-    `Esperados ${expected.length} lançamento(s): ${reconciliation.posted.length} já constam no movimento e ${reconciliation.missing.length} serão gerados como ajuste.`,
+    `Esperados ${expected.length} lançamento(s): ${reconciliation.posted.length} têm movimentos brutos compatíveis (não comprovam partidas individuais) e ${adjustments.length} serão sugeridos na prévia.`,
     `${unmappedOperational} lançamento(s) dos módulos não encontraram conta equivalente no Balancete${unmappedOperational ? " e bloqueiam o fechamento" : ""}.`,
     cash
       ? `Caixa: saldo atual antes dos ajustes ${money(currentSigned(cash))} ${currentSigned(cash) < 0 ? "C" : "D"}; alvo variável ${money(targetCash ?? 0)}; projetado ${projectedCash === null ? "—" : `${money(projectedCash)} ${projectedCash < 0 ? "C" : "D"}`}.`
@@ -709,8 +745,8 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
   return {
     competence: `${month}/${year}`,
     observations: originalCritical,
-    targets: targets(rows, previewRows, reconciliation.missing),
-    adjustments: reconciliation.missing,
+    targets: targets(rows, previewRows, adjustments),
+    adjustments,
     previewRows,
     remainingCriticalObservations: remainingCritical,
     correctionComplete,
@@ -722,8 +758,9 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
     contextSummary,
     expectedEntryCount: expected.length,
     alreadyPostedCount: reconciliation.posted.length,
-    missingEntryCount: reconciliation.missing.length,
+    missingEntryCount: adjustments.length,
     unmappedEntryCount: unmappedOperational,
+    unmappedEntries,
     costCenterIssues,
     generatedAt: new Date().toISOString(),
   };
