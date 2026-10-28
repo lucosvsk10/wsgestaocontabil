@@ -92,12 +92,12 @@ describe("critical trial balance correction", () => {
     });
   });
 
-  it("keeps the cash target low and variable", () => {
+  it("keeps the cash target deterministic within the configured range", () => {
     const january = __test.cashTarget(COMPANY, "01", "2024", 0, { cashTargetMinInCents: 60_000, cashTargetMaxInCents: 180_000, cashTargetAnchorInCents: 100_000 });
     const february = __test.cashTarget(COMPANY, "02", "2024", 132_623, { cashTargetMinInCents: 60_000, cashTargetMaxInCents: 180_000, cashTargetAnchorInCents: 100_000 });
     expect(january).toBeGreaterThanOrEqual(60_000);
     expect(january).toBeLessThanOrEqual(180_000);
-    expect(february).toBe(147_848);
+    expect(february).toBe(132_623);
     expect(january).not.toBe(february);
   });
 
@@ -110,9 +110,9 @@ describe("critical trial balance correction", () => {
     const plan = await buildCriticalTrialBalancePlan(COMPANY, "02", "2024", rows);
     const receipt = plan.adjustments.find(entry => entry.type === "recebimento_clientes");
 
-    expect(plan.targetCashSignedInCents).toBe(147_848);
-    expect(receipt?.amountInCents).toBe(33_727_108);
-    expect(plan.projectedCashSignedInCents).toBe(147_848);
+    expect(plan.targetCashSignedInCents).toBe(132_623);
+    expect(receipt?.amountInCents).toBe(2_898_904);
+    expect(plan.projectedCashSignedInCents).toBe(132_623);
     expect(plan.projectedCashSignedInCents).toBeGreaterThan(0);
 
     expect(plan.previewRows.map(item => item.id)).toEqual(rows.map(item => item.id));
@@ -129,6 +129,63 @@ describe("critical trial balance correction", () => {
     expect(plan.previewRows.some(item => item.reducedCode === "3108" && item.title === "SALÁRIOS À PAGAR")).toBe(true);
     expect(plan.previewRows.some(item => item.reducedCode === "4241" && item.title === "SALÁRIOS")).toBe(true);
     expect(plan.remainingCriticalObservations.find(item => item.headline === "Caixa credor")).toBeUndefined();
+  });
+
+
+  it("does not discard a required cash receipt merely because gross movements are sufficient", async () => {
+    mocks.loadWorkspaceData.mockImplementation(async (key: string) => {
+      if (key.endsWith(":balancete:closing-policy")) return {};
+      if (key.endsWith(":chart-of-accounts")) return [];
+      return { entries: [] };
+    });
+    const januaryRows = [
+      row({
+        id: "cash-jan", accountCode: "1.1.1.01.0001", title: "CAIXA MATRIZ", reducedCode: "374",
+        debitInCents: 200_000, creditInCents: 288_147,
+        currentBalanceInCents: 88_147, currentNature: "C",
+      }),
+      row({
+        id: "clients-jan", accountCode: "1.1.2.01.0001", title: "CLIENTES", reducedCode: "429",
+        previousBalanceInCents: 800_000, previousNature: "D",
+        debitInCents: 250_000, creditInCents: 200_000,
+        currentBalanceInCents: 850_000, currentNature: "D",
+      }),
+    ];
+    const plan = await buildCriticalTrialBalancePlan(COMPANY, "01", "2026", januaryRows);
+    const receipt = plan.adjustments.find(entry => entry.type === "recebimento_clientes");
+    expect(plan.currentCashSignedInCents).toBe(-88_147);
+    expect(plan.targetCashSignedInCents).toBe(50_000);
+    expect(receipt?.debitCode).toBe("374");
+    expect(receipt?.creditCode).toBe("429");
+    expect(receipt?.amountInCents).toBe(138_147);
+    expect(plan.projectedCashSignedInCents).toBe(50_000);
+    expect(plan.remainingCriticalObservations.find(item => item.headline === "Caixa credor")).toBeUndefined();
+  });
+
+  it("shows the original module entry and unrecognized C.R. instead of an anonymous error", async () => {
+    mocks.loadWorkspaceData.mockImplementation(async (key: string) => {
+      if (key.endsWith(":balancete:closing-policy")) return {};
+      if (key.endsWith(":chart-of-accounts")) return [];
+      if (key === `${COMPANY}:2026:01:despesas:parsed`) return {
+        entries: [{
+          date: "31/01/2026", amountInCents: 12_000, debitCode: "99999", creditCode: "374",
+          debitDescription: "Conta específica inexistente", creditDescription: "Caixa Matriz",
+          debitCostCenter: "", creditCostCenter: "", history: "DESPESA NÃO MAPEADA", kind: "despesa",
+        }],
+      };
+      return { entries: [] };
+    });
+    const januaryRows = [
+      row({ id: "cash-jan", accountCode: "1.1.1.01.0001", title: "CAIXA MATRIZ", reducedCode: "374",
+        previousBalanceInCents: 20_000, previousNature: "D", currentBalanceInCents: 20_000, currentNature: "D" }),
+    ];
+    const plan = await buildCriticalTrialBalancePlan(COMPANY, "01", "2026", januaryRows);
+    expect(plan.unmappedEntryCount).toBe(1);
+    expect(plan.unmappedEntries[0].history).toBe("DESPESA NÃO MAPEADA");
+    expect(plan.unmappedEntries[0].debitCode).toBe("99999");
+    expect(plan.unmappedEntries[0].missingSides).toContain("débito");
+    expect(plan.remainingCriticalObservations.find(item => item.headline === "Existem contas não reconhecidas")?.message).toContain("99999");
+    expect(plan.correctionComplete).toBe(false);
   });
 
   it("does not generate a duplicate when an expected entry is already in the Balancete", () => {
