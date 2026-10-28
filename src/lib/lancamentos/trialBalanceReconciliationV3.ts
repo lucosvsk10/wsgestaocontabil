@@ -35,6 +35,45 @@ export interface DocumentSourceEvidence {
   entryCount: number;
 }
 
+export interface AiClosingSource {
+  module: DocumentSourceEvidence["module"];
+  entries: AccountingExportEntry[] | null;
+}
+export interface AiClosingDecision {
+  candidateIndex: number;
+  status: "supported" | "needs_evidence" | "reject";
+  reason: string;
+  sourceModule: string;
+  sourceIndex: number;
+}
+export interface AiClosingProposal {
+  debitCode: string;
+  creditCode: string;
+  amountInCents: number;
+  history: string;
+  reason: string;
+  sourceModule: string;
+  sourceIndex: number;
+}
+export interface AiClosingResponse {
+  summary: string;
+  decisions: AiClosingDecision[];
+  proposals: AiClosingProposal[];
+  issues: string[];
+  model: string;
+  analyzedAt: string;
+}
+export interface AiClosingReport {
+  summary: string;
+  model: string;
+  analyzedAt: string;
+  supportedCount: number;
+  pendingCount: number;
+  rejectedCount: number;
+  addedCount: number;
+  issues: string[];
+}
+
 export interface UnmappedTrialBalanceEntry {
   section: string;
   history: string;
@@ -66,6 +105,7 @@ export interface CriticalTrialBalancePlan {
   unmappedEntryCount: number;
   unmappedEntries: UnmappedTrialBalanceEntry[];
   documentSources: DocumentSourceEvidence[];
+  aiReview?: AiClosingReport;
   costCenterIssues: string[];
   generatedAt: string;
 }
@@ -795,6 +835,113 @@ export async function buildCriticalTrialBalancePlan(company: string, month: stri
     unmappedEntries,
     documentSources,
     costCenterIssues,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+export function applyAiClosingReview(
+  plan: CriticalTrialBalancePlan,
+  rows: TrialBalanceRow[],
+  review: AiClosingResponse,
+  sources: AiClosingSource[],
+): CriticalTrialBalancePlan {
+  const supported = (decision: AiClosingDecision, entry: AccountingExportEntry) => {
+    const source = sources.find(item => item.module === decision.sourceModule);
+    const documented = source?.entries?.[decision.sourceIndex];
+    return Boolean(documented
+      && documented.amountInCents === entry.amountInCents
+      && documented.debitCode === entry.debitCode
+      && documented.creditCode === entry.creditCode);
+  };
+  const selected: AccountingExportEntry[] = [];
+  const issues: string[] = Array.isArray(review.issues) ? review.issues.filter(Boolean).slice(0, 20) : [];
+  let pendingCount = 0, rejectedCount = 0, supportedCount = 0, addedCount = 0;
+  plan.adjustments.forEach((entry, index) => {
+    const decision = review.decisions?.find(item => item.candidateIndex === index);
+    if (decision?.status === "reject") {
+      rejectedCount++;
+      issues.push(`Lançamento rejeitado pela IA: ${entry.history}. ${decision.reason}`);
+      return;
+    }
+    const verified = Boolean(decision?.status === "supported" && supported(decision, entry));
+    if (verified) supportedCount++;
+    else {
+      pendingCount++;
+      issues.push(`Comprovante pendente: ${entry.history} (D ${entry.debitCode}/C ${entry.creditCode}). ${decision?.reason || "A IA não comprovou a partida."}`);
+    }
+    selected.push({
+      ...entry,
+      mappingReason: `${verified ? "IA conferiu com lançamento estruturado" : "IA exige confirmação"}: ${decision?.reason || "Sem evidência individual"}. ${entry.mappingReason || ""}`,
+    });
+  });
+  for (const item of (review.proposals ?? []).slice(0, 20)) {
+    const referenced = sources.find(source => source.module === item.sourceModule)?.entries?.[item.sourceIndex];
+    const debit = findExact(rows, item.debitCode);
+    const credit = findExact(rows, item.creditCode);
+    if (!referenced || !debit || !credit || debit.reducedCode === credit.reducedCode
+      || item.amountInCents <= 0 || !Number.isSafeInteger(item.amountInCents)
+      || referenced.amountInCents !== item.amountInCents
+      || referenced.debitCode !== item.debitCode
+      || referenced.creditCode !== item.creditCode) {
+      issues.push(`Proposta de IA recusada: ${item.history} (sem correspondência documental ou C.R. válido).`);
+      continue;
+    }
+    if (selected.some(entry => entry.debitCode === item.debitCode
+      && entry.creditCode === item.creditCode && entry.amountInCents === item.amountInCents)) continue;
+    const proposed = journal(
+      closingDate(plan.competence.slice(0, 2), plan.competence.slice(3)),
+      item.amountInCents, debit, credit, referenced.history || item.history,
+      `IA: ${item.reason}. Fonte: ${item.sourceModule} linha ${item.sourceIndex + 1}. Confirmar no razão que não foi contabilizado.`,
+      "ia_revisao_documental",
+    );
+    selected.push(proposed);
+    addedCount++;
+    pendingCount++;
+    issues.push(`Possível duplicidade: ${proposed.history} consta em ${item.sourceModule}, mas o balancete não comprova se a partida individual já foi lançada. Verificar no razão.`);
+  }
+  const previewRows = apply(rows, selected);
+  const missingCodes = adjustmentsOutsideTrialBalance(rows, selected);
+  const targetCash = plan.targetCashSignedInCents;
+  const material = threshold(plan.operatingScaleInCents);
+  const remainingCriticalObservations = criticals(
+    previewRows, plan.operatingScaleInCents, targetCash,
+    plan.unmappedEntries, missingCodes, plan.documentSources,
+  );
+  const structureOk = previewPreservesStructure(rows, previewRows);
+  const projectedCash = findAlias(previewRows, "cash");
+  const projectedCashSignedInCents = projectedCash ? currentSigned(projectedCash) : null;
+  const movements = analytical(previewRows).reduce((sum, row) => sum + row.debitInCents - row.creditInCents, 0);
+  const arithmeticOk = analytical(previewRows).every(row => Math.abs(validateTrialBalanceRow(row)) <= material);
+  const cashOk = projectedCashSignedInCents === null || (
+    projectedCashSignedInCents > 0 && projectedCashSignedInCents >= 10_000
+    && projectedCashSignedInCents <= 95_000
+  );
+  const report: AiClosingReport = {
+    summary: review.summary || "Análise documental concluída.",
+    model: review.model,
+    analyzedAt: review.analyzedAt,
+    supportedCount, pendingCount, rejectedCount, addedCount, issues,
+  };
+  const correctionComplete = plan.previousBalanceVerified
+    && plan.documentSources.every(source => source.available)
+    && plan.unmappedEntries.length === 0
+    && missingCodes.length === 0 && remainingCriticalObservations.length === 0
+    && structureOk && arithmeticOk && Math.abs(movements) <= 1
+    && cashOk && pendingCount === 0 && issues.length === 0;
+  return {
+    ...plan,
+    adjustments: selected,
+    targets: targets(rows, previewRows, selected),
+    previewRows,
+    remainingCriticalObservations,
+    correctionComplete,
+    projectedCashSignedInCents,
+    missingEntryCount: selected.length,
+    aiReview: report,
+    contextSummary: [
+      `IA: ${supportedCount} comprovados, ${pendingCount} pendentes, ${rejectedCount} rejeitados e ${addedCount} propostos.`,
+      ...plan.contextSummary,
+    ],
     generatedAt: new Date().toISOString(),
   };
 }
