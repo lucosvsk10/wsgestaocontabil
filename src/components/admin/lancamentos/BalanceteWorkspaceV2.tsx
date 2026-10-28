@@ -1,5 +1,5 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, CircleAlert, FileSpreadsheet, Loader2, Maximize2, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleAlert, FileSpreadsheet, Info, Loader2, Maximize2, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -15,6 +15,7 @@ import {
 import { TrialBalanceObservation } from "@/lib/lancamentos/trialBalanceAutoAdjustment";
 import {
   analyticalTrialBalanceRows,
+  signedBalance,
   summarizeTrialBalance,
   trialBalanceDepth,
   TrialBalanceResult,
@@ -318,28 +319,64 @@ export function BalanceteWorkspaceV2() {
             <TrialBalanceTable rows={result?.rows ?? []} observations={observationMap} onExpand={() => setExpanded("original")} empty="Importe um Balancete Acumulado Analítico do Calima para começar." />
           </TabsContent>
 
-          <TabsContent value="lancamentos" className="mt-7 space-y-6">
-            <div className="rounded-md border border-border bg-background p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div><h3 className="font-semibold">Correção do Balancete</h3><p className="mt-1 max-w-3xl text-sm text-muted-foreground">A correção tenta explicar o saldo pela manobra contábil real. Ex.: Caixa credor + Clientes devedor do faturamento → recebimento D Caixa / C Clientes. Não força uma meta fixa de Caixa.</p></div>
-                <Button disabled={!result?.rows.length || correcting || !previousBalanceVerified} onClick={() => void correctAutomatically()}>{correcting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Recalculando saldos...</> : <><Sparkles className="mr-2 h-4 w-4" />Corrigir automaticamente</>}</Button>
+          <TabsContent value="lancamentos" className="mt-7 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-background p-4">
+              <div>
+                <h3 className="text-sm font-semibold">Fechamento de {monthLabel} de {year}</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Conferência de Despesas, Folha, Compras e Faturamento com o Balancete importado.</p>
               </div>
-              {analysis?.contextSummary?.length ? <div className="mt-4 grid gap-2 border-t border-border pt-4 text-xs text-muted-foreground md:grid-cols-2">{analysis.contextSummary.map(text => <p key={text}>{text}</p>)}</div> : null}
+              <Button disabled={!result?.rows.length || correcting || !previousBalanceVerified} onClick={() => void correctAutomatically()}>
+                {correcting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analisando...</> : <><Sparkles className="mr-2 h-4 w-4" />Analisar e corrigir</>}
+              </Button>
             </div>
+            {!plan ? <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Execute a análise para visualizar os saldos antes e depois e os lançamentos sugeridos.</div> : <>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Metric label="Lançamentos propostos" value={String(plan.adjustments.length)} />
+                <Metric label="Pendências" value={String(plan.remainingCriticalObservations.length)} />
+                <Metric label="Caixa: atual → projetado" value={plan.currentCashSignedInCents === null || plan.projectedCashSignedInCents === null ? "Não localizado" : balance(plan.currentCashSignedInCents) + " → " + balance(plan.projectedCashSignedInCents)} />
+              </div>
+              <BalanceChangeList before={result?.rows ?? []} plan={plan} />
 
-            {!plan ? <div className="grid min-h-52 place-items-center rounded-md border border-dashed border-border bg-muted/20 p-8 text-center"><div><Sparkles className="mx-auto h-6 w-6 text-muted-foreground" /><p className="mt-3 text-sm font-medium">Nenhuma prévia gerada ainda</p><p className="mt-1 text-xs text-muted-foreground">Clique em Corrigir automaticamente para transformar os problemas críticos em lançamentos de ajuste.</p></div></div> : <>
-              <div className="grid gap-3 sm:grid-cols-4"><Metric label="Ajustes gerados" value={String(plan.adjustments.length)} /><Metric label="Críticos restantes" value={String(plan.remainingCriticalObservations.length)} /><Metric label="Caixa atual" value={plan.currentCashSignedInCents === null ? "Não localizado" : balance(plan.currentCashSignedInCents)} /><Metric label="Caixa projetado" value={plan.projectedCashSignedInCents === null ? "Não localizado" : balance(plan.projectedCashSignedInCents)} /></div>
+              {Boolean(plan.unmappedEntries?.length) && <section className="rounded-md border border-amber-500/40 bg-amber-500/5 p-4">
+                <h4 className="text-sm font-semibold">Contas ainda não identificadas</h4>
+                <p className="mt-1 text-xs text-muted-foreground">Sem C.R. correspondente, o sistema não pode criar um lançamento confiável.</p>
+                <ul className="mt-3 space-y-2 text-xs">{plan.unmappedEntries.map((item, i) => <li key={i} className="rounded border border-border bg-background p-3">
+                  <p className="font-semibold">{item.section.toUpperCase()}: {item.history} — {money(item.amountInCents)}</p>
+                  <p className="mt-1">D {item.debitCode} ({item.debitDescription || "sem descrição"}) / C {item.creditCode} ({item.creditDescription || "sem descrição"})</p>
+                  <p className="mt-1 text-amber-700 dark:text-amber-300">Sem correspondência: {item.missingSides.join(" e ")}.</p>
+                </li>)}</ul>
+              </section>}
 
-              {!plan.correctionComplete && <div className="flex gap-2 rounded-md border-2 border-red-600/50 bg-red-600/15 p-4 text-sm font-semibold text-red-800 dark:text-red-200"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />Esta prévia ainda NÃO está corrigida. Existem {plan.remainingCriticalObservations.length} problema(s) crítico(s) ou a conferência matemática não fechou. Ela não recebe status verde e não pode ser exportada.</div>}
-              {plan.correctionComplete && <div className="flex gap-2 rounded-md border-2 border-emerald-600/50 bg-emerald-500/15 p-4 text-sm font-semibold text-emerald-800 dark:text-emerald-200"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />Os problemas críticos foram resolvidos na prévia. As linhas realmente alteradas aparecem em verde forte abaixo.</div>}
+              {plan.remainingCriticalObservations.length > 0 && <section className="rounded-md border border-red-500/35 bg-red-500/5 p-4">
+                <h4 className="text-sm font-semibold">O que ainda impede o fechamento</h4>
+                <ul className="mt-2 space-y-2 text-xs">{plan.remainingCriticalObservations.map(item => <li key={item.id}>
+                  <span className="font-semibold">{item.title} — {item.headline}:</span> {item.message}
+                </li>)}</ul>
+              </section>}
+              {plan.correctionComplete ? <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="h-4 w-4" />Prévia matematicamente conciliada. Confira os comprovantes antes da importação.</div> : <div className="flex items-center gap-2 text-xs text-red-700 dark:text-red-300"><AlertTriangle className="h-4 w-4" />Ajustes simulados. Exportação bloqueada enquanto houver divergências.</div>}
 
               <section className="overflow-hidden rounded-md border border-border bg-background">
-                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3"><div><h4 className="text-sm font-semibold">Lançamentos de ajuste</h4><p className="mt-0.5 text-xs text-muted-foreground">Somente estes lançamentos serão levados ao Calima; o balancete original não é reescrito.</p></div><Button disabled={!conferenceOk || !planConferable || !plan.adjustments.length} onClick={exportAdjustments}>Exportar ajustes para o Calima</Button></div>
-                <div className="overflow-x-auto"><table className="w-full min-w-[980px] table-fixed text-xs"><thead className="bg-muted/50 text-left text-[11px] text-muted-foreground"><tr><th className="w-[11%] border-b border-r border-border px-2 py-2">Data</th><th className="w-[31%] border-b border-r border-border px-2 py-2">Histórico</th><th className="w-[10%] border-b border-r border-border px-2 py-2">Débito</th><th className="w-[10%] border-b border-r border-border px-2 py-2">Crédito</th><th className="w-[15%] border-b border-r border-border px-2 py-2 text-right">Valor</th><th className="w-[23%] border-b border-border px-2 py-2">Motivo</th></tr></thead><tbody>{plan.adjustments.map((row, index) => <tr key={`${index}-${row.debitCode}-${row.creditCode}`}><td className="border-r border-border px-2 py-2">{row.date}</td><td className="border-r border-border px-2 py-2">{row.history}</td><td className="border-r border-border px-2 py-2 tabular-nums">{row.debitCode}</td><td className="border-r border-border px-2 py-2 tabular-nums">{row.creditCode}</td><td className="border-r border-border px-2 py-2 text-right tabular-nums">{money(row.amountInCents)}</td><td className="px-2 py-2 text-[11px] text-muted-foreground">{row.mappingReason}</td></tr>)}</tbody></table></div>
-                {!conferenceOk && <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">A exportação só é liberada depois que a prévia estiver realmente corrigida e a Conferência for marcada como OK.</p>}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-4">
+                  <h4 className="text-sm font-semibold">Lançamentos sugeridos ({plan.adjustments.length})</h4>
+                  <Button disabled={!conferenceOk || !planConferable || !plan.adjustments.length} onClick={exportAdjustments} size="sm">Exportar para o Calima</Button>
+                </div>
+                <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-xs">
+                  <thead className="bg-muted/40 text-left text-muted-foreground"><tr><th className="p-3">Data / Histórico</th><th className="p-3">Débito</th><th className="p-3">Crédito</th><th className="p-3 text-right">Valor</th><th className="p-3 text-center">Motivo</th></tr></thead>
+                  <tbody>{plan.adjustments.map((entry, i) => <tr key={i} className="border-t border-border">
+                    <td className="p-3"><span className="text-muted-foreground">{entry.date}</span><p className="mt-1 font-semibold">{entry.history}</p></td>
+                    <td className="p-3 tabular-nums">{entry.debitCode}</td><td className="p-3 tabular-nums">{entry.creditCode}</td>
+                    <td className="p-3 text-right tabular-nums">{money(entry.amountInCents)}</td>
+                    <td className="p-3 text-center"><HoverCard openDelay={80}><HoverCardTrigger asChild>
+                      <button type="button" className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border" aria-label="Ver justificativa"><Info className="h-4 w-4" /></button>
+                    </HoverCardTrigger><HoverCardContent align="end" className="w-[370px] max-w-[85vw]">
+                      <p className="text-xs font-semibold">{entry.history}</p>
+                      <p className="mt-2 text-xs text-muted-foreground">{entry.mappingReason || "Conciliação dos saldos com os módulos importados."}</p>
+                      <p className="mt-2 text-xs text-muted-foreground">Uma sugestão de fechamento não comprova pagamento ou recebimento. Confira a documentação.</p>
+                    </HoverCardContent></HoverCard></td>
+                  </tr>)}</tbody>
+                </table></div>
               </section>
-
-              <div><div className="mb-3"><h4 className="font-semibold">Prévia do Balancete corrigido</h4><p className="mt-1 text-sm text-muted-foreground">VERDE forte = linha realmente alterada. VERMELHO forte = problema crítico que ainda permaneceu após os lançamentos.</p></div><TrialBalanceTable rows={plan.previewRows} observations={previewObservationMap} originalRows={result?.rows ?? []} preview onExpand={() => setExpanded("preview")} empty="Sem prévia." /></div>
+              <div className="flex justify-end"><Button type="button" variant="outline" size="sm" onClick={() => setExpanded("preview")}><Maximize2 className="mr-2 h-4 w-4" />Ver balancete projetado completo</Button></div>
             </>}
           </TabsContent>
 
@@ -391,6 +428,46 @@ function TrialBalanceTable({ rows, observations, originalRows, preview = false, 
 
 function ObservationHover({ observations }: { observations: TrialBalanceObservation[] }) {
   return <HoverCard openDelay={80} closeDelay={80}><HoverCardTrigger asChild><button type="button" className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-red-700 text-white shadow-sm ring-2 ring-red-500/30" aria-label="Ver problema crítico"><CircleAlert className="h-4 w-4" /></button></HoverCardTrigger><HoverCardContent side="right" align="start" className="w-[380px] overflow-hidden border-2 border-red-600/30 p-0 shadow-xl"><div className="bg-red-600/15 px-4 py-3"><p className="text-xs font-extrabold uppercase tracking-wide text-red-800 dark:text-red-200">Problema crítico</p></div><div className="space-y-3 p-4">{observations.map(item => <div key={item.id}><p className="text-sm font-bold text-foreground">{item.headline}</p><p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{item.message}</p>{item.suggestedSignedInCents !== undefined && <p className="mt-2 text-xs"><span className="text-muted-foreground">Resultado esperado: </span><span className="font-semibold text-foreground">{balance(item.suggestedSignedInCents)}</span></p>}<p className="mt-1 text-[10px] text-muted-foreground">Base: {item.source}</p></div>)}</div></HoverCardContent></HoverCard>;
+}
+
+function BalanceChangeList({ before, plan }: { before: TrialBalanceRow[]; plan: CriticalTrialBalancePlan }) {
+  const original = new Map(before.map(row => [row.id, row]));
+  const changes = analyticalTrialBalanceRows(plan.previewRows).flatMap(row => {
+    const prior = original.get(row.id);
+    if (!prior) return [];
+    const oldBalance = signedBalance(prior.currentBalanceInCents, prior.currentNature);
+    const newBalance = signedBalance(row.currentBalanceInCents, row.currentNature);
+    if (Math.abs(oldBalance - newBalance) <= 1) return [];
+    const evidence = plan.adjustments.filter(entry => entry.debitCode === row.reducedCode || entry.creditCode === row.reducedCode);
+    return [{ row, oldBalance, newBalance, evidence }];
+  });
+
+  return <section className="overflow-hidden rounded-md border border-border bg-background">
+    <div className="border-b border-border px-4 py-3">
+      <h4 className="text-sm font-semibold">Saldos alterados</h4>
+      <p className="mt-1 text-xs text-muted-foreground">Saldo atual do documento → saldo após os lançamentos propostos. O ícone informa a origem da variação.</p>
+    </div>
+    {changes.length > 0 ? <div className="overflow-x-auto"><table className="w-full min-w-[670px] text-xs">
+      <thead className="bg-muted/40 text-left text-muted-foreground"><tr><th className="px-4 py-2">Conta / C.R.</th><th className="px-4 py-2 text-right">Saldo atual</th><th className="px-4 py-2 text-right">Saldo projetado</th><th className="px-3 py-2 text-center">Motivo</th></tr></thead>
+      <tbody>{changes.map(item => <tr key={item.row.id} className="border-t border-border">
+        <td className="px-4 py-3"><span className="font-semibold">{item.row.title}</span><span className="ml-2 text-muted-foreground">{item.row.reducedCode}</span></td>
+        <td className="px-4 py-3 text-right tabular-nums">{balance(item.oldBalance)}</td>
+        <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">{balance(item.newBalance)}</td>
+        <td className="px-3 py-3 text-center"><HoverCard openDelay={80}><HoverCardTrigger asChild>
+          <button type="button" className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border" aria-label={"Justificativa da conta " + item.row.title}><Info className="h-4 w-4" /></button>
+        </HoverCardTrigger><HoverCardContent align="end" className="w-[370px] max-w-[85vw] space-y-2 text-xs">
+          <p className="font-semibold">{item.row.title} · C.R. {item.row.reducedCode}</p>
+          <p>Variação: {money(item.newBalance - item.oldBalance)} {item.newBalance > item.oldBalance ? "a débito" : "a crédito"}.</p>
+          {item.evidence.map((entry, index) => <div key={index} className="border-t border-border pt-2">
+            <p className="font-semibold">{entry.history}</p>
+            <p>D {entry.debitCode} / C {entry.creditCode} · {money(entry.amountInCents)}</p>
+            <p className="mt-1 text-muted-foreground">{entry.mappingReason || "Partida sugerida com base nos saldos e lançamentos dos módulos."}</p>
+          </div>)}
+          <p className="border-t border-border pt-2 text-muted-foreground">O saldo novo é uma simulação; a justificativa não substitui o comprovante do fato contábil.</p>
+        </HoverCardContent></HoverCard></td>
+      </tr>)}</tbody>
+    </table></div> : <p className="px-4 py-6 text-xs text-muted-foreground">Nenhum saldo alterado. Consulte as pendências do fechamento.</p>}
+  </section>;
 }
 
 function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-md border border-border bg-background px-4 py-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-semibold tabular-nums">{value}</p></div>; }
