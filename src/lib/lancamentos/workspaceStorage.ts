@@ -311,11 +311,13 @@ export async function saveWorkspaceData<T>(id: string, value: T): Promise<Worksp
   return { synced: !syncError, error: syncError };
 }
 
-export async function deleteWorkspaceData(id: string) {
+export async function deleteWorkspaceData(id: string): Promise<WorkspaceSaveResult> {
+  let syncError: string | undefined;
   try {
     const { error } = await (supabase as any).from("accounting_workspace_data").delete().eq("scope", id);
     if (error) throw error;
   } catch (error) {
+    syncError = error instanceof Error ? error.message : "Falha na exclusão remota.";
     console.error("Falha ao remover dados do workspace no Supabase.", error);
   }
   const database = await openDatabase();
@@ -323,6 +325,7 @@ export async function deleteWorkspaceData(id: string) {
   transaction.objectStore(DATA_STORE).delete(id);
   await complete(transaction);
   database.close();
+  return { synced: !syncError, error: syncError };
 }
 
 export async function loadWorkspaceData<T>(id: string) {
