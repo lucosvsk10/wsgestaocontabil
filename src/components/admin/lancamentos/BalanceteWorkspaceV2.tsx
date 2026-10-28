@@ -6,7 +6,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountingCompany } from "@/hooks/lancamentos/useAccountingCompany";
-import { exportAccountingWorkbook } from "@/lib/lancamentos/accountingExportWorkbook";
+import { exportCalimaBalancete } from "@/lib/lancamentos/calimaBalanceteExport";
 import {
   applyAiClosingReview,
   AiClosingResponse,
@@ -281,23 +281,8 @@ export function BalanceteWorkspaceV2() {
   };
 
   const exportAdjustments = () => {
-    if (!plan || !planConferable) return;
-    exportAccountingWorkbook({
-      moduleTitle: "Ajustes do Balancete",
-      competence,
-      fileName: `ajustes-balancete-${year}-${month}.xlsx`,
-      entries: plan.adjustments,
-      comparisons: plan.targets.map(target => ({
-        label: `${target.label} · C.R. ${target.row.reducedCode}`,
-        documentAmountInCents: Math.abs(target.currentSignedInCents),
-        entriesAmountInCents: Math.abs(target.targetSignedInCents),
-        differenceInCents: Math.abs(target.targetSignedInCents) - Math.abs(target.currentSignedInCents),
-        source: target.source,
-        blocking: false,
-        note: `${balance(target.currentSignedInCents)} → ${balance(target.targetSignedInCents)}`,
-      })),
-      note: "Lançamentos conferidos pelo motor, pela IA e pelos limites da empresa. Verificar documentos de suporte antes de importar no Calima.",
-    });
+    if (!plan || !planConferable || !plan.adjustments.length) return;
+    exportCalimaBalancete(competence, plan.adjustments);
   };
 
   return <div className="mx-auto w-full max-w-[1720px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
