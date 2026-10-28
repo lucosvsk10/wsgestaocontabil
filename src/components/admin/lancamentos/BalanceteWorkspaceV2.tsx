@@ -1,5 +1,5 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, CircleAlert, FileSpreadsheet, Info, Loader2, Maximize2, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleAlert, FileSpreadsheet, Info, Loader2, Maximize2, Sparkles, Trash2, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -16,6 +16,8 @@ import {
   criticalTrialBalancePlanIsCorrected,
 } from "@/lib/lancamentos/trialBalanceCriticalCorrection";
 import { TrialBalanceObservation } from "@/lib/lancamentos/trialBalanceAutoAdjustment";
+import { parseCalimaTrialBalance } from "@/lib/lancamentos/trialBalancePdfParser";
+import { balanceLimitForRow, checkBalanceLimits, BalanceLimitOverrides, BalanceLimitRule } from "@/lib/lancamentos/trialBalanceLimits";
 import {
   analyticalTrialBalanceRows,
   signedBalance,
@@ -56,6 +58,11 @@ export function BalanceteWorkspaceV2() {
   const [result, setResult] = useState<TrialBalanceResult | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [analysis, setAnalysis] = useState<CriticalTrialBalancePlan | null>(null);
+  const [limits, setLimits] = useState<BalanceLimitOverrides>({});
+  const [onlyCritical, setOnlyCritical] = useState(false);
+  const [filterText, setFilterText] = useState("");
+  const [editingCode, setEditingCode] = useState<string | null>(null);
+  const [editingRule, setEditingRule] = useState<BalanceLimitRule | null>(null);
   const [plan, setPlan] = useState<CriticalTrialBalancePlan | null>(null);
   const [conferenceOk, setConferenceOk] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -71,6 +78,7 @@ export function BalanceteWorkspaceV2() {
   const scope = `${company.id}:${year}:${month}:balancete`;
   const dataKey = `${scope}:parsed`;
   const planKey = `${scope}:auto-plan`;
+  const limitKey = `${company.id}:balancete:limits`;
   const conferenceKey = `${scope}:conference-ok`;
   const monthLabel = months.find(item => item[0] === month)?.[1] ?? month;
 
@@ -97,8 +105,8 @@ export function BalanceteWorkspaceV2() {
         loadWorkspaceFiles(prefix),
       ]);
       const corrected = criticalTrialBalancePlanIsCorrected(savedPlan);
-      const issues = savedPlan?.remainingCriticalObservations?.length
-        ?? (saved?.validationIssues.length ?? 0) + (saved?.rows.filter(row => Math.abs(validateTrialBalanceRow(row)) > 10_000).length ?? 0);
+      const storedLimits = await loadWorkspaceData<BalanceLimitOverrides>(`${company.id}:balancete:limits`);
+      const issues = saved?.rows?.length ? checkBalanceLimits(saved.rows, storedLimits || {}).filter(item => item.critical).length : 0;
       return [key, { hasData: Boolean(saved?.rows?.length), hasFile: storedFiles.length > 0, issues, corrected, conferenceOk: Boolean(ok && corrected) }] as const;
     }));
     setYearStates(Object.fromEntries(entries));
@@ -122,40 +130,45 @@ export function BalanceteWorkspaceV2() {
       loadWorkspaceFiles(scope),
       loadWorkspaceData<CriticalTrialBalancePlan>(planKey),
       loadWorkspaceData<boolean>(conferenceKey),
-    ]).then(async ([saved, docs, savedPlan, savedOk]) => {
+      loadWorkspaceData<BalanceLimitOverrides>(limitKey),
+    ]).then(async ([saved, docs, savedPlan, savedOk, storedLimits]) => {
       if (!active) return;
       setResult(saved ?? null);
       setFiles(docs);
+      setLimits(storedLimits || {});
       // O plano salvo por IA permanece como prévia; o usuário pode reexecutar
       // a análise sempre que carregar novos documentos nos módulos.
       setPlan(savedPlan?.aiReview ? savedPlan : null);
       setConferenceOk(false);
-      if (saved?.rows?.length && previousBalancesAreVerified(saved)) {
-        try {
-          const nextAnalysis = await buildCriticalTrialBalancePlan(company.id, month, year, saved.rows);
-          if (!active) return;
-          setAnalysis(nextAnalysis);
-          if (savedPlan && !savedPlan.aiReview) {
-            setPlan(nextAnalysis);
-            await saveWorkspaceData(planKey, nextAnalysis);
-            await saveWorkspaceData(conferenceKey, false);
-            void refreshYearStates();
-          }
-        } catch (reason) {
-          if (active) setError(reason instanceof Error ? reason.message : "Falha ao analisar o balancete.");
-        }
-      }
+      // A importação e o filtro de saldos não chamam IA.
+      // Apenas o botão da aba Lançamentos inicia a análise inteligente.
     });
     return () => { active = false; };
-  }, [company.id, conferenceKey, dataKey, month, planKey, scope, year]);
+  }, [company.id, conferenceKey, dataKey, month, planKey, scope, year, limitKey]);
 
+  const checks = useMemo(() => checkBalanceLimits(result?.rows || [], limits), [result, limits]);
+  const flagged = useMemo(() => checks.filter(item => item.critical), [checks]);
+  const projectedFlags = useMemo(() => plan ? checkBalanceLimits(plan.previewRows, limits).filter(item => item.critical) : [], [plan, limits]);
+  const chooseRule = (row: TrialBalanceRow) => {
+    setEditingCode(row.reducedCode);
+    setEditingRule(balanceLimitForRow(row, limits[row.reducedCode] || {}));
+  };
+  const storeRule = async () => {
+    if (!editingCode || !editingRule) return;
+    const next = { ...limits, [editingCode]: { ...editingRule, origin: "custom" as const } };
+    setLimits(next);
+    setEditingCode(null);
+    setEditingRule(null);
+    await saveWorkspaceData(limitKey, next);
+    await refreshYearStates();
+  };
   const previousBalanceVerified = previousBalancesAreVerified(result);
   const observations = (analysis?.observations ?? []).filter(item => item.severity === "critical");
   const observationMap = useMemo(() => groupObservations(observations), [observations]);
   const previewObservationMap = useMemo(() => groupObservations(plan?.remainingCriticalObservations ?? []), [plan]);
   const previewSummary = useMemo(() => summarizeTrialBalance(plan?.previewRows ?? []), [plan]);
-  const planConferable = criticalTrialBalancePlanIsCorrected(plan);
-  const criticalOriginal = observations.length;
+  const planConferable = criticalTrialBalancePlanIsCorrected(plan) && projectedFlags.length === 0;
+  const criticalOriginal = flagged.length;
 
   const importFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? []);
@@ -163,12 +176,8 @@ export function BalanceteWorkspaceV2() {
     if (!selected.length) return;
     setProcessing(true); setError(null);
     try {
-      const documents = await Promise.all(selected.map(async file => ({ name: file.name, mime_type: file.type || "application/pdf", data: await asBase64(file) })));
-      const { data, error: invokeError } = await supabase.functions.invoke("process-trial-balance-document", { body: { company_id: company.id, documents } });
-      if (invokeError) throw await functionError(invokeError, "Falha ao ler o Balancete do Calima.");
-      if (!Array.isArray(data?.rows) || !data.competence) throw new Error("O balancete não devolveu linhas estruturadas.");
-      const parsed = data as TrialBalanceResultWithPrevious;
-      if (!parsed.previousBalanceVerified) throw new Error(`A coluna SALDO ANT não foi confirmada em todas as linhas (${parsed.previousBalanceReadCount ?? 0}/${parsed.rows.length}). A importação foi interrompida para não calcular o fechamento com dados incompletos.`);
+      if (selected.length !== 1) throw new Error("Envie um balancete PDF por vez.");
+      const parsed = await parseCalimaTrialBalance(selected[0]);
       if (parsed.competence !== competence) setPending({ result: parsed, files: selected });
       else await persistImport(parsed, selected);
     } catch (reason) {
@@ -190,8 +199,7 @@ export function BalanceteWorkspaceV2() {
     setResult(parsed);
     setFiles(await loadWorkspaceFiles(targetScope));
     setPlan(null); setConferenceOk(false);
-    const nextAnalysis = await buildCriticalTrialBalancePlan(company.id, targetMonth, targetYear, parsed.rows);
-    setAnalysis(nextAnalysis);
+    setAnalysis(null);
     setActiveTab("balancete");
     await refreshYearStates();
   };
