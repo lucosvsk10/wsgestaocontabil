@@ -949,7 +949,12 @@ export function applyAiClosingReview(
 export function criticalTrialBalancePlanIsCorrected(plan: CriticalTrialBalancePlan | null | undefined) {
   return Boolean(
     plan?.correctionComplete
+    && plan.aiReview
+    && plan.aiReview.pendingCount === 0
+    && plan.aiReview.rejectedCount === 0
+    && plan.aiReview.issues.length === 0
     && plan.previousBalanceVerified
+    && plan.documentSources?.every(source => source.available)
     && plan.remainingCriticalObservations.length === 0
     && plan.unmappedEntryCount === 0,
   );
