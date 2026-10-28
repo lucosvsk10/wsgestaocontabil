@@ -335,6 +335,10 @@ export function BalanceteWorkspaceV2() {
                 <Metric label="Pendências" value={String(plan.remainingCriticalObservations.length)} />
                 <Metric label="Caixa: atual → projetado" value={plan.currentCashSignedInCents === null || plan.projectedCashSignedInCents === null ? "Não localizado" : balance(plan.currentCashSignedInCents) + " → " + balance(plan.projectedCashSignedInCents)} />
               </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span>Fontes lidas: {plan.documentSources?.filter(source => source.available).length ?? 0}/4</span>
+                {plan.documentSources?.filter(source => !source.available).map(source => <span key={source.module} className="text-amber-700 dark:text-amber-300">Falta {source.module}</span>)}
+              </div>
               <BalanceChangeList before={result?.rows ?? []} plan={plan} />
 
               {Boolean(plan.unmappedEntries?.length) && <section className="rounded-md border border-amber-500/40 bg-amber-500/5 p-4">
