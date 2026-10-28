@@ -98,17 +98,16 @@ export function BalanceteWorkspaceV2() {
   const refreshYearStates = useCallback(async () => {
     const entries = await Promise.all(months.map(async ([key]) => {
       const prefix = `${company.id}:${year}:${key}:balancete`;
-      const [saved, savedPlan, ok, storedFiles] = await Promise.all([
+      const [saved, savedPlan, ok] = await Promise.all([
         loadWorkspaceData<TrialBalanceResult>(`${prefix}:parsed`),
         loadWorkspaceData<CriticalTrialBalancePlan>(`${prefix}:auto-plan`),
         loadWorkspaceData<boolean>(`${prefix}:conference-ok`),
-        loadWorkspaceFiles(prefix),
       ]);
       const storedLimits = await loadWorkspaceData<BalanceLimitOverrides>(`${company.id}:balancete:limits`);
       const corrected = criticalTrialBalancePlanIsCorrected(savedPlan)
         && checkBalanceLimits(savedPlan?.previewRows ?? [], storedLimits || {}).every(item => !item.critical);
       const issues = corrected ? 0 : saved?.rows?.length ? checkBalanceLimits(saved.rows, storedLimits || {}).filter(item => item.critical).length : 0;
-      return [key, { hasData: Boolean(saved?.rows?.length), hasFile: storedFiles.length > 0, issues, corrected, conferenceOk: Boolean(ok && corrected) }] as const;
+      return [key, { hasData: Boolean(saved?.rows?.length), hasFile: Boolean(saved?.rows?.length), issues, corrected, conferenceOk: Boolean(ok && corrected) }] as const;
     }));
     setYearStates(Object.fromEntries(entries));
   }, [company.id, year]);
