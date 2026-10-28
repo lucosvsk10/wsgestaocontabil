@@ -342,13 +342,40 @@ export function BalanceteWorkspaceV2() {
             { value: "conferencia", label: "Conferência", count: conferenceOk ? 0 : plan?.remainingCriticalObservations.length ?? 1 },
           ]} />
 
-          <TabsContent value="balancete" className="mt-7 space-y-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div><h3 className="font-semibold">Balancete importado</h3><p className="mt-1 text-sm text-muted-foreground">Somente problemas realmente críticos aparecem em vermelho. Diferenças pequenas e detalhes sem impacto material não recebem alerta.</p></div>
-              {result?.rows.length ? <span className="rounded-md border-2 border-red-600/60 bg-red-600/20 px-3 py-1.5 text-xs font-bold text-red-800 dark:text-red-200">{criticalOriginal} CRÍTICO(S)</span> : null}
+          <TabsContent value="balancete" className="mt-5 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">Saldos do Calima</h3>
+                <p className="mt-1 text-xs text-muted-foreground">{result?.rows.length || 0} linhas lidas sem IA · {flagged.length} fora das regras</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input className="w-40 rounded border border-input bg-background px-2 py-2 text-xs sm:w-56" placeholder="Buscar conta ou C.R." value={filterText} onChange={event => setFilterText(event.target.value)} />
+                <Button type="button" variant={onlyCritical ? "default" : "outline"} size="sm" onClick={() => setOnlyCritical(current => !current)}>Só críticos ({flagged.length})</Button>
+              </div>
             </div>
-            {observations.length > 0 && <div className="rounded-md border border-red-600/30 bg-red-500/5 p-3"><p className="mb-2 text-sm font-semibold">Todos os {observations.length} problemas críticos encontrados</p><ol className="list-decimal space-y-1 pl-5 text-xs">{observations.map(item => <li key={item.id}><span className="font-semibold">{item.title} — {item.headline}:</span> {item.message}</li>)}</ol></div>}
-            <TrialBalanceTable rows={result?.rows ?? []} observations={observationMap} onExpand={() => setExpanded("original")} empty="Importe um Balancete Acumulado Analítico do Calima para começar." />
+            <BalanceLimitsTable checks={checks.filter(item => (!onlyCritical || item.critical) && (!filterText.trim() || (item.row.title + " " + item.row.reducedCode + " " + item.row.accountCode).toLowerCase().includes(filterText.toLowerCase().trim())))} onEdit={chooseRule} />
+            <Dialog open={Boolean(editingCode && editingRule)} onOpenChange={open => { if (!open) { setEditingCode(null); setEditingRule(null); } }}>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Limites da conta C.R. {editingCode}</DialogTitle><DialogDescription>Regras do filtro. Alterações serão aplicadas às competências desta empresa.</DialogDescription></DialogHeader>
+                {editingRule && <div className="space-y-3 text-sm">
+                  <label className="block">Natureza esperada
+                    <select className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2" value={editingRule.nature} onChange={e => setEditingRule({ ...editingRule, nature: e.target.value as BalanceLimitRule["nature"] })}>
+                      <option value="D">Devedora</option><option value="C">Credora</option><option value="any">Sem natureza fixa</option>
+                    </select>
+                  </label>
+                  <label className="block">Saldo mínimo (R$)
+                    <input type="number" min="0" step="0.01" className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2" value={editingRule.minInCents / 100} onChange={e => setEditingRule({ ...editingRule, minInCents: Math.round(Math.max(0, Number(e.target.value)) * 100) })} />
+                  </label>
+                  <label className="block">Saldo máximo (R$)
+                    <input type="number" min="0" step="0.01" className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2" value={editingRule.maxInCents / 100} onChange={e => setEditingRule({ ...editingRule, maxInCents: Math.round(Math.max(0, Number(e.target.value)) * 100) })} />
+                  </label>
+                  <label className="block">Margem de tolerância (%)
+                    <input type="number" min="0" max="200" step="1" className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2" value={editingRule.marginPercent} onChange={e => setEditingRule({ ...editingRule, marginPercent: Math.max(0, Math.min(200, Number(e.target.value))) })} />
+                  </label>
+                </div>}
+                <DialogFooter><Button type="button" variant="outline" onClick={() => { setEditingCode(null); setEditingRule(null); }}>Cancelar</Button><Button type="button" onClick={() => void storeRule()}>Salvar regra</Button></DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="lancamentos" className="mt-7 space-y-4">
@@ -475,6 +502,38 @@ function TrialBalanceTable({ rows, observations, originalRows, preview = false, 
 
 function ObservationHover({ observations }: { observations: TrialBalanceObservation[] }) {
   return <HoverCard openDelay={80} closeDelay={80}><HoverCardTrigger asChild><button type="button" className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-red-700 text-white shadow-sm ring-2 ring-red-500/30" aria-label="Ver problema crítico"><CircleAlert className="h-4 w-4" /></button></HoverCardTrigger><HoverCardContent side="right" align="start" className="w-[380px] overflow-hidden border-2 border-red-600/30 p-0 shadow-xl"><div className="bg-red-600/15 px-4 py-3"><p className="text-xs font-extrabold uppercase tracking-wide text-red-800 dark:text-red-200">Problema crítico</p></div><div className="space-y-3 p-4">{observations.map(item => <div key={item.id}><p className="text-sm font-bold text-foreground">{item.headline}</p><p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{item.message}</p>{item.suggestedSignedInCents !== undefined && <p className="mt-2 text-xs"><span className="text-muted-foreground">Resultado esperado: </span><span className="font-semibold text-foreground">{balance(item.suggestedSignedInCents)}</span></p>}<p className="mt-1 text-[10px] text-muted-foreground">Base: {item.source}</p></div>)}</div></HoverCardContent></HoverCard>;
+}
+
+function BalanceLimitsTable({ checks, onEdit }: { checks: import("@/lib/lancamentos/trialBalanceLimits").BalanceLimitCheck[]; onEdit: (row: TrialBalanceRow) => void }) {
+  return <div className="overflow-hidden rounded-md border border-border bg-background">
+    <div className="overflow-x-auto"><table className="w-full min-w-[980px] text-xs">
+      <thead className="bg-muted/40 text-left text-muted-foreground"><tr>
+        <th className="p-3">Conta / C.R.</th><th className="p-3 text-right">Saldo ant.</th>
+        <th className="p-3 text-right">Débito</th><th className="p-3 text-right">Crédito</th>
+        <th className="p-3 text-right">Saldo atual</th><th className="p-3 text-right">Faixa esperada</th><th className="p-3 text-center">Filtro</th>
+      </tr></thead>
+      <tbody>{checks.map(item => <tr key={item.row.id} className={cn("border-t border-border", item.critical && "bg-red-500/10")}>
+        <td className="p-3">
+          <div className="flex items-center gap-2">
+            <span className={cn("h-2 w-2 shrink-0 rounded-full", item.critical ? "bg-red-500" : "bg-emerald-500")} />
+            <div><p className="font-semibold">{item.row.title}</p><p className="text-[10px] text-muted-foreground">{item.row.accountCode} · C.R. {item.row.reducedCode}</p></div>
+          </div>
+        </td>
+        <td className="p-3 text-right tabular-nums">{formatAmountNature(item.row.previousBalanceInCents, item.row.previousNature)}</td>
+        <td className="p-3 text-right tabular-nums">{money(item.row.debitInCents)}</td>
+        <td className="p-3 text-right tabular-nums">{money(item.row.creditInCents)}</td>
+        <td className={cn("p-3 text-right font-semibold tabular-nums", item.critical && "text-red-700 dark:text-red-300")}>{balance(item.signedInCents)}</td>
+        <td className="p-3 text-right tabular-nums">{money(item.rule.minInCents)} – {money(item.rule.maxInCents)} {item.rule.nature === "any" ? "" : item.rule.nature}<p className="text-[10px] text-muted-foreground">Margem {item.rule.marginPercent}%</p></td>
+        <td className="p-3 text-center">
+          <div className="flex items-center justify-center gap-2">
+            {item.critical && <HoverCard openDelay={80}><HoverCardTrigger asChild><button type="button" aria-label="Motivos do alerta" className="text-red-600"><CircleAlert className="h-4 w-4" /></button></HoverCardTrigger><HoverCardContent className="text-xs"><p className="font-semibold">Fora do intervalo</p>{item.reasons.map(reason => <p className="mt-1" key={reason}>{reason}</p>)}</HoverCardContent></HoverCard>}
+            <button type="button" aria-label={"Configurar conta " + item.row.reducedCode} onClick={() => onEdit(item.row)} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><Settings2 className="h-4 w-4" /></button>
+          </div>
+        </td>
+      </tr>)}</tbody>
+    </table></div>
+    {!checks.length && <p className="p-8 text-center text-xs text-muted-foreground">Nenhuma conta corresponde ao filtro.</p>}
+  </div>;
 }
 
 function BalanceChangeList({ before, plan }: { before: TrialBalanceRow[]; plan: CriticalTrialBalancePlan }) {
