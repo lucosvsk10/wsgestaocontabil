@@ -67,7 +67,7 @@ export function BalanceteWorkspaceV2() {
   const [conferenceOk, setConferenceOk] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState("");
-  const [syncStatus, setSyncStatus] = useState<"none" | "local" | "syncing" | "synced" | "failed">("none");
+  const [cloudSync, setCloudSync] = useState<{ scope: string; status: "local" | "syncing" | "synced" | "failed" } | null>(null);
   const [correcting, setCorrecting] = useState(false);
   const [pending, setPending] = useState<PendingImport | null>(null);
   const [expanded, setExpanded] = useState<"original" | "preview" | null>(null);
@@ -127,24 +127,36 @@ export function BalanceteWorkspaceV2() {
     let active = true;
     setAnalysis(null);
     setError(null);
-    Promise.all([
-      loadWorkspaceData<TrialBalanceResult>(dataKey),
-      loadWorkspaceFiles(scope),
-      loadWorkspaceData<CriticalTrialBalancePlan>(planKey),
-      loadWorkspaceData<boolean>(conferenceKey),
-      loadWorkspaceData<BalanceLimitOverrides>(limitKey),
-    ]).then(async ([saved, docs, savedPlan, savedOk, storedLimits]) => {
-      if (!active) return;
-      setResult(saved ?? null);
-      setFiles(docs);
-      setLimits(storedLimits || {});
-      // O plano salvo por IA permanece como prévia; o usuário pode reexecutar
-      // a análise sempre que carregar novos documentos nos módulos.
-      setPlan(savedPlan?.aiReview ? savedPlan : null);
-      setConferenceOk(false);
-      // A importação e o filtro de saldos não chamam IA.
-      // Apenas o botão da aba Lançamentos inicia a análise inteligente.
-    });
+    (async () => {
+      try {
+        const [saved, docs, savedPlan, storedLimits, syncMarker] = await Promise.all([
+          loadLocalWorkspaceData<TrialBalanceResult>(dataKey),
+          loadLocalWorkspaceFiles(scope),
+          loadLocalWorkspaceData<CriticalTrialBalancePlan>(planKey),
+          loadLocalWorkspaceData<BalanceLimitOverrides>(limitKey),
+          loadLocalWorkspaceData<{ status: "pending" | "synced" }>(`${scope}:sync-state`),
+        ]);
+        if (!active) return;
+        setResult(saved ?? null);
+        setFiles(docs);
+        setLimits(storedLimits || {});
+        setPlan(savedPlan?.aiReview ? savedPlan : null);
+        setConferenceOk(false);
+        setCloudSync(syncMarker ? { scope, status: syncMarker.status === "synced" ? "synced" : "local" } : null);
+        // Only load from cloud if there is no local copy. Never download the PDF
+        // just to display the Balancete; the parsed rows are sufficient.
+        if (!saved) {
+          const remote = await loadWorkspaceData<TrialBalanceResult>(dataKey);
+          if (remote && active) {
+            setResult(remote);
+            setCloudSync({ scope, status: "synced" });
+            void saveLocalWorkspaceData(dataKey, remote);
+          }
+        }
+      } catch (reason) {
+        if (active) setError(reason instanceof Error ? reason.message : "Falha ao recuperar a cópia local.");
+      }
+    })();
     return () => { active = false; };
   }, [company.id, conferenceKey, dataKey, month, planKey, scope, year, limitKey]);
 
@@ -200,23 +212,53 @@ export function BalanceteWorkspaceV2() {
     } finally { setProcessing(false); setProcessingStep(""); }
   };
 
+  const syncImport = async (targetScope: string, parsed: TrialBalanceResult, selected: File[]) => {
+    setCloudSync({ scope: targetScope, status: "syncing" });
+    try {
+      const [filesSaved, dataSaved, oldPlanDeleted, oldConferenceDeleted] = await Promise.all([
+        saveWorkspaceFiles(targetScope, selected, { skipCompetencePrompt: true }),
+        saveWorkspaceData(`${targetScope}:parsed`, parsed),
+        deleteWorkspaceData(`${targetScope}:auto-plan`),
+        deleteWorkspaceData(`${targetScope}:conference-ok`),
+      ]);
+      if (![filesSaved, dataSaved, oldPlanDeleted, oldConferenceDeleted].every(item => item?.synced)) {
+        throw new Error("A sincronização do balancete não foi concluída no Supabase.");
+      }
+      await saveLocalWorkspaceData(`${targetScope}:sync-state`, { status: "synced" });
+      setCloudSync({ scope: targetScope, status: "synced" });
+    } catch (reason) {
+      // Local copy remains safe and retryable even during a Supabase outage.
+      setCloudSync({ scope: targetScope, status: "failed" });
+      console.error("Balancete salvo localmente. Sincronização remota pendente.", reason);
+    }
+  };
+
   const persistImport = async (parsed: TrialBalanceResult, selected: File[]) => {
     const [targetMonth, targetYear] = parsed.competence.split("/");
     const targetScope = `${company.id}:${targetYear}:${targetMonth}:balancete`;
-    await saveWorkspaceFiles(targetScope, selected, { skipCompetencePrompt: true });
-    await saveWorkspaceData(`${targetScope}:parsed`, parsed);
-    await deleteWorkspaceData(`${targetScope}:auto-plan`);
-    await deleteWorkspaceData(`${targetScope}:conference-ok`);
-    if (targetMonth !== month || targetYear !== year) {
-      setYear(targetYear); setMonth(targetMonth); setActiveTab("balancete");
-      return;
-    }
+    // Commit both parsed rows and original PDF to IndexedDB first (no network).
+    await Promise.all([
+      saveLocalWorkspaceFiles(targetScope, selected),
+      saveLocalWorkspaceData(`${targetScope}:parsed`, parsed),
+      deleteLocalWorkspaceData(`${targetScope}:auto-plan`),
+      deleteLocalWorkspaceData(`${targetScope}:conference-ok`),
+      saveLocalWorkspaceData(`${targetScope}:sync-state`, { status: "pending" }),
+    ]);
     setResult(parsed);
-    setFiles(await loadWorkspaceFiles(targetScope));
-    setPlan(null); setConferenceOk(false);
+    setFiles(selected);
+    setPlan(null);
+    setConferenceOk(false);
     setAnalysis(null);
+    setCloudSync({ scope: targetScope, status: "local" });
     setActiveTab("balancete");
-    await refreshYearStates();
+    if (targetMonth !== month || targetYear !== year) {
+      setYear(targetYear);
+      setMonth(targetMonth);
+    }
+    // Never block the import spinner on a remote upload, remote deletes,
+    // a second download of the PDF, or all 12 month status requests.
+    void refreshYearStates();
+    void syncImport(targetScope, parsed, selected);
   };
 
   const keepDetected = async () => {
