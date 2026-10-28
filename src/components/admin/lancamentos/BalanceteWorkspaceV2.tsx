@@ -104,9 +104,10 @@ export function BalanceteWorkspaceV2() {
         loadWorkspaceData<boolean>(`${prefix}:conference-ok`),
         loadWorkspaceFiles(prefix),
       ]);
-      const corrected = criticalTrialBalancePlanIsCorrected(savedPlan);
       const storedLimits = await loadWorkspaceData<BalanceLimitOverrides>(`${company.id}:balancete:limits`);
-      const issues = saved?.rows?.length ? checkBalanceLimits(saved.rows, storedLimits || {}).filter(item => item.critical).length : 0;
+      const corrected = criticalTrialBalancePlanIsCorrected(savedPlan)
+        && checkBalanceLimits(savedPlan?.previewRows ?? [], storedLimits || {}).every(item => !item.critical);
+      const issues = corrected ? 0 : saved?.rows?.length ? checkBalanceLimits(saved.rows, storedLimits || {}).filter(item => item.critical).length : 0;
       return [key, { hasData: Boolean(saved?.rows?.length), hasFile: storedFiles.length > 0, issues, corrected, conferenceOk: Boolean(ok && corrected) }] as const;
     }));
     setYearStates(Object.fromEntries(entries));
@@ -305,7 +306,7 @@ export function BalanceteWorkspaceV2() {
           {months.map(([key, label]) => {
             const state = yearStates[key];
             const active = month === key;
-            const dot = state?.hasData && state.issues > 0 ? "bg-red-500" : state?.corrected ? "bg-emerald-500" : state?.hasData ? "bg-sky-500" : state?.hasFile ? "bg-amber-500" : "bg-muted-foreground/25";
+            const dot = state?.corrected ? "bg-emerald-500" : state?.hasData && state.issues > 0 ? "bg-red-500" : state?.hasData ? "bg-sky-500" : state?.hasFile ? "bg-amber-500" : "bg-muted-foreground/25";
             return <button key={key} type="button" onClick={() => setMonth(key)} className={cn("flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm transition-colors", active ? "bg-cyan-500/15 text-cyan-800 dark:text-cyan-200" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
               <span>{label}</span><span className="flex items-center gap-2"><span className="text-[10px]">{state?.conferenceOk ? "OK" : state?.corrected ? "corrigido" : state?.hasData && state.issues ? `${state.issues} crítico(s)` : state?.hasData ? "importado" : state?.hasFile ? "arquivo" : ""}</span><span className={cn("h-2 w-2 rounded-full", dot)} /></span>
             </button>;
