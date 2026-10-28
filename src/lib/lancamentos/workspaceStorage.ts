@@ -158,8 +158,20 @@ export async function saveLocalWorkspaceData<T>(id: string, value: T) {
   }
 }
 
+export async function deleteLocalWorkspaceData(id: string) {
+  const database = await openDatabase();
+  try {
+    const transaction = database.transaction(DATA_STORE, "readwrite");
+    transaction.objectStore(DATA_STORE).delete(id);
+    await complete(transaction);
+  } finally {
+    database.close();
+  }
+}
+
 export async function saveWorkspaceFiles(scope: string, files: File[], options: SaveWorkspaceFilesOptions = {}) {
   const context = parseScope(scope);
+  let syncError: string | undefined;
   try {
     for (const file of files) {
       const storagePath = storagePathFor(scope, file);
@@ -169,6 +181,7 @@ export async function saveWorkspaceFiles(scope: string, files: File[], options: 
       if (metadataError) throw metadataError;
     }
   } catch (error) {
+    syncError = error instanceof Error ? error.message : "Falha ao sincronizar arquivo.";
     console.error("Falha ao salvar documentos no Supabase; mantendo cópia local.", error);
   }
   const database = await openDatabase();
@@ -188,6 +201,7 @@ export async function saveWorkspaceFiles(scope: string, files: File[], options: 
       throw new WrongCompetenceImportCancelledError();
     }
   }
+  return { synced: !syncError, error: syncError } satisfies WorkspaceSaveResult;
 }
 
 export async function loadWorkspaceFiles(scope: string) {
