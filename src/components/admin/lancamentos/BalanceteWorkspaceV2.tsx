@@ -56,6 +56,8 @@ export function BalanceteWorkspaceV2() {
   const [conferenceOk, setConferenceOk] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [correcting, setCorrecting] = useState(false);
+  const [mappingSaving, setMappingSaving] = useState(false);
+  const [mappingDraft, setMappingDraft] = useState<Record<string, string>>({});
   const [pending, setPending] = useState<PendingImport | null>(null);
   const [expanded, setExpanded] = useState<"original" | "preview" | null>(null);
   const [yearStates, setYearStates] = useState<Record<string, MonthState>>({});
@@ -208,6 +210,32 @@ export function BalanceteWorkspaceV2() {
     await refreshYearStates();
   };
 
+  const confirmAccountMapping = async (sourceCode: string, targetCode: string) => {
+    if (!result?.rows.length || !targetCode || !analyticalTrialBalanceRows(result.rows).some(row => row.reducedCode === targetCode)) {
+      setError("Selecione um C.R. analítico existente no Balancete para confirmar a correspondência.");
+      return;
+    }
+    setMappingSaving(true);
+    setError(null);
+    try {
+      const key = `${company.id}:balancete:account-mappings`;
+      const existing = await loadWorkspaceData<Record<string, string>>(key) ?? {};
+      await saveWorkspaceData(key, { ...existing, [sourceCode]: targetCode });
+      const recalculated = await buildCriticalTrialBalancePlan(company.id, month, year, result.rows);
+      setAnalysis(recalculated);
+      setPlan(recalculated);
+      setConferenceOk(false);
+      setMappingDraft(current => { const next = { ...current }; delete next[sourceCode]; return next; });
+      await saveWorkspaceData(planKey, recalculated);
+      await saveWorkspaceData(conferenceKey, false);
+      await refreshYearStates();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível salvar a correspondência de contas.");
+    } finally {
+      setMappingSaving(false);
+    }
+  };
+
   const correctAutomatically = async () => {
     if (!result?.rows.length) return;
     if (!previousBalanceVerified) {
@@ -336,6 +364,17 @@ export function BalanceteWorkspaceV2() {
                   <p className="font-semibold">{entry.section.toUpperCase()} — {entry.history}</p>
                   <p className="mt-1 text-xs">Valor: {money(entry.amountInCents)} · Débito: {entry.debitCode} ({entry.debitDescription || "não informado"}) · Crédito: {entry.creditCode} ({entry.creditDescription || "não informado"})</p>
                   <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">Sem correspondência no balancete: {entry.missingSides.join(" e ")}</p>
+                  {(["débito", "crédito"] as const).filter(side => entry.missingSides.includes(side)).map(side => {
+                    const sourceCode = side === "débito" ? entry.debitCode : entry.creditCode;
+                    return <div key={side} className="mt-3 flex flex-wrap items-center gap-2">
+                      <label className="text-xs font-semibold" htmlFor={`map-${index}-${side}`}>Conta correta para o {side} {sourceCode}:</label>
+                      <select id={`map-${index}-${side}`} className="min-w-[260px] max-w-full flex-1 rounded-md border border-input bg-background px-2 py-2 text-xs" value={mappingDraft[sourceCode] ?? ""} onChange={event => setMappingDraft(current => ({ ...current, [sourceCode]: event.target.value }))}>
+                        <option value="">Selecione o C.R. existente no Balancete</option>
+                        {analyticalTrialBalanceRows(result?.rows ?? []).filter(row => row.reducedCode).map(row => <option key={row.id} value={row.reducedCode}>{row.reducedCode} — {row.title}</option>)}
+                      </select>
+                      <Button type="button" size="sm" disabled={mappingSaving || !mappingDraft[sourceCode]} onClick={() => void confirmAccountMapping(sourceCode, mappingDraft[sourceCode])}>{mappingSaving ? "Salvando..." : "Confirmar C.R. e recalcular"}</Button>
+                    </div>;
+                  })}
                 </li>)}</ul>
               </section>}
               {!!plan.remainingCriticalObservations.length && <div className="rounded-md border border-red-600/30 bg-red-500/5 p-3 text-xs">
