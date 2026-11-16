@@ -44,7 +44,7 @@ const localToday = () => {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
 };
 async function fetchReport(gatewayToken: string, username: string, password: string, cnpj: string, start: string, end: string) {
-  const response = await fetch("https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-entry-report", {
+  const response = await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/sefaz-al-entry-report", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${gatewayToken}` },
     body: JSON.stringify({ username, password, cnpj, start, end }),
@@ -58,7 +58,7 @@ async function fetchReport(gatewayToken: string, username: string, password: str
 }
 
 async function fetchSalesReport(gatewayToken: string, username: string, password: string, cnpj: string, ie: string, start: string, end: string) {
-  const response = await fetch("https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-sales-report", {
+  const response = await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/sefaz-al-sales-report", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${gatewayToken}` },
     body: JSON.stringify({ username, password, cnpj, ie, start, end, format: "csv" }),

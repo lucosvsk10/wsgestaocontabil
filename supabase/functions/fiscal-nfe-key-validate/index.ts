@@ -44,7 +44,7 @@ Deno.serve(async req=>{
     for(const key of keys){
       const now=new Date().toISOString();
       try{
-        const response=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{
+        const response=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/fiscal-soap",{
           method:"POST",headers:{"content-type":"application/json","authorization":`Bearer ${gatewayToken}`},
           body:JSON.stringify({action:"nfe-consult",environment,...material,access_key:key}),
           signal:AbortSignal.timeout(65000)

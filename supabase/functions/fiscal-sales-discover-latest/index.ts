@@ -52,7 +52,7 @@ function monthCodes() {
 async function consult(pfx: string, password: string, accessKey: string) {
   const payload = `<consSitNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>1</tpAmb><xServ>CONSULTAR</xServ><chNFe>${accessKey}</chNFe></consSitNFe>`;
   const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeConsultaProtocolo4">${payload}</nfeDadosMsg></soap12:Body></soap12:Envelope>`;
-  const response = await fetch("https://ws-svrs-consit.vercel.app/api/consit", {
+  const response = await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/consit", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ certificate_base64: pfx, certificate_password: password, soap_body: soap }),

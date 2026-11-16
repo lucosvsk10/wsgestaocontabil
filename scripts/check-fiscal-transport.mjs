@@ -6,6 +6,9 @@ const extensions = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
 const allowedAuthorityFiles = new Set([
   path.normalize('supabase/functions/dfe-issue-native/qrcode.ts'),
 ]);
+// The native fiscal gateway is the single place allowed to open mTLS connections to the
+// fiscal authorities (Deno.connectTls + A1 + ICP-Brasil roots). Every other function must call it.
+const gatewayDir = path.normalize('supabase/functions/fiscal-gateway') + path.sep;
 const patterns = [
   { name: 'Deno mTLS transport', re: /Deno\.createHttpClient\s*\(/g },
   { name: 'Node HTTPS transport inside Supabase', re: /(?:from\s+["']node:https["']|require\(\s*["']node:https["']\s*\))/g },
@@ -41,6 +44,7 @@ function allowedStaticLiteral(rel, line) {
 const violations = [];
 for (const file of walk(root)) {
   const rel = path.normalize(path.relative(process.cwd(), file));
+  if (rel.startsWith(gatewayDir)) continue;
   const text = fs.readFileSync(file, 'utf8');
   for (const pattern of patterns) {
     pattern.re.lastIndex = 0;
@@ -56,7 +60,7 @@ for (const file of walk(root)) {
 }
 
 if (violations.length) {
-  console.error('Direct fiscal transports are forbidden in Supabase Edge Functions. Route them through the Vercel fiscal gateways.');
+  console.error('Direct fiscal transports are forbidden in Supabase Edge Functions. Route them through supabase/functions/fiscal-gateway.');
   for (const item of violations) console.error(`- ${item}`);
   process.exit(1);
 }

@@ -374,7 +374,7 @@ async function lookupAlStateRegistration(admin: any, cnpj: string) {
       .maybeSingle();
     const gatewayToken = clean(gateway?.token);
     if (!gatewayToken) return null;
-    const response = await fetch('https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-registry', {
+    const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/sefaz-al-registry', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

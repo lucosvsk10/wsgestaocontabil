@@ -10,7 +10,7 @@ async function dec(c:string,iv:string){return D.decode(await crypto.subtle.decry
 function parseRanges(text:string){const out:{start:number,end:number,reason:string}[]=[];for(const line of String(text||'').split(/\n+/)){const m=line.trim().match(/^(\d+)\s*-\s*(\d+)\s*(.*)$/);if(!m)continue;const start=Number(m[1]),end=Number(m[2]);if(start>0&&end>=start)out.push({start,end,reason:(m[3]||'').trim()})}return out}
 async function exactCount(admin:any,companyId:string,latest:number,status:string){const {count,error}=await admin.from('fiscal_sales_reconciliation').select('*',{count:'exact',head:true}).eq('company_id',companyId).eq('model','65').eq('series','1').lte('note_number',latest).eq('status',status);if(error)throw error;return Number(count||0)}
 async function fetchReport(gatewayToken:string,user:string,pass:string,cnpj:string){
- const r=await fetch('https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-report',{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${gatewayToken}`},body:JSON.stringify({username:user,password:pass,cnpj}),signal:AbortSignal.timeout(60000)});
+ const r=await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/sefaz-al-report',{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${gatewayToken}`},body:JSON.stringify({username:user,password:pass,cnpj}),signal:AbortSignal.timeout(60000)});
  const o=await r.json().catch(()=>({})) as any;
  if(!r.ok||!o?.ok)throw new Error(`gateway_report_${r.status}:${String(o?.error||'unknown').slice(0,160)}`);
  const base64=String(o?.pdf_base64||'');if(!base64)throw new Error('gateway_report_empty');

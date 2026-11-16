@@ -18,7 +18,7 @@ async function fetchDistribution(admin:any,pfx:string,pass:string,cnpj:string,uf
     const key=await crypto.subtle.importKey("raw",E.encode(bridgeSecret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
     const signed=new Uint8Array(await crypto.subtle.sign("HMAC",key,E.encode("dfe-bridge:"+timestamp+":"+bodyJson)));
     const signature=[...signed].map(v=>v.toString(16).padStart(2,"0")).join("");
-    const r=await fetch("https://ws-dfe-bridge.vercel.app/api/distribuicao",{method:"POST",headers:{"x-ws-timestamp":timestamp,"x-ws-signature":signature,"content-type":"application/json"},body:bodyJson,signal:AbortSignal.timeout(45000)});
+    const r=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/distribuicao",{method:"POST",headers:{"x-ws-timestamp":timestamp,"x-ws-signature":signature,"content-type":"application/json"},body:bodyJson,signal:AbortSignal.timeout(45000)});
     const p=await r.json().catch(()=>({})) as any;
     if(r.ok&&p?.raw_xml)return{raw:String(p.raw_xml),response:p.response||null,transport:"dfe_bridge"};
     primaryError="bridge_"+r.status+":"+String(p?.error||"erro");
@@ -27,7 +27,7 @@ async function fetchDistribution(admin:any,pfx:string,pass:string,cnpj:string,uf
   const token=String(g?.token||"");if(!token)throw Error(primaryError+"; fallback_token_missing");
   let certificate:any;
   try{certificate=lerCertificado(Buffer.from(pfx,"base64"),pass)}catch(e){throw Error(primaryError+"; local_pfx_parse_failed")}
-  const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify({action:"nfe-distribution",environment:env==="homologacao"?"homologation":"production",certificate_pem:certificate.certificadoPem,private_key_pem:certificate.chavePrivadaPem,chain_pem:certificate.cadeiaPem||[],cnpj,uf_code:uf,ult_nsu:cur}),signal:AbortSignal.timeout(60000)});
+  const r=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify({action:"nfe-distribution",environment:env==="homologacao"?"homologation":"production",certificate_pem:certificate.certificadoPem,private_key_pem:certificate.chavePrivadaPem,chain_pem:certificate.cadeiaPem||[],cnpj,uf_code:uf,ult_nsu:cur}),signal:AbortSignal.timeout(60000)});
   const o=await r.json().catch(()=>({})) as any;
   if(!r.ok||!o?.ok||!o?.text)throw Error(primaryError+"; fallback_"+r.status+":"+String(o?.error||"erro"));
   return{raw:String(o.text),response:null,transport:"fiscal_soap_fallback"};

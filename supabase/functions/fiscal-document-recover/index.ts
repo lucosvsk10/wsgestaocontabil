@@ -81,7 +81,7 @@ function parseDownloadPayload(payload: unknown) {
   throw new Error('xml_payload_not_found');
 }
 async function downloadXml(pfx: string, password: string, accessKey: string) {
-  const r = await fetch('https://ws-svrs-consit.vercel.app/api/download', {
+  const r = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/download', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
