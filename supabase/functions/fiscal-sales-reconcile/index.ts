@@ -73,7 +73,7 @@ function estimateMonths(all: string[], n: number, latest: number) {
 async function cons(pfx: string, pass: string, key: string) {
   const payload = `<consSitNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>1</tpAmb><xServ>CONSULTAR</xServ><chNFe>${key}</chNFe></consSitNFe>`;
   const soap = `<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeConsultaProtocolo4">${payload}</nfeDadosMsg></soap12:Body></soap12:Envelope>`;
-  const r = await fetch('https://ws-svrs-consit.vercel.app/api/consit', {
+  const r = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/consit', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ certificate_base64: pfx, certificate_password: pass, soap_body: soap }),
@@ -88,7 +88,7 @@ async function cons(pfx: string, pass: string, key: string) {
   };
 }
 async function cons55(pfx: string, pass: string, key: string, gatewayToken: string) {
-  const r = await fetch('https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap', {
+  const r = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/fiscal-soap', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${gatewayToken}` },
     body: JSON.stringify({
@@ -121,7 +121,7 @@ async function consultModel(
 }
 
 async function download(pfx: string, pass: string, key: string) {
-  const r = await fetch('https://ws-svrs-consit.vercel.app/api/download', {
+  const r = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/download', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ certificate_base64: pfx, certificate_password: pass, access_key: key }),

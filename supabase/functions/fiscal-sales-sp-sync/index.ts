@@ -15,13 +15,13 @@ function dtLocal(v:Date){const parts=new Intl.DateTimeFormat("sv-SE",{timeZone:"
 async function gzDoc(v:string){const b=Uint8Array.from(atob(v.replace(/\\s/g,"")),c=>c.charCodeAt(0));return D.decode(await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer())}
 
 async function gateway(token:string,body:any){
-  const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify(body),signal:AbortSignal.timeout(70000)});
+  const r=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify(body),signal:AbortSignal.timeout(70000)});
   const o=await r.json().catch(()=>({})) as any;
   if(!r.ok||!o?.ok)throw new Error("gateway_"+r.status+":"+String(o?.error||o?.response_excerpt||"failed").slice(0,300));
   return String(o.text||"");
 }
 async function gatewayObject(token:string,body:any){
-  const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify(body),signal:AbortSignal.timeout(70000)});
+  const r=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+token},body:JSON.stringify(body),signal:AbortSignal.timeout(70000)});
   const o=await r.json().catch(()=>({})) as any;
   if(!r.ok||!o?.ok)throw new Error("gateway_"+r.status+":"+String(o?.error||o?.xMotivo||"failed").slice(0,300));
   return o;

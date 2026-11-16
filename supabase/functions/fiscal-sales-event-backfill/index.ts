@@ -11,7 +11,7 @@ const tag=(xml:string,n:string)=>xml.match(new RegExp(`<${n}>([\\s\\S]*?)<\\/${n
 async function cons(pfx:string,pass:string,key:string){
   const payload=`<consSitNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe"><tpAmb>1</tpAmb><xServ>CONSULTAR</xServ><chNFe>${key}</chNFe></consSitNFe>`;
   const soap=`<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeConsultaProtocolo4">${payload}</nfeDadosMsg></soap12:Body></soap12:Envelope>`;
-  const r=await fetch("https://ws-svrs-consit.vercel.app/api/consit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({certificate_base64:pfx,certificate_password:pass,soap_body:soap}),signal:AbortSignal.timeout(25000)});
+  const r=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/consit",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({certificate_base64:pfx,certificate_password:pass,soap_body:soap}),signal:AbortSignal.timeout(25000)});
   if(!r.ok)throw new Error(`consit_http_${r.status}`);
   const o=await r.json().catch(()=>({}));const body=String(o?.body||"");if(!body)throw new Error("consit_empty");return body;
 }

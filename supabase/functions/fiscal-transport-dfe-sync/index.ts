@@ -71,7 +71,7 @@ function parseTransport(xml:string,schema:string,cnpj:string,family:Family):Pars
   };
 }
 async function gateway(token:string,body:any){
-  const response=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{
+  const response=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/fiscal-soap",{
     method:"POST",
     headers:{"content-type":"application/json","authorization":`Bearer ${token}`},
     body:JSON.stringify(body),

@@ -18,6 +18,6 @@ Deno.serve(async req=>{try{
  const {data:cert,error}=await a.from("fiscal_certificates").select("certificate_ciphertext,certificate_iv,password_ciphertext,password_iv").eq("company_id",cid).eq("is_active",true).order("created_at",{ascending:false}).limit(1).single();
  if(error||!cert)return J({error:"certificate_missing"},422);
  const pfx=await dec(cert.certificate_ciphertext,cert.certificate_iv),pass=await dec(cert.password_ciphertext,cert.password_iv),parsed=lerCertificado(Buffer.from(pfx,"base64"),pass);
- const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+String(g?.token||"")},body:JSON.stringify({action:"sp-nfe-portal-probe",environment:"production",certificate_pem:parsed.certificadoPem,private_key_pem:parsed.chavePrivadaPem,chain_pem:parsed.cadeiaPem||[]}),signal:AbortSignal.timeout(70000)});
+ const r=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+String(g?.token||"")},body:JSON.stringify({action:"sp-nfe-portal-probe",environment:"production",certificate_pem:parsed.certificadoPem,private_key_pem:parsed.chavePrivadaPem,chain_pem:parsed.cadeiaPem||[]}),signal:AbortSignal.timeout(70000)});
  const out=await r.json().catch(()=>({}));return J(out,r.status);
 }catch(e){return J({error:e instanceof Error?e.message:String(e)},500)}});

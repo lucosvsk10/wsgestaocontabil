@@ -9,7 +9,7 @@ const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"au
 const out=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{...cors,"Content-Type":"application/json"}});
 const digits=(v:unknown)=>String(v??"").replace(/\D/g,"");
 const esc=(v:unknown)=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&apos;");
-const GATEWAY="https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap";
+const GATEWAY="https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/fiscal-soap";
 const TEST_NFE_KEY="27260912345678000195550010000000011123456780";
 const PLACEHOLDER_RNTRC="12345678";
 

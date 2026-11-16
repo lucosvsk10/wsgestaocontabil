@@ -126,7 +126,7 @@ async function verifyAl(admin:any,username:string,password:string,cnpj:string,ie
   const today=new Date();
   const day=new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Maceio",year:"numeric",month:"2-digit",day:"2-digit"}).format(today);
   try{
-    const entryResponse=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-entry-report",{
+    const entryResponse=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/sefaz-al-entry-report",{
       method:"POST",
       headers:{"content-type":"application/json","authorization":`Bearer ${token}`},
       body:JSON.stringify({username,password,cnpj,start:day,end:day,verify_only:true}),
@@ -136,7 +136,7 @@ async function verifyAl(admin:any,username:string,password:string,cnpj:string,ie
     if(entryResponse.status===422&&entry?.error==="invalid_credentials")return{code:"invalid_credentials",http:entryResponse.status,details:{login_valid:false}};
     if(!(entryResponse.ok&&entry?.login_valid===true))return{code:"portal_unavailable",http:entryResponse.status,details:{reason:entry?.error||"entry_report_verification_failed"}};
 
-    const salesResponse=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-sales-report",{
+    const salesResponse=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/sefaz-al-sales-report",{
       method:"POST",
       headers:{"content-type":"application/json","authorization":`Bearer ${token}`},
       body:JSON.stringify({username,password,cnpj,ie,start:day,end:day,verify_only:true}),
@@ -250,7 +250,7 @@ Deno.serve(async req=>{
       const secretValue=await decrypt(stored.password_ciphertext,stored.password_iv);
       const end=clean(body.end)||new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Maceio",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
       const start=clean(body.start)||end.slice(0,8)+"01";
-      const response=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-sales-report",{
+      const response=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/sefaz-al-sales-report",{
         method:"POST",
         headers:{"content-type":"application/json","authorization":`Bearer ${String(g?.token||"")}`},
         body:JSON.stringify({username:userValue,password:secretValue,cnpj:digits(fiscal.cnpj),ie:digits(fiscal.inscricao_estadual),start,end,format:"csv"}),

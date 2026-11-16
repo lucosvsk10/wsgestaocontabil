@@ -9,7 +9,7 @@ async function vk(){const s=Deno.env.get("ACCOUNTING_ENGINE_SESSION_SECRET")||De
 async function dec(c:string,iv:string){return D.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:B(iv)},await vk(),B(c)))}
 
 async function bridge(token:string,body:any){
-  const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/nfe-event",{
+  const r=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/nfe-event",{
     method:"POST",headers:{"content-type":"application/json","authorization":`Bearer ${token}`},body:JSON.stringify(body),signal:AbortSignal.timeout(60000),
   });
   const raw=await r.text();let o:any={};try{o=JSON.parse(raw)}catch{o={raw:raw.slice(0,1200)}}

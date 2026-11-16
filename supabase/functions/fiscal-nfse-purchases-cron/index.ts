@@ -12,7 +12,7 @@ async function gun(v:string){const bytes=Uint8Array.from(atob(v.replace(/\s/g,""
 function parseNFSe(xml:string,companyCnpj:string){const inf=section(xml,"infNFSe")||xml,emit=section(inf,"emit"),dps=section(inf,"DPS"),infDps=section(dps,"infDPS")||dps,toma=section(infDps,"toma"),issuer=digits(tag(emit,"CNPJ")||tag(emit,"CPF")),recipient=digits(tag(toma,"CNPJ")||tag(toma,"CPF")),direction=issuer===companyCnpj?"saida":recipient===companyCnpj?"entrada":"relacionada",status=tag(inf,"cStat");return{direction,issuer,issuerName:tag(emit,"xNome"),recipient,number:tag(inf,"nNFSe")||tag(infDps,"nDPS"),series:tag(infDps,"serie"),issue:tag(infDps,"dhEmi")||tag(inf,"dhProc")||null,value:Number(tag(inf,"vLiq")||tag(infDps,"vServ")||0),status,statusText:status==="100"?"Autorizada":status?`cStat ${status}`:"Fiscal"}}
 
 async function fetchAdnBatch(gatewayToken:string,material:any,cnpj:string,nsu:number){
- const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/nfe-event",{method:"POST",headers:{"content-type":"application/json","authorization":`Bearer ${gatewayToken}`},body:JSON.stringify({action:"nfse-dfe",...material,cnpj,nsu}),signal:AbortSignal.timeout(60000)});
+ const r=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/nfe-event",{method:"POST",headers:{"content-type":"application/json","authorization":`Bearer ${gatewayToken}`},body:JSON.stringify({action:"nfse-dfe",...material,cnpj,nsu}),signal:AbortSignal.timeout(60000)});
  const o=await r.json().catch(()=>({})) as any;
  if(!r.ok)throw Error(`gateway_http_${r.status}:${String(o?.error||"").slice(0,120)}`);
  const status=Number(o?.http||0),data=o?.response||{};

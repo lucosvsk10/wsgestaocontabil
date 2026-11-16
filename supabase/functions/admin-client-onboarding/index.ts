@@ -150,7 +150,7 @@ async function lookupAlIe(admin: any, cnpj: string) {
   try {
     const { data } = await admin.from('_fiscal_vercel_gateway_token').select('token').eq('id', true).maybeSingle();
     if (!data?.token) return '';
-    const response = await fetch('https://ws-nfse-sefin-probe.vercel.app/api/sefaz-al-registry', {
+    const response = await fetch('https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/sefaz-al-registry', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.token}` },
       body: JSON.stringify({ cnpj }),

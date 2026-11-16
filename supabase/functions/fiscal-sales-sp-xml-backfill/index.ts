@@ -16,7 +16,7 @@ async function K(){const s=Deno.env.get("ACCOUNTING_ENGINE_SESSION_SECRET")||Den
 async function dec(c:string,i:string){return D.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:B(i)},await K(),B(c)))}
 async function gunzip(v:string){const b=Uint8Array.from(atob(v.replace(/\s/g,"")),c=>c.charCodeAt(0));return D.decode(await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer())}
 async function downloadBridge(pfx:string,pass:string,key:string){
-  const response=await fetch("https://ws-svrs-consit.vercel.app/api/download",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({certificate_base64:pfx,certificate_password:pass,access_key:key,model:"55",document_type:"nfe",sistema:"Nfe"}),signal:AbortSignal.timeout(45000)});
+  const response=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/download",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({certificate_base64:pfx,certificate_password:pass,access_key:key,model:"55",document_type:"nfe",sistema:"Nfe"}),signal:AbortSignal.timeout(45000)});
   const raw=await response.text();let payload:unknown=raw;try{payload=JSON.parse(raw)}catch{}
   if(!response.ok)throw Error(`bridge_http_${response.status}`);
   const xml=findFiscalXml(payload);if(!xml)throw Error(`bridge_xml_payload_not_found:len=${raw.length};stringJson=${/stringJson/i.test(raw)?1:0};xmlKey=${/["']xml["']\s*:/i.test(raw)?1:0};escapedXmlKey=/\\["']xml\\["']\s*:/.test(raw)?1:0;lt=${raw.includes("<")?1:0};escapedLt=${/\\u003c|&lt;/i.test(raw)?1:0}`);return xml;
@@ -48,7 +48,7 @@ Deno.serve(async req=>{try{
     if(key.length!==44||key.slice(6,20)!==dg(c.cnpj)||key.slice(20,22)!=="55")throw Error("invalid_key");
     let full:any=null,source="sefaz_sp_nfe55_distribution_xml",service="NFeDistribuicaoDFe_consChNFe",official=true,officialError="";
     if(gatewayToken){try{
-      const r=await fetch("https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+gatewayToken},body:JSON.stringify({action:"nfe-distribution",environment:c.ambiente_padrao==="homologacao"?"homologation":"production",certificate_pem:parsed.certificadoPem,private_key_pem:parsed.chavePrivadaPem,chain_pem:parsed.cadeiaPem||[],cnpj:c.cnpj,uf_code:"35",access_key:key}),signal:AbortSignal.timeout(70000)});
+      const r=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/fiscal-soap",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+gatewayToken},body:JSON.stringify({action:"nfe-distribution",environment:c.ambiente_padrao==="homologacao"?"homologation":"production",certificate_pem:parsed.certificadoPem,private_key_pem:parsed.chavePrivadaPem,chain_pem:parsed.cadeiaPem||[],cnpj:c.cnpj,uf_code:"35",access_key:key}),signal:AbortSignal.timeout(70000)});
       const o=await r.json().catch(()=>({})) as any;if(!r.ok||!o?.ok)throw Error("gateway_"+r.status+":"+String(o?.error||"failed"));
       const raw=decodeEntities(String(o.text||"")),docs:any[]=[];const rx=/<docZip\b([^>]*)>([\s\S]*?)<\/docZip>/gi;let m;
       while((m=rx.exec(raw)))try{const xml=await gunzip(m[2]),sm=String(m[1]||"").match(/schema=["']([^"']+)["']/i),schema=sm?.[1]||"",access=tag(xml,"chNFe")||xml.match(/Id=["']NFe(\d{44})/i)?.[1]||"";if(access===key)docs.push({xml,schema,full:/(?:procNFe|nfeProc)/i.test(schema)||/<(?:\w+:)?NFe\b/i.test(xml)})}catch{}

@@ -25,7 +25,7 @@ function parseDownloadHtml(all:string){
  throw Error("xml_payload_not_found")
 }
 async function downloadBridge(pfx:string,pass:string,key:string){
- const r=await fetch("https://ws-svrs-consit.vercel.app/api/download",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({certificate_base64:pfx,certificate_password:pass,access_key:key,model:"55",document_type:"nfe",sistema:"Nfe"}),signal:AbortSignal.timeout(45000)});
+ const r=await fetch("https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/download",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({certificate_base64:pfx,certificate_password:pass,access_key:key,model:"55",document_type:"nfe",sistema:"Nfe"}),signal:AbortSignal.timeout(45000)});
  const raw=await r.text();let o:any={};try{o=JSON.parse(raw)}catch{o={body_text:raw}};
  if(!r.ok)throw Error(`bridge_http_${r.status}:${String(o?.error||o?.message||"").slice(0,120)}`);
  for(const value of [o?.xml,o?.body_text,o?.body,o?.data?.xml]){if(value){try{return parseDownloadHtml(String(value))}catch(e){const code=e instanceof Error?e.message:String(e);if(code==="certificate_not_involved"||code==="manifestation_required")throw e}}}

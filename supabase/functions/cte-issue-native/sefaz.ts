@@ -1,5 +1,5 @@
 export type CertificadoMtls={chavePrivadaPem:string;certificadoPem:string;cadeiaPem:string[]};
-const GATEWAY="https://ws-nfse-sefin-probe.vercel.app/api/fiscal-soap";
+const GATEWAY="https://nadtoitgkukzbghtbohm.supabase.co/functions/v1/fiscal-gateway/api/fiscal-soap";
 async function callGateway(cert:CertificadoMtls,gatewayToken:string,body:Record<string,unknown>){
  if(!gatewayToken)throw new Error("gateway_token_missing");
  const response=await fetch(GATEWAY,{method:"POST",headers:{"content-type":"application/json","authorization":`Bearer ${gatewayToken}`},body:JSON.stringify({...body,certificate_pem:cert.certificadoPem,private_key_pem:cert.chavePrivadaPem,chain_pem:cert.cadeiaPem||[]}),signal:AbortSignal.timeout(70000)});
